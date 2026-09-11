@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
+/* Design tokens. Source of truth: docs/style-reference.md */
 @theme {
+  --color-*: initial;
   --color-ink: #000000;
   --color-paper: #fffdf5;
   --color-yellow: #ffd23f;
@@ -9,17 +11,59 @@
   --color-green: #88d498;
   --color-orange: #ffa552;
   --color-lavender: #b8a9fa;
+  /* Neutral for "not yet classified" (Uncategorised, Unassigned). Outside the accent palette on purpose. */
+  --color-grey: #d9d6cc;
+  --color-grey-ink: #6b6860;
+  /* Darker text-safe variants of coral and green for amounts on light surfaces. */
+  --color-coral-ink: #c2352e;
+  --color-green-ink: #2a7a4b;
+  --color-white: #ffffff;
 
   --font-display: "Syne", system-ui, sans-serif;
   --font-heading: "Space Grotesk", system-ui, sans-serif;
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "Space Mono", ui-monospace, monospace;
 
+  --shadow-*: initial;
   --shadow-hard-sm: 3px 3px 0 0 #000;
   --shadow-hard: 5px 5px 0 0 #000;
   --shadow-hard-lg: 8px 8px 0 0 #000;
   --shadow-hard-xl: 12px 12px 0 0 #000;
+  --shadow-none: 0 0 #0000;
 
   --radius-*: initial;
-  --radius: 0;
+  --radius-none: 0;
+
+  --border-width-2: 2px;
+  --border-width-3: 3px;
+  --border-width-4: 4px;
+}
+
+@layer base {
+  html {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  * {
+    border-radius: 0;
+  }
+  ::selection {
+    background: var(--color-yellow);
+  }
+}
+
+/* The Neubrutalist "lift on hover, press on click" gesture, shared by every interactive surface. */
+@utility lift {
+  transition:
+    transform 80ms ease-out,
+    box-shadow 80ms ease-out;
+  &:hover:not(:disabled) {
+    transform: translate(-2px, -2px);
+  }
+  &:active:not(:disabled) {
+    transform: translate(3px, 3px);
+    box-shadow: var(--shadow-none);
+  }
 }
