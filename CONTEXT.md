@@ -53,7 +53,7 @@ The Transaction Type that moves money from one Wallet to another. If the Wallets
 _Avoid_: transfer, conversion, move
 
 **Category**:
-A classification of a Transaction from the User's own list (e.g. Groceries, Rent). Each Category has a display name and a stable slug. A Transaction has at most one Category.
+A classification of a Transaction from the User's own list (e.g. Groceries, Rent). Each Category has a display name, a stable slug, and an optional emoji shown wherever the Category appears. A Transaction has at most one Category.
 _Avoid_: type, group, label
 
 **Uncategorised**:
