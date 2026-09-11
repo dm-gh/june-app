@@ -1,0 +1,13 @@
+{
+  "name": "june",
+  "private": true,
+  "engines": { "node": ">=22", "pnpm": ">=8" },
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}
