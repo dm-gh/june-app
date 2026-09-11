@@ -11,7 +11,7 @@ export function Display<T extends ElementType = "h1">({ as, className, ...rest }
   const Tag = (as ?? "h1") as ElementType
   return (
     <Tag
-      className={cn("font-display text-5xl font-extrabold leading-none tracking-tight sm:text-6xl", className)}
+      className={cn("font-display text-5xl font-extrabold uppercase leading-none tracking-tight sm:text-6xl", className)}
       {...rest}
     />
   )

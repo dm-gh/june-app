@@ -23,7 +23,7 @@ One neutral base, one dark outline, limited saturated accents. No gradients.
 - Hover: `transform: translate(-2px, -2px)` and shadow grows. Active: element presses in, shadow disappears.
 
 ## Typography
-- Display: Syne 800
+- Display: Syne 800, always uppercase (the author dislikes Syne lowercase)
 - Heading: Space Grotesk 700
 - Body: Inter 400
 - Mono: Space Mono
