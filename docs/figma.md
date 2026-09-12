@@ -29,7 +29,7 @@ Design work lives in the author's personal Figma account, never the work account
 - Add exchange is a separate form: From wallet, To wallet, Sent and Received amounts in each wallet's currency, Date. No currency, category or description fields. When the wallets differ in currency a notice shows the reference rate for that date; the recorded legs are exactly what the User enters (ADR-0004).
 - Analysis stacks: Spent (coral) / Income (green) cards, By category bars, Over time monthly bars (current month yellow), Wallet balances with an approximate total in Default Currency.
 - Settings: ordered Wallets with drag handles (order drives Shortcut capture), Categories as two lists, Expense and Income, each row with emoji, name, slug and colour, Default currency select, Shortcut card with masked Capture Token, Regenerate (danger) and Download Shortcut, sign out.
-- Sign in: brand block, Google button, or email magic link; invite-only note. No tagline.
+- Sign in: brand block, Google button only; the "or / Email / Send magic link" block is kept but hidden until magic link is in scope. No invite-only note, no tagline.
 - Form action bars have no top rule. On desktop they are pinned to the bottom of the content column.
 - Period: on Transactions and Analysis the month label carries a calendar icon and opens the Period sheet from the bottom over a scrim: From and To date fields, a Monday-first calendar with caret buttons to step the month, the selected range in the accent and the two ends bordered with a hard shadow, and a full-width Apply. No month shortcut chips: a whole month is picked on the calendar. The chevrons beside the label step the current period by its own length.
 - Accent colour: every accent use is bound to `Color/bg/accent/primary`, which aliases `Primitives/accent`. `Primitives/accent` is #CEF366; paste a new hex into it to retheme every accent use at once. The "Accent lab" frame on Foundations shows a hue ramp and a saturation/lightness ramp of candidates.
@@ -48,3 +48,8 @@ The "Screens · Desktop" page mirrors every mobile screen at 1440×1024. The bot
 ## Constraints
 
 - Plan: Professional, Full seat (upgraded 2026-09-12). Figma MCP allows 200 tool calls per day.
+
+## Not yet designed
+- Edit wallet (name, Init balance; currency read-only) with Delete behind the options menu and a confirmation dialog.
+- Delete on Edit category, with confirmation.
+- Tag input: space-separated, suggestions list of existing Tags; bulk edit shows shared Tags as removable chips plus an add field.

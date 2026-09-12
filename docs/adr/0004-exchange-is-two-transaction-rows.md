@@ -11,3 +11,4 @@ An Exchange moves money from one Wallet to another, possibly across currencies, 
 - Creating, editing, or deleting an Exchange must touch both rows atomically, always inside one database transaction.
 - The implied rate of an Exchange is derived from the two legs, never looked up from the Rate Provider.
 - A single leg row is invalid on its own; a check constraint requires `exchange_id` on every `exchange` row, but the "exactly two legs" rule is enforced in application code.
+- Deleting a Wallet cannot leave a lone leg. Its Init is deleted with it, and every Exchange touching it collapses into a Change in the surviving Wallet: the deleted-side leg is removed and the surviving leg keeps its amount, date and description, becomes a Change, and is tagged `wallet_<currency>_delete_<dd.mm.yyyy>` so the conversion stays visible. This is a system conversion, not a User edit, so it is the one case where a row's type changes.
