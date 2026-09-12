@@ -67,7 +67,7 @@ First candidates after launch: LLM extraction, budgets.
 
 ## Round 2 (designed 2026-09-12, see docs/figma.md "Round 2 screens")
 - Filters: one set shared by Transactions and Analysis, kept in the URL: Transaction Type (all, expense, income), Categories, Tags, Wallets.
-- Analysis gains Per day (bars plus running total), Share of spending (donut), Income vs expense by month, By tag and By wallet.
+- Analysis becomes: Per day (bars plus running total), By category, Income vs expense, By tag, By wallet, each breakdown capped at five rows with an All page behind it (the categories page opens with a Share donut). Charts show days for a period of a month or less, months beyond. Over time and the Wallet balances list are removed. Rows on the All pages toggle that item in the shared filter.
 - CSV Import in June's own template (`date,amount,currency,category,description,tags`) with a preview, per-row skipping with reasons, and an optional duplicate skip. Bank formats stay out: the User reshapes an export into the template.
 
 ## Still open
