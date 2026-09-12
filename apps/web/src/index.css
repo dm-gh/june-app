@@ -5,11 +5,9 @@
   --color-*: initial;
   --color-ink: #000000;
   --color-paper: #fffdf5;
-  /* Accent family. accent: primary buttons, active nav tab, plus button, checked boxes, selected days.
-     accent-strong: cover and sign-in brand only. accent-soft: large quiet surfaces such as the Spent panel. */
-  --color-accent: #cef366;
+  /* Accent pair. accent (soft): every control and accent surface. accent-strong (bold): the sign-in screen and the cover only. */
+  --color-accent: #e6f9b2;
   --color-accent-strong: #bdef36;
-  --color-accent-soft: #e6f9b2;
   --color-yellow: #ffd23f;
   --color-coral: #ff6b6b;
   --color-sky: #74b9ff;
