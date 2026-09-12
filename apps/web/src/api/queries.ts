@@ -6,8 +6,10 @@ import type {
   CreateExchange,
   CreateWallet,
   CurrencyCode,
+  ExchangeId,
   TransactionId,
   UpdateCategory,
+  UpdateExchange,
   UpdateTransaction,
   UpdateWallet,
   WalletId
@@ -22,7 +24,8 @@ export const keys = {
   categories: ["categories"] as const,
   tags: ["tags"] as const,
   transactions: (p: Period) => ["transactions", p.from, p.to] as const,
-  transaction: (id: TransactionId) => ["transaction", id] as const
+  transaction: (id: TransactionId) => ["transaction", id] as const,
+  exchange: (id: ExchangeId) => ["exchange", id] as const
 }
 
 export const useMe = () => useQuery({ queryKey: keys.me, queryFn: () => run(api.settings.me()) })
@@ -45,6 +48,13 @@ export const useTransactions = (period: Period) =>
 export const useTransaction = (id: TransactionId) =>
   useQuery({ queryKey: keys.transaction(id), queryFn: () => run(api.transactions.get({ path: { id } })) })
 
+export const useExchange = (id: ExchangeId | null) =>
+  useQuery({
+    queryKey: keys.exchange(id ?? ("" as ExchangeId)),
+    queryFn: () => run(api.transactions.getExchange({ path: { exchangeId: id! } })),
+    enabled: id !== null
+  })
+
 type Payload<T> = T extends { new (props: infer P): unknown } ? Exclude<P, void> : never
 
 /** A mutation that invalidates the given query roots when it succeeds. */
@@ -56,7 +66,7 @@ const useInvalidating = <Input, Output>(fn: (input: Input) => Promise<Output>, r
   })
 }
 
-const money = ["transactions", "transaction", "wallets", "tags"]
+const money = ["transactions", "transaction", "exchange", "wallets", "tags"]
 
 export const useCreateChange = () =>
   useInvalidating((payload: Payload<typeof CreateChange>) => run(api.transactions.createChange({ payload })), money)
@@ -68,6 +78,13 @@ export const useUpdateTransaction = () =>
   useInvalidating(
     ({ id, payload }: { id: TransactionId; payload: Payload<typeof UpdateTransaction> }) =>
       run(api.transactions.update({ path: { id }, payload })),
+    money
+  )
+
+export const useUpdateExchange = () =>
+  useInvalidating(
+    ({ exchangeId, payload }: { exchangeId: ExchangeId; payload: Payload<typeof UpdateExchange> }) =>
+      run(api.transactions.updateExchange({ path: { exchangeId }, payload })),
     money
   )
 

@@ -1,11 +1,12 @@
-import { type CategoryId, type LocalDate, type MinorAmount, toMinor, type TransactionId, type WalletId } from "@june/shared"
+import { type CategoryId, type ExchangeId, type LocalDate, type MinorAmount, toMinor, type TransactionId, type WalletId } from "@june/shared"
 import { Trash } from "@phosphor-icons/react"
 import { Either } from "effect"
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router"
-import { useCategories, useDeleteTransactions, useTags, useTransaction, useUpdateTransaction, useWallets } from "../../api/queries"
+import { useCategories, useDeleteTransactions, useExchange, useTags, useTransaction, useUpdateExchange, useUpdateTransaction, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { Dialog, ErrorNotice, Loading } from "../../ui"
+import { draftFromLegs, type ExchangeDraft, ExchangeFields, exchangePayload } from "./ExchangeForm"
 import { type ChangeDraft, draftFromTransaction, TransactionForm } from "./TransactionForm"
 
 const titles = { change: "Edit transaction", init: "Edit opening balance", exchange: "Edit exchange" } as const
@@ -13,8 +14,81 @@ const titles = { change: "Edit transaction", init: "Edit opening balance", excha
 /** A Transaction opens straight into its edit form; Delete sits behind the options menu. The Transaction Type is fixed. */
 export function EditTransactionPage() {
   const { id } = useParams()
-  const navigate = useNavigate()
   const transaction = useTransaction(id as TransactionId)
+  if (transaction.data?.type === "exchange" && transaction.data.exchangeId !== null) {
+    return <EditExchangePage exchangeId={transaction.data.exchangeId} />
+  }
+  return <EditChangePage id={id as TransactionId} />
+}
+
+/** An Exchange is edited as a whole: both Wallets, both amounts, and the shared date, description and tags. */
+function EditExchangePage({ exchangeId }: { exchangeId: ExchangeId }) {
+  const navigate = useNavigate()
+  const legs = useExchange(exchangeId)
+  const wallets = useWallets()
+  const tags = useTags()
+  const update = useUpdateExchange()
+  const remove = useDeleteTransactions()
+  const [draft, setDraft] = useState<ExchangeDraft | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [confirm, setConfirm] = useState(false)
+
+  useEffect(() => {
+    if (legs.data && draft === null) setDraft(draftFromLegs(legs.data))
+  }, [legs.data, draft])
+
+  const walletList = wallets.data?.wallets ?? []
+  if (legs.isPending || wallets.isPending) {
+    return (
+      <FormPage title="Edit exchange" backTo="/transactions">
+        {legs.isError ? <ErrorNotice message={legs.error.message} /> : <Loading />}
+      </FormPage>
+    )
+  }
+  if (draft === null) {
+    return (
+      <FormPage title="Edit exchange" backTo="/transactions">
+        <ErrorNotice message="One side of this Exchange lost its Wallet, so it can only be deleted." />
+      </FormPage>
+    )
+  }
+
+  const submit = () => {
+    const payload = exchangePayload(draft, walletList)
+    if (Either.isLeft(payload)) return setError(payload.left)
+    setError(null)
+    update.mutate({ exchangeId, payload: payload.right }, { onSuccess: () => navigate("/transactions") })
+  }
+
+  return (
+    <FormPage
+      title="Edit exchange"
+      backTo="/transactions"
+      submitLabel="Save exchange"
+      onSubmit={submit}
+      busy={update.isPending}
+      error={error ?? update.error?.message ?? remove.error?.message ?? null}
+      menu={[{ label: "Delete", icon: Trash, danger: true, onSelect: () => setConfirm(true) }]}
+    >
+      <ExchangeFields draft={draft} onChange={setDraft} wallets={walletList} tagSuggestions={tags.data ?? []} />
+      <Dialog
+        open={confirm}
+        title="Delete this exchange?"
+        body="Both legs go, and both Wallets' Balances move back."
+        confirmLabel="Delete"
+        danger
+        busy={remove.isPending}
+        onConfirm={() => remove.mutate([legs.data![0]!.id], { onSuccess: () => navigate("/transactions") })}
+        onCancel={() => setConfirm(false)}
+      />
+    </FormPage>
+  )
+}
+
+/** A Change or an Init: the single-row form. */
+function EditChangePage({ id }: { id: TransactionId }) {
+  const navigate = useNavigate()
+  const transaction = useTransaction(id)
   const wallets = useWallets()
   const categories = useCategories()
   const tags = useTags()
@@ -87,8 +161,8 @@ export function EditTransactionPage() {
       />
       <Dialog
         open={confirm}
-        title={t.type === "exchange" ? "Delete this exchange?" : "Delete this transaction?"}
-        body={t.type === "exchange" ? "Both legs go, and both Wallets' Balances move back." : "It is removed for good and the Wallet's Balance moves accordingly."}
+        title="Delete this transaction?"
+        body="It is removed for good and the Wallet's Balance moves accordingly."
         confirmLabel="Delete"
         danger
         busy={remove.isPending}

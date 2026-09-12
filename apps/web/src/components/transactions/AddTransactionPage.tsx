@@ -1,11 +1,12 @@
 import { type CategoryId, type LocalDate, type MinorAmount, toMinor, type WalletId } from "@june/shared"
 import { Either } from "effect"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { useNavigate, useSearchParams } from "react-router"
 import { useCategories, useCreateChange, useCreateExchange, useMe, useTags, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { todayLocal } from "../../lib/period"
-import { AmountInput, DateInput, Field, Loading, Notice, Segmented, Select, Text } from "../../ui"
+import { Field, Loading, Notice, Segmented, Text } from "../../ui"
+import { type ExchangeDraft, ExchangeFields, exchangePayload } from "./ExchangeForm"
 import { type ChangeDraft, TransactionForm } from "./TransactionForm"
 
 type Kind = "change" | "exchange"
@@ -110,82 +111,28 @@ function ChangeForm({ wallets, categories, tagSuggestions, toggle }: { wallets: 
 function ExchangeForm({ wallets, tagSuggestions, toggle }: { wallets: Wallets; tagSuggestions: ReadonlyArray<string>; toggle: Toggle }) {
   const navigate = useNavigate()
   const create = useCreateExchange()
-  const [source, setSource] = useState<WalletId>(wallets[0]!.id)
-  const [target, setTarget] = useState<WalletId>((wallets[1] ?? wallets[0])!.id)
-  const [sent, setSent] = useState("")
-  const [received, setReceived] = useState("")
-  const [date, setDate] = useState<LocalDate>(todayLocal())
+  const [draft, setDraft] = useState<ExchangeDraft>({
+    source: wallets[0]!.id,
+    target: (wallets[1] ?? wallets[0])!.id,
+    sent: "",
+    received: "",
+    date: todayLocal(),
+    description: "",
+    tags: []
+  })
   const [error, setError] = useState<string | null>(null)
-  void tagSuggestions
-
-  const from = wallets.find((w) => w.id === source)!
-  const to = wallets.find((w) => w.id === target)!
-  const sameCurrency = from.currency === to.currency
-  const implied = useMemo(() => {
-    const s = Number(sent)
-    const r = Number(received)
-    return s > 0 && r > 0 ? (r / s).toFixed(4) : null
-  }, [sent, received])
 
   const submit = () => {
-    if (source === target) return setError("Pick two different wallets")
-    const sentMinor = toMinor(Number(sent), from.currency)
-    const receivedMinor = toMinor(Number(received || (sameCurrency ? sent : "")), to.currency)
-    if (Either.isLeft(sentMinor) || sentMinor.right <= 0) return setError(Either.isLeft(sentMinor) ? sentMinor.left : "Enter the amount sent")
-    if (Either.isLeft(receivedMinor) || receivedMinor.right <= 0) return setError(Either.isLeft(receivedMinor) ? receivedMinor.left : "Enter the amount received")
+    const payload = exchangePayload(draft, wallets)
+    if (Either.isLeft(payload)) return setError(payload.left)
     setError(null)
-    create.mutate(
-      {
-        sourceWalletId: source,
-        sourceMinor: sentMinor.right as MinorAmount,
-        targetWalletId: target,
-        targetMinor: receivedMinor.right as MinorAmount,
-        occurredOn: date
-      },
-      { onSuccess: () => navigate("/transactions") }
-    )
+    create.mutate(payload.right, { onSuccess: () => navigate("/transactions") })
   }
-
-  const walletOptions = wallets.map((w) => (
-    <option key={w.id} value={w.id}>
-      {w.name} · {w.currency}
-    </option>
-  ))
 
   return (
     <FormPage title="Add transaction" backTo="/transactions" submitLabel="Save exchange" onSubmit={submit} busy={create.isPending} error={error ?? create.error?.message ?? null}>
       {toggle("Expense")}
-      <Field label="From wallet" htmlFor="from">
-        <Select id="from" value={source} onChange={(e) => setSource(e.target.value as WalletId)}>
-          {walletOptions}
-        </Select>
-      </Field>
-      <Field label="To wallet" htmlFor="to">
-        <Select id="to" value={target} onChange={(e) => setTarget(e.target.value as WalletId)}>
-          {walletOptions}
-        </Select>
-      </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label={`Sent · ${from.currency}`} htmlFor="sent" hint={`Leaves ${from.name}`}>
-          <AmountInput id="sent" value={sent} onChange={setSent} sign="-" />
-        </Field>
-        <Field label={`Received · ${to.currency}`} htmlFor="received" hint={`Arrives in ${to.name}`}>
-          <AmountInput id="received" value={sameCurrency ? sent : received} onChange={setReceived} sign="+" disabled={sameCurrency} />
-        </Field>
-      </div>
-      <Field label="Date" htmlFor="date">
-        <DateInput id="date" value={date} onChange={setDate} />
-      </Field>
-      {sameCurrency ? null : (
-        <Notice accent="sky" label="Different currencies">
-          {implied ? (
-            <p className="font-mono">
-              Your amounts imply 1 {from.currency} = {implied} {to.currency}.
-            </p>
-          ) : null}
-          <p>The wallets record exactly what you enter.</p>
-        </Notice>
-      )}
+      <ExchangeFields draft={draft} onChange={setDraft} wallets={wallets} tagSuggestions={tagSuggestions} />
     </FormPage>
   )
 }

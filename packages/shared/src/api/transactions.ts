@@ -1,11 +1,12 @@
 import { HttpApiEndpoint, HttpApiError, HttpApiGroup, HttpApiSchema } from "@effect/platform"
 import { Schema } from "effect"
 import { CurrencyCode } from "../currency.js"
-import { CategoryId, LocalDate, MinorAmount, Tag, Transaction, TransactionId, WalletId } from "../domain.js"
+import { CategoryId, ExchangeId, LocalDate, MinorAmount, Tag, Transaction, TransactionId, WalletId } from "../domain.js"
 import { Authentication } from "./auth.js"
 import { RateUnavailable, RuleViolation } from "./errors.js"
 
 const TransactionPath = Schema.Struct({ id: TransactionId })
+const ExchangePath = Schema.Struct({ exchangeId: ExchangeId })
 
 /** Period bounds, inclusive. */
 export class Period extends Schema.Class<Period>("Period")({
@@ -38,9 +39,20 @@ export class CreateExchange extends Schema.Class<CreateExchange>("CreateExchange
   tags: Schema.optional(Schema.Array(Tag))
 }) {}
 
+/** An Exchange is edited as a whole: both legs are rewritten from the same fields that created it. */
+export class UpdateExchange extends Schema.Class<UpdateExchange>("UpdateExchange")({
+  sourceWalletId: WalletId,
+  sourceMinor: MinorAmount.pipe(Schema.positive()),
+  targetWalletId: WalletId,
+  targetMinor: MinorAmount.pipe(Schema.positive()),
+  occurredOn: LocalDate,
+  description: Schema.optional(Schema.String),
+  tags: Schema.optional(Schema.Array(Tag))
+}) {}
+
 /**
- * Fields a single edit may change. Transaction Type never changes. For an Exchange leg, amount
- * and Wallet apply to that leg only; date, description and tags apply to both legs.
+ * Fields a single edit may change. Transaction Type never changes. Exchange legs are refused here:
+ * an Exchange is edited as a whole through updateExchange.
  */
 export class UpdateTransaction extends Schema.Class<UpdateTransaction>("UpdateTransaction")({
   walletId: Schema.optional(WalletId),
@@ -91,6 +103,22 @@ export class TransactionsGroup extends HttpApiGroup.make("transactions")
     HttpApiEndpoint.post("createExchange", "/transactions/exchange")
       .setPayload(CreateExchange)
       .addSuccess(Schema.Array(Transaction), { status: 201 })
+      .addError(RuleViolation)
+      .addError(RateUnavailable)
+  )
+  .add(
+    HttpApiEndpoint.get("getExchange", "/transactions/exchange/:exchangeId")
+      .setPath(ExchangePath)
+      .addSuccess(Schema.Array(Transaction))
+      .addError(HttpApiError.NotFound)
+      .addError(RateUnavailable)
+  )
+  .add(
+    HttpApiEndpoint.patch("updateExchange", "/transactions/exchange/:exchangeId")
+      .setPath(ExchangePath)
+      .setPayload(UpdateExchange)
+      .addSuccess(Schema.Array(Transaction))
+      .addError(HttpApiError.NotFound)
       .addError(RuleViolation)
       .addError(RateUnavailable)
   )

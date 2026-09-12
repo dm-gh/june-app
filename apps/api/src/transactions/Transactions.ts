@@ -6,6 +6,7 @@ import {
   type CurrentUserShape,
   type ExchangeId,
   JuneApi,
+  type CreateExchange,
   RuleViolation,
   type Transaction,
   type WalletId
@@ -96,6 +97,25 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
         return wallet
       })
 
+    /** The rules both creating and editing an Exchange obey; resolves both Wallets. */
+    const checkExchange = (user: CurrentUserShape, payload: Pick<CreateExchange, "sourceWalletId" | "sourceMinor" | "targetWalletId" | "targetMinor">) =>
+      Effect.gen(function* () {
+        if (payload.sourceWalletId === payload.targetWalletId) {
+          return yield* violation("An Exchange needs two different Wallets")
+        }
+        const source = yield* requireWallet(user, payload.sourceWalletId)
+        const target = yield* requireWallet(user, payload.targetWalletId)
+        if (source.currency === target.currency && payload.sourceMinor !== payload.targetMinor) {
+          return yield* violation("Same-currency Exchange must move equal amounts")
+        }
+        return { source, target }
+      })
+
+    const findExchangeOrNotFound = (user: CurrentUserShape, exchangeId: ExchangeId) =>
+      repo.findByExchange(user.id, exchangeId).pipe(
+        Effect.flatMap((legs) => (legs.length === 0 ? new HttpApiError.NotFound() : Effect.succeed(legs)))
+      )
+
     const findOrNotFound = (user: CurrentUserShape, id: TransactionRow["id"]) =>
       repo.find(user.id, id).pipe(
         Effect.flatMap(Option.match({ onNone: () => new HttpApiError.NotFound(), onSome: Effect.succeed }))
@@ -139,14 +159,7 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
       .handle("createExchange", ({ payload }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
-          if (payload.sourceWalletId === payload.targetWalletId) {
-            return yield* violation("An Exchange needs two different Wallets")
-          }
-          const source = yield* requireWallet(user, payload.sourceWalletId)
-          const target = yield* requireWallet(user, payload.targetWalletId)
-          if (source.currency === target.currency && payload.sourceMinor !== payload.targetMinor) {
-            return yield* violation("Same-currency Exchange must move equal amounts")
-          }
+          const { source, target } = yield* checkExchange(user, payload)
           const exchangeId = randomUUID() as ExchangeId
           const leg = (wallet: WalletRow, amountMinor: number) => ({
             walletId: wallet.id,
@@ -165,6 +178,32 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
             repo.insert(user.id, leg(target, payload.targetMinor))
           ]).pipe(sql.withTransaction, Effect.orDie)
           return yield* present(user, rows)
+        })
+      )
+      .handle("getExchange", ({ path }) =>
+        Effect.gen(function* () {
+          const user = yield* CurrentUser
+          return yield* present(user, yield* findExchangeOrNotFound(user, path.exchangeId))
+        })
+      )
+      .handle("updateExchange", ({ path, payload }) =>
+        Effect.gen(function* () {
+          const user = yield* CurrentUser
+          const legs = yield* findExchangeOrNotFound(user, path.exchangeId)
+          const sourceLeg = legs.find((l) => l.amountMinor < 0)
+          const targetLeg = legs.find((l) => l.amountMinor > 0)
+          if (sourceLeg === undefined || targetLeg === undefined) return yield* new HttpApiError.NotFound()
+          const { source, target } = yield* checkExchange(user, payload)
+          yield* Effect.all([
+            repo.update(user.id, sourceLeg.id, { walletId: source.id, amountMinor: -payload.sourceMinor, currency: source.currency }),
+            repo.update(user.id, targetLeg.id, { walletId: target.id, amountMinor: payload.targetMinor, currency: target.currency }),
+            repo.updateExchange(user.id, path.exchangeId, {
+              occurredOn: payload.occurredOn,
+              description: payload.description ?? "",
+              tags: payload.tags ?? []
+            })
+          ]).pipe(sql.withTransaction, Effect.orDie)
+          return yield* present(user, yield* repo.findByExchange(user.id, path.exchangeId))
         })
       )
       .handle("update", ({ path, payload }) =>
@@ -189,21 +228,7 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
               break
             }
             case "exchange": {
-              if (payload.categoryId) return yield* violation("An Exchange has no Category")
-              if (next.amountMinor === 0) return yield* violation("Amount cannot be zero")
-              if (Math.sign(next.amountMinor) !== Math.sign(current.amountMinor)) {
-                return yield* violation("An Exchange leg keeps its direction")
-              }
-              if (next.walletId === null) return yield* violation("An Exchange leg needs a Wallet")
-              const wallet = yield* requireWallet(user, next.walletId)
-              if (wallet.currency !== next.currency) {
-                return yield* violation(`Wallet ${wallet.name} holds ${wallet.currency}, not ${next.currency}`)
-              }
-              const other = (yield* repo.findByExchange(user.id, current.exchangeId!)).find((l) => l.id !== current.id)
-              if (other !== undefined && other.walletId === wallet.id) {
-                return yield* violation("An Exchange needs two different Wallets")
-              }
-              break
+              return yield* violation("An Exchange is edited as a whole")
             }
           }
           const updated = yield* Effect.gen(function* () {
@@ -217,13 +242,6 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
               ...(payload.hiddenFromAnalysis !== undefined ? { hiddenFromAnalysis: payload.hiddenFromAnalysis } : {}),
               ...(payload.categoryId !== undefined ? { categoryId: payload.categoryId } : {})
             })
-            if (current.exchangeId !== null) {
-              yield* repo.updateExchange(user.id, current.exchangeId, {
-                ...(payload.occurredOn !== undefined ? { occurredOn: payload.occurredOn } : {}),
-                ...(payload.description !== undefined ? { description: payload.description } : {}),
-                ...(payload.tags !== undefined ? { tags: payload.tags } : {})
-              })
-            }
             return row
           }).pipe(sql.withTransaction, Effect.orDie)
           if (Option.isNone(updated)) return yield* new HttpApiError.NotFound()

@@ -155,3 +155,45 @@ it.scoped("deleting removes both legs of an Exchange and never an Init", () =>
     expect(same._tag).toBe("RuleViolation")
   })
 )
+
+it.scoped("an Exchange is edited as a whole, never leg by leg", () =>
+  Effect.gen(function* () {
+    const h = yield* makeHarness()
+    const card = yield* h.client.wallets.create({ payload: { name: "Card", currency: usd, initMinor: minor(1_000) } })
+    const cash = yield* h.client.wallets.create({ payload: { name: "Cash", currency: gel, initMinor: minor(0) } })
+    const legs = yield* h.client.transactions.createExchange({
+      payload: { sourceWalletId: card.id, sourceMinor: minor(100), targetWalletId: cash.id, targetMinor: minor(270), occurredOn: day("2026-09-05") }
+    })
+    const exchangeId = legs[0]!.exchangeId!
+
+    const legEdit = yield* h.client.transactions.update({ path: { id: legs[0]!.id }, payload: { amountMinor: minor(-50) } }).pipe(Effect.flip)
+    expect(legEdit._tag).toBe("RuleViolation")
+
+    // Reverse the direction: GEL leaves Cash, USD arrives on Card.
+    const updated = yield* h.client.transactions.updateExchange({
+      path: { exchangeId },
+      payload: { sourceWalletId: cash.id, sourceMinor: minor(540), targetWalletId: card.id, targetMinor: minor(200), occurredOn: day("2026-09-06"), tags: [tag("fx")] }
+    })
+    expect(updated.map((l) => [l.walletId, l.amountMinor, l.currency, l.occurredOn, l.tags])).toEqual([
+      [cash.id, -540, "GEL", "2026-09-06", ["fx"]],
+      [card.id, 200, "USD", "2026-09-06", ["fx"]]
+    ])
+    expect(updated.every((l) => l.exchangeId === exchangeId && l.id !== undefined)).toBe(true)
+    const fetched = yield* h.client.transactions.getExchange({ path: { exchangeId } })
+    expect(fetched.map((l) => l.id).sort()).toEqual(legs.map((l) => l.id).sort())
+
+    const wallets = yield* h.client.wallets.list()
+    expect(wallets.wallets.map((w) => [w.name, w.balanceMinor])).toEqual([
+      ["Card", 1_200],
+      ["Cash", -540]
+    ])
+
+    const same = yield* h.client.transactions
+      .updateExchange({
+        path: { exchangeId },
+        payload: { sourceWalletId: card.id, sourceMinor: minor(100), targetWalletId: card.id, targetMinor: minor(100), occurredOn: day("2026-09-05") }
+      })
+      .pipe(Effect.flip)
+    expect(same._tag).toBe("RuleViolation")
+  })
+)
