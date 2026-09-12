@@ -36,3 +36,7 @@ Extreme type only for headlines and calls to action; body stays conventional.
 ## Notes for June
 - Charts (Recharts, SVG) must follow the same grammar: black strokes, flat fills from the palette, no gradients, hard shadows on cards not on marks.
 - Uncategorised and Unassigned buckets render in a neutral grey outside the accent palette so they read as "not yet classified".
+
+## Icons
+
+Phosphor Icons, Bold weight, via `@phosphor-icons/react` in code and an `Icon` component set in Figma. 24px in a 44px ghost hit area for icon buttons, 20px inline next to text.

@@ -8,7 +8,7 @@ Design work lives in the author's personal Figma account, never the work account
   - Variables: Primitives (13 colours, hidden), Color (19 semantic aliases), Spacing (22 floats), Typography (10 strings). Every variable carries WEB code syntax matching the Tailwind theme.
   - Styles: 4 hard-shadow effect styles, 18 text styles mirroring the Typography/Button/Badge/Amount components.
   - Component sets: Badge (8), Button (48), Input (4), Select (4), Textarea (4), Field (3), Card (27), Amount (12).
-  - Screens page (added 2026-09-12): screen-level components Nav bar (3), Transaction row (Kind × Hidden, 4), Sign toggle (2), Checkbox (2), Icon button (Close, Menu, Back), Menu, Dialog, Hue slider, Top bar, plus the MVP screens as 390-wide phone frames: Sign in, Transactions (plus Selecting, Selecting · Menu, Selecting · Delete), Bulk edit, Transaction (plus · Menu, · Delete), Edit transaction, Add transaction (Expense and Income states), Add exchange, Analysis, Settings, Add wallet, Add category.
+  - Screens page (added 2026-09-12): screen-level components Nav bar (3), Transaction row (Kind × Hidden, 4), Sign toggle (2), Checkbox (2), Icon (9 Phosphor Bold glyphs), Icon button (Close, Menu, Back), Menu, Dialog, Hue slider, Top bar, Period sheet, plus the MVP screens as 390-wide phone frames: Sign in, Transactions (plus Selecting, Selecting · Menu, Selecting · Delete, Period), Bulk edit, Transaction (plus · Menu, · Delete), Edit transaction, Add transaction (Expense and Income states), Add exchange, Analysis, Settings, Add wallet, Add category.
   - Badge has a Size axis (MD 28px, SM 20px); SM is the corner tag on transaction cards. Effect styles Shadow/Hard SM Coral and Shadow/Hard SM Green colour the amount field by sign.
   - Phone screen titles use the text style Display/SM (Syne ExtraBold 24px, uppercase like all Display styles); the code equivalent is `font-display text-3xl` and should be added to the Display component as a size prop when screens are implemented.
 
@@ -30,10 +30,12 @@ Design work lives in the author's personal Figma account, never the work account
 - Analysis stacks: Spent (coral) / Income (green) cards, By category bars, Over time monthly bars (current month yellow), Wallet balances with an approximate total in Default Currency.
 - Settings: ordered Wallets with drag handles (order drives Shortcut capture), Categories as two lists, Expense and Income, each row with emoji, name, slug and colour, Default currency select, Shortcut card with masked Capture Token, Regenerate (danger) and Download Shortcut, sign out.
 - Sign in: Google button, or email magic link; invite-only note.
-- Selection mode: long-pressing a card shows a Checkbox at the top-left of every card and swaps the header for a Top bar with a Close icon button on the left, "N selected" in the middle and a Menu icon button on the right. The Menu offers "Edit N items" and "Delete N items" (coral). The tab bar stays.
+- Period: on Transactions and Analysis the month label carries a calendar icon and opens the Period sheet from the bottom over a scrim: month shortcut chips (last six months), From and To date fields, a Monday-first calendar with the selected range in yellow and the two ends bordered with a hard shadow, and a full-width Apply. The chevrons beside the label step the current period by its own length.
+- Icons come from Phosphor (Bold weight), mirrored in code by @phosphor-icons/react. Icon buttons are ghost: no fill, border or shadow, just the 24px glyph in a 44px hit area.
+- Selection mode: long-pressing a card shows a Checkbox flush in the top-left corner of every card (28px, yellow with an ink check when on, hard shadow, per neubrutalism.com) and swaps the header for a Top bar with a ghost Close icon button on the left, "N selected" in the middle and a ghost Menu icon button on the right. The Menu offers "Edit N items" (pencil) and "Delete N items" (trash, coral). The tab bar stays.
 - Bulk edit: a form with only Wallet, Category and Tags; each control defaults to "Keep as is" so an untouched field leaves every selected item unchanged.
-- Transaction view: Top bar with Back on the left and Menu on the right (Edit, Delete in coral). Amount, category tag, description and then every field read-only as label / value rows, including Hide from analysis.
-- Edit transaction: same form as Add transaction with the current values filled in, titled EDIT TRANSACTION, Save changes.
+- Transaction view is the Edit transaction form with every control in its Disabled (read-only) state and no action bar. Header: ghost Back icon on the left, ghost Menu icon on the right (Edit with pencil, Delete with trash in coral).
+- Edit transaction: same form as Add transaction with the current values filled in, titled EDIT TRANSACTION, ghost Back icon in the header, Save changes.
 - Every Delete, single or bulk, opens the Dialog over a 50% ink scrim: Cancel (ghost) or Delete (coral Danger button).
 
 ## Constraints

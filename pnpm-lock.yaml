@@ -48,6 +48,9 @@ importers:
       '@june/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@phosphor-icons/react':
+        specifier: ^2.1.10
+        version: 2.1.10(react-dom@19.3.0)(react@19.3.0)
       effect:
         specifier: 3.22.2
         version: 3.22.2
@@ -61,6 +64,9 @@ importers:
         specifier: 3.10.1
         version: 3.10.1(@types/react@19.3.0)(react-dom@19.3.0)(react-is@19.3.0)(react@19.3.0)(redux@5.0.1)
     devDependencies:
+      '@phosphor-icons/core':
+        specifier: ^2.1.1
+        version: 2.1.1
       '@tailwindcss/vite':
         specifier: 4.3.3
         version: 4.3.3(vite@8.3.0)
@@ -1798,6 +1804,21 @@ packages:
       '@parcel/watcher-linux-x64-musl': 2.6.0
       '@parcel/watcher-win32-arm64': 2.6.0
       '@parcel/watcher-win32-x64': 2.6.0
+    dev: false
+
+  /@phosphor-icons/core@2.1.1:
+    resolution: {integrity: sha512-v4ARvrip4qBCImOE5rmPUylOEK4iiED9ZyKjcvzuezqMaiRASCHKcRIuvvxL/twvLpkfnEODCOJp5dM4eZilxQ==}
+    dev: true
+
+  /@phosphor-icons/react@2.1.10(react-dom@19.3.0)(react@19.3.0):
+    resolution: {integrity: sha512-vt8Tvq8GLjheAZZYa+YG/pW7HDbov8El/MANW8pOAz4eGxrwhnbfrQZq0Cp4q8zBEu8NIhHdnr+r8thnfRSNYA==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      react: '>= 16.8'
+      react-dom: '>= 16.8'
+    dependencies:
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
     dev: false
 
   /@reduxjs/toolkit@2.12.0(react-redux@9.3.0)(react@19.3.0):

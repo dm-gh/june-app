@@ -24,6 +24,7 @@ Personal finance tracker. Built by one developer for themself, with sign-in for 
 3. Wallet Balances, plus total in Default Currency.
 4. Single Category over time.
 Plus a filterable Transaction list. All amounts shown in Default Currency.
+- Period: both the Transactions list and Analysis run over one selected period. Tapping the period label opens a picker with From and To dates and single-month shortcuts; the chevrons step the period by its own length.
 
 ## Settings
 Wallets (create, reorder, Init balance), Categories (type, name, slug, emoji, hue), Default Currency, Capture Token (regenerate), Shortcut generation and download.
