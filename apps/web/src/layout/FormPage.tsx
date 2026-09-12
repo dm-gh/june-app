@@ -5,10 +5,10 @@ import { Button, Display, ErrorNotice, IconButton, Menu, type MenuItem } from ".
 import { AppShell } from "./AppShell"
 
 export interface FormPageProps {
-  title: string
+  title: ReactNode
   /** Where Back goes; defaults to history back. */
   backTo?: string
-  menu?: ReadonlyArray<MenuItem>
+  menu?: ReadonlyArray<MenuItem> | undefined
   /** Omit for read-only pages: no action bar. */
   submitLabel?: string
   onSubmit?: () => void

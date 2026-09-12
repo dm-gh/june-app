@@ -1,11 +1,16 @@
 import { type CategoryId, type CategoryType, type Hue, type Slug, slugify } from "@june/shared"
 import { Trash } from "@phosphor-icons/react"
-import { useEffect, useState } from "react"
+import { lazy, Suspense, useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { hueColor } from "../../lib/format"
-import { Badge, Dialog, Field, HueSlider, Input, Loading, Segmented } from "../../ui"
+import { Dialog, Field, HueSlider, Input, Loading, Segmented, Sheet } from "../../ui"
+import { FitText } from "../../ui/FitText"
+
+const EmojiPicker = lazy(() => import("emoji-picker-react"))
+
+const NAME_MAX = 50
 
 interface Draft {
   type: CategoryType
@@ -14,11 +19,33 @@ interface Draft {
   hue: number
 }
 
+const segmenter = new Intl.Segmenter()
+/** Exactly one grapheme, and a pictographic one: "🚌" yes, "ab" or "🚌🚌" no. */
+const isSingleEmoji = (s: string): boolean => [...segmenter.segment(s)].length === 1 && /\p{Extended_Pictographic}/u.test(s)
+
+/** The title doubles as the preview: "ADD 🚌 TRANSPORT" with the name on the category's colour. */
+function TitlePreview({ verb, draft }: { verb: "Add" | "Edit"; draft: Draft }) {
+  const name = draft.name.trim()
+  return (
+    <FitText max={30} min={16} maxLines={2}>
+      {verb}{" "}
+      {name ? (
+        <span className="px-1" style={{ background: hueColor(draft.hue), boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone" }}>
+          {draft.emoji ? `${draft.emoji} ` : ""}
+          {name}
+        </span>
+      ) : (
+        "category"
+      )}
+    </FitText>
+  )
+}
+
 function CategoryFields({ draft, onChange, slug, typeLocked }: { draft: Draft; onChange: (d: Draft) => void; slug: string; typeLocked: boolean }) {
-  const label = `${draft.emoji ? `${draft.emoji} ` : ""}${draft.name || "Category"}`
+  const [picking, setPicking] = useState(false)
   return (
     <>
-      <Field label="Type" hint={typeLocked ? "Fixed once the category exists" : undefined}>
+      <Field label="Type">
         <Segmented<CategoryType>
           options={[{ value: "expense", label: "Expense" }, { value: "income", label: "Income" }]}
           value={draft.type}
@@ -28,10 +55,18 @@ function CategoryFields({ draft, onChange, slug, typeLocked }: { draft: Draft; o
       </Field>
       <div className="grid grid-cols-[4rem_1fr] gap-3">
         <Field label="Emoji" htmlFor="emoji">
-          <Input id="emoji" value={draft.emoji} maxLength={4} onChange={(e) => onChange({ ...draft, emoji: e.target.value })} className="px-0 text-center text-xl" />
+          <button
+            id="emoji"
+            type="button"
+            aria-label={draft.emoji ? `Emoji ${draft.emoji}, tap to change` : "Pick an emoji"}
+            onClick={() => setPicking(true)}
+            className="h-11 w-full border-3 border-ink bg-white text-2xl leading-none shadow-hard-sm lift"
+          >
+            {draft.emoji || <span className="text-base text-grey-ink">?</span>}
+          </button>
         </Field>
-        <Field label="Name" htmlFor="name">
-          <Input id="name" value={draft.name} onChange={(e) => onChange({ ...draft, name: e.target.value })} placeholder="Transport" autoFocus />
+        <Field label="Name" htmlFor="name" hint={draft.name.length >= NAME_MAX ? `${NAME_MAX} characters at most` : undefined}>
+          <Input id="name" value={draft.name} maxLength={NAME_MAX} onChange={(e) => onChange({ ...draft, name: e.target.value })} placeholder="Transport" autoFocus />
         </Field>
       </div>
       <Field label="Slug" htmlFor="slug">
@@ -40,15 +75,23 @@ function CategoryFields({ draft, onChange, slug, typeLocked }: { draft: Draft; o
       <Field label="Colour" htmlFor="hue">
         <HueSlider id="hue" value={draft.hue} onChange={(hue) => onChange({ ...draft, hue })} />
       </Field>
-      <Field label="Preview">
-        <div className="flex items-center gap-3">
-          <Badge style={{ background: hueColor(draft.hue) }}>{label}</Badge>
-          <Badge className="h-5 px-1.5 text-[10px]" style={{ background: hueColor(draft.hue) }}>
-            {label}
-          </Badge>
-          <span className="font-mono text-xs text-grey-ink">list · card tag</span>
-        </div>
-      </Field>
+      <Sheet open={picking} title="Emoji" onClose={() => setPicking(false)}>
+        {picking ? (
+          <Suspense fallback={<Loading />}>
+            <EmojiPicker
+              width="100%"
+              height={420}
+              emojiStyle={"native" as never}
+              previewConfig={{ showPreview: false }}
+              skinTonesDisabled
+              onEmojiClick={(e) => {
+                if (isSingleEmoji(e.emoji)) onChange({ ...draft, emoji: e.emoji })
+                setPicking(false)
+              }}
+            />
+          </Suspense>
+        ) : null}
+      </Sheet>
     </>
   )
 }
@@ -60,11 +103,19 @@ export function AddCategoryPage() {
   const slug = slugify(draft.name)
   const submit = () =>
     create.mutate(
-      { type: draft.type, name: draft.name.trim(), emoji: draft.emoji.trim() || null, hue: draft.hue as Hue },
+      { type: draft.type, name: draft.name.trim(), emoji: draft.emoji || null, hue: draft.hue as Hue },
       { onSuccess: () => navigate("/settings") }
     )
   return (
-    <FormPage title="Add category" backTo="/settings" submitLabel="Create category" onSubmit={submit} busy={create.isPending} canSubmit={slug.length > 0} error={create.error?.message ?? null}>
+    <FormPage
+      title={<TitlePreview verb="Add" draft={draft} />}
+      backTo="/settings"
+      submitLabel="Create category"
+      onSubmit={submit}
+      busy={create.isPending}
+      canSubmit={slug.length > 0}
+      error={create.error?.message ?? null}
+    >
       <CategoryFields draft={draft} onChange={setDraft} slug={slug} typeLocked={false} />
     </FormPage>
   )
@@ -95,13 +146,13 @@ export function EditCategoryPage() {
     update.mutate(
       {
         id: category.id as CategoryId,
-        payload: { name: draft.name.trim(), emoji: draft.emoji.trim() || null, hue: draft.hue as Hue, slug: category.slug as Slug }
+        payload: { name: draft.name.trim(), emoji: draft.emoji || null, hue: draft.hue as Hue, slug: category.slug as Slug }
       },
       { onSuccess: () => navigate("/settings") }
     )
   return (
     <FormPage
-      title="Edit category"
+      title={<TitlePreview verb="Edit" draft={draft} />}
       backTo="/settings"
       submitLabel="Save category"
       onSubmit={submit}

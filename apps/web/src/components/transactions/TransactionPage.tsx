@@ -1,5 +1,5 @@
 import { type CategoryId, type LocalDate, type MinorAmount, toMinor, type TransactionId, type WalletId } from "@june/shared"
-import { PencilSimple, Trash } from "@phosphor-icons/react"
+import { Trash } from "@phosphor-icons/react"
 import { Either } from "effect"
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router"
@@ -8,68 +8,9 @@ import { FormPage } from "../../layout/FormPage"
 import { Dialog, ErrorNotice, Loading } from "../../ui"
 import { type ChangeDraft, draftFromTransaction, TransactionForm } from "./TransactionForm"
 
-const titles = { change: "Transaction", init: "Opening balance", exchange: "Exchange" } as const
+const titles = { change: "Edit transaction", init: "Edit opening balance", exchange: "Edit exchange" } as const
 
-/** Read-only view: the edit form with every control disabled, Edit and Delete behind the menu. */
-export function TransactionPage() {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const transaction = useTransaction(id as TransactionId)
-  const wallets = useWallets()
-  const categories = useCategories()
-  const remove = useDeleteTransactions()
-  const [confirm, setConfirm] = useState(false)
-
-  if (transaction.isPending || wallets.isPending || categories.isPending) {
-    return (
-      <FormPage title="Transaction" backTo="/transactions">
-        <Loading />
-      </FormPage>
-    )
-  }
-  if (transaction.isError) {
-    return (
-      <FormPage title="Transaction" backTo="/transactions">
-        <ErrorNotice message={transaction.error.message} />
-      </FormPage>
-    )
-  }
-  const t = transaction.data
-  const canDelete = t.type !== "init"
-  return (
-    <FormPage
-      title={titles[t.type]}
-      backTo="/transactions"
-      menu={[
-        { label: "Edit", icon: PencilSimple, onSelect: () => navigate(`/transactions/${t.id}/edit`) },
-        ...(canDelete ? [{ label: "Delete", icon: Trash, danger: true, onSelect: () => setConfirm(true) }] : [])
-      ]}
-    >
-      <TransactionForm
-        draft={draftFromTransaction(t)}
-        onChange={() => {}}
-        wallets={wallets.data?.wallets ?? []}
-        categories={categories.data ?? []}
-        tagSuggestions={[]}
-        mode="view"
-        transactionType={t.type}
-      />
-      {remove.isError ? <ErrorNotice message={remove.error.message} /> : null}
-      <Dialog
-        open={confirm}
-        title={t.type === "exchange" ? "Delete this exchange?" : "Delete this transaction?"}
-        body={t.type === "exchange" ? "Both legs go, and both Wallets' Balances move back." : "It is removed for good and the Wallet's Balance moves accordingly."}
-        confirmLabel="Delete"
-        danger
-        busy={remove.isPending}
-        onConfirm={() => remove.mutate([t.id], { onSuccess: () => navigate("/transactions") })}
-        onCancel={() => setConfirm(false)}
-      />
-    </FormPage>
-  )
-}
-
-/** Edit: the same form with the current values; the Transaction Type is fixed. */
+/** A Transaction opens straight into its edit form; Delete sits behind the options menu. The Transaction Type is fixed. */
 export function EditTransactionPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -78,8 +19,10 @@ export function EditTransactionPage() {
   const categories = useCategories()
   const tags = useTags()
   const update = useUpdateTransaction()
+  const remove = useDeleteTransactions()
   const [draft, setDraft] = useState<ChangeDraft | null>(null)
   const [errors, setErrors] = useState<{ amount?: string; wallet?: string }>({})
+  const [confirm, setConfirm] = useState(false)
 
   useEffect(() => {
     if (transaction.data && draft === null) setDraft(draftFromTransaction(transaction.data))
@@ -117,12 +60,21 @@ export function EditTransactionPage() {
           hiddenFromAnalysis: draft.hidden
         }
       },
-      { onSuccess: () => navigate(`/transactions/${t.id}`) }
+      { onSuccess: () => navigate("/transactions") }
     )
   }
 
+  const canDelete = t.type !== "init"
   return (
-    <FormPage title={`Edit ${titles[t.type].toLowerCase()}`} submitLabel="Save changes" onSubmit={submit} busy={update.isPending} error={update.error?.message ?? null}>
+    <FormPage
+      title={titles[t.type]}
+      backTo="/transactions"
+      submitLabel="Save changes"
+      onSubmit={submit}
+      busy={update.isPending}
+      error={update.error?.message ?? remove.error?.message ?? null}
+      menu={canDelete ? [{ label: "Delete", icon: Trash, danger: true, onSelect: () => setConfirm(true) }] : undefined}
+    >
       <TransactionForm
         draft={draft}
         onChange={setDraft}
@@ -132,6 +84,16 @@ export function EditTransactionPage() {
         mode="edit"
         transactionType={t.type}
         errors={errors}
+      />
+      <Dialog
+        open={confirm}
+        title={t.type === "exchange" ? "Delete this exchange?" : "Delete this transaction?"}
+        body={t.type === "exchange" ? "Both legs go, and both Wallets' Balances move back." : "It is removed for good and the Wallet's Balance moves accordingly."}
+        confirmLabel="Delete"
+        danger
+        busy={remove.isPending}
+        onConfirm={() => remove.mutate([t.id], { onSuccess: () => navigate("/transactions") })}
+        onCancel={() => setConfirm(false)}
       />
     </FormPage>
   )

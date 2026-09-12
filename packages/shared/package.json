@@ -20,5 +20,8 @@
     "@effect/platform": "0.97.2",
     "effect": "3.22.2",
     "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "slugify": "^1.6.9"
   }
 }

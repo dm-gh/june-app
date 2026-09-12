@@ -6,9 +6,12 @@ import { RuleViolation } from "./errors.js"
 
 const CategoryPath = Schema.Struct({ id: CategoryId })
 
+/** A Category name is at most 50 characters. */
+export const CategoryName = Schema.NonEmptyTrimmedString.pipe(Schema.maxLength(50))
+
 export class CreateCategory extends Schema.Class<CreateCategory>("CreateCategory")({
   type: CategoryType,
-  name: Schema.NonEmptyTrimmedString,
+  name: CategoryName,
   /** Defaults to a slug generated from the name. */
   slug: Schema.optional(Slug),
   emoji: Schema.optional(Schema.NullOr(Schema.String)),
@@ -17,7 +20,7 @@ export class CreateCategory extends Schema.Class<CreateCategory>("CreateCategory
 
 /** Category Type is fixed: changing it would orphan every Transaction of the other sign. */
 export class UpdateCategory extends Schema.Class<UpdateCategory>("UpdateCategory")({
-  name: Schema.optional(Schema.NonEmptyTrimmedString),
+  name: Schema.optional(CategoryName),
   slug: Schema.optional(Slug),
   emoji: Schema.optional(Schema.NullOr(Schema.String)),
   hue: Schema.optional(Hue)

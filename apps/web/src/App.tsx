@@ -7,7 +7,7 @@ import { SettingsPage } from "./components/settings/SettingsPage"
 import { AddWalletPage, EditWalletPage } from "./components/settings/WalletFormPage"
 import { AddTransactionPage } from "./components/transactions/AddTransactionPage"
 import { BulkEditPage } from "./components/transactions/BulkEditPage"
-import { EditTransactionPage, TransactionPage } from "./components/transactions/TransactionPage"
+import { EditTransactionPage } from "./components/transactions/TransactionPage"
 import { TransactionsPage } from "./components/transactions/TransactionsPage"
 import { monthPeriod, type Period, PeriodContext, todayLocal } from "./lib/period"
 import { DesignShowcase } from "./pages/DesignShowcase"
@@ -57,8 +57,7 @@ export function App() {
                   <Route path="transactions" element={<TransactionsPage />} />
                   <Route path="transactions/new" element={<AddTransactionPage />} />
                   <Route path="transactions/bulk-edit" element={<BulkEditPage />} />
-                  <Route path="transactions/:id" element={<TransactionPage />} />
-                  <Route path="transactions/:id/edit" element={<EditTransactionPage />} />
+                  <Route path="transactions/:id" element={<EditTransactionPage />} />
                   <Route path="analysis" element={<AnalysisPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="settings/wallets/new" element={<AddWalletPage />} />

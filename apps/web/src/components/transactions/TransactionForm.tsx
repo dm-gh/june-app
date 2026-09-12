@@ -33,16 +33,17 @@ export interface TransactionFormProps {
   wallets: ReadonlyArray<Wallet>
   categories: ReadonlyArray<Category>
   tagSuggestions: ReadonlyArray<string>
-  /** view: everything disabled. Exchange legs and Inits lock sign and category. */
-  mode: "add" | "edit" | "view"
+  /** On add the type tabs choose expense or income, so the sign is display-only; on edit the sign itself toggles. */
+  mode: "add" | "edit"
   transactionType?: Transaction["type"]
   errors?: Partial<Record<"amount" | "wallet", string>>
 }
 
 /** The shared body of Add transaction, Edit transaction and the read-only Transaction view. */
 export function TransactionForm({ draft, onChange, wallets, categories, tagSuggestions, mode, transactionType = "change", errors }: TransactionFormProps) {
-  const disabled = mode === "view"
+  const disabled = false
   const isChange = transactionType === "change"
+  const signToggles = mode === "edit" && isChange
   const set = <K extends keyof ChangeDraft>(key: K, value: ChangeDraft[K]) => onChange({ ...draft, [key]: value })
 
   // Only currencies a Wallet holds can be chosen: a Transaction entered by hand always has a Wallet.
@@ -56,13 +57,13 @@ export function TransactionForm({ draft, onChange, wallets, categories, tagSugge
 
   return (
     <>
-      <Field label="Amount" htmlFor="amount" error={errors?.amount} hint={mode === "view" ? undefined : isChange ? "Tap the sign to switch between expense and income" : undefined}>
+      <Field label="Amount" htmlFor="amount" error={errors?.amount} hint={signToggles ? "Tap the sign to switch between expense and income" : undefined}>
         <AmountInput
           id="amount"
           value={draft.amount}
           onChange={(amount) => set("amount", amount)}
           sign={draft.sign}
-          onSignChange={isChange && !disabled ? (sign) => onChange({ ...draft, sign, categoryId: "" }) : undefined}
+          onSignChange={signToggles ? (sign) => onChange({ ...draft, sign, categoryId: "" }) : undefined}
           disabled={disabled}
           invalid={errors?.amount !== undefined}
         />
@@ -120,7 +121,7 @@ export function TransactionForm({ draft, onChange, wallets, categories, tagSugge
       <Field label="Description" htmlFor="description">
         <Input id="description" value={draft.description} disabled={disabled} onChange={(e) => set("description", e.target.value)} placeholder="What was it?" />
       </Field>
-      <Field label="Tags" htmlFor="tags" hint={disabled ? undefined : "Space-separated, e.g. vacation-2026"}>
+      <Field label="Tags" htmlFor="tags" hint="Space-separated, e.g. vacation-2026">
         <TagInput id="tags" value={draft.tags} onChange={(tags) => set("tags", tags)} suggestions={tagSuggestions} disabled={disabled} />
       </Field>
       {isChange ? (

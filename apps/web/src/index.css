@@ -56,18 +56,30 @@
   }
 }
 
-/* The Neubrutalist "lift on hover, press on click" gesture, shared by every interactive surface. */
+/*
+ * The Neubrutalist "lift on hover, press on click" gesture, shared by every interactive surface.
+ * On hover the element rises 2px up-left while its shadow stays where it was, so the shadow
+ * grows by 2px; each shadow size declares the grown shadow it lifts to. On press the element
+ * drops onto its shadow.
+ */
 @utility lift {
   transition:
     transform 80ms ease-out,
     box-shadow 80ms ease-out;
   &:hover:not(:disabled) {
     transform: translate(-2px, -2px);
+    box-shadow: var(--lift-shadow, 7px 7px 0 0 #000);
   }
   &:active:not(:disabled) {
     transform: translate(3px, 3px);
     box-shadow: var(--shadow-none);
   }
+}
+@layer utilities {
+  .shadow-hard-sm { --lift-shadow: 5px 5px 0 0 #000; }
+  .shadow-hard { --lift-shadow: 7px 7px 0 0 #000; }
+  .shadow-hard-lg { --lift-shadow: 10px 10px 0 0 #000; }
+  .shadow-hard-xl { --lift-shadow: 14px 14px 0 0 #000; }
 }
 
 /* Hue slider: the track is painted by a sibling, the thumb is a bordered square in the chosen colour. */

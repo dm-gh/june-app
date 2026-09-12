@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import slugifyLib from "slugify"
 import { CurrencyCode } from "./currency.js"
 
 /** Domain schemas shared by api and web. Terminology follows CONTEXT.md. */
@@ -66,13 +67,8 @@ export const Slug = Schema.String.pipe(
 )
 export type Slug = typeof Slug.Type
 
-export const slugify = (name: string): string =>
-  name
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+/** Slug from a name, transliterating non-Latin scripts: "Продукты" → "produkty", "Café" → "cafe". */
+export const slugify = (name: string): string => slugifyLib(name, { lower: true, strict: true, trim: true })
 
 export class Wallet extends Schema.Class<Wallet>("Wallet")({
   id: WalletId,

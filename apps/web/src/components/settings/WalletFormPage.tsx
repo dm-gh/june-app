@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCreateWallet, useDeleteWallet, useMe, useUpdateWallet, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
-import { Dialog, Field, Input, Loading, Notice, Select } from "../../ui"
+import { Dialog, Field, Input, Loading, Select } from "../../ui"
 
 const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" })
 
@@ -42,21 +42,17 @@ export function AddWalletPage() {
 
   return (
     <FormPage title="Add wallet" backTo="/settings" submitLabel="Create wallet" onSubmit={submit} busy={create.isPending} error={error ?? create.error?.message ?? null}>
-      <Field label="Name" htmlFor="name" hint="How it shows up in lists and the Shortcut">
+      <Field label="Name" htmlFor="name">
         <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Cash" autoFocus />
       </Field>
-      <Field label="Currency" htmlFor="currency" hint="A wallet holds exactly one currency">
+      <Field label="Currency" htmlFor="currency">
         <Select id="currency" value={effectiveCurrency} onChange={(e) => setCurrency(e.target.value)}>
           <CurrencyOptions />
         </Select>
       </Field>
-      <Field label="Opening balance" htmlFor="opening" hint="Recorded as an Init transaction. Never shown in analysis.">
+      <Field label="Opening balance" htmlFor="opening">
         <Input id="opening" inputMode="decimal" value={opening} onChange={(e) => setOpening(e.target.value.replace(",", "."))} className="font-mono font-bold" />
       </Field>
-      <Notice label="Wallet order">
-        New wallets go last. Shortcut captures land in the first wallet whose currency matches, so drag it up in Settings if this should win for{" "}
-        {effectiveCurrency}.
-      </Notice>
     </FormPage>
   )
 }

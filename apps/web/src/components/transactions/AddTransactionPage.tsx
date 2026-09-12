@@ -8,12 +8,13 @@ import { todayLocal } from "../../lib/period"
 import { AmountInput, Field, Input, Loading, Notice, Segmented, Select, Text } from "../../ui"
 import { type ChangeDraft, TransactionForm } from "./TransactionForm"
 
-type Kind = "change" | "exchange"
+type Kind = "expense" | "income" | "exchange"
 
 /** Add transaction: a Change (Expense or Income by sign) or, via the type toggle, an Exchange. */
 export function AddTransactionPage() {
   const [params, setParams] = useSearchParams()
-  const kind: Kind = params.get("type") === "exchange" ? "exchange" : "change"
+  const raw = params.get("type")
+  const kind: Kind = raw === "exchange" || raw === "income" ? raw : "expense"
   const wallets = useWallets()
   const categories = useCategories()
   const tags = useTags()
@@ -39,28 +40,28 @@ export function AddTransactionPage() {
   const toggle = (
     <Field label="Type">
       <Segmented<Kind>
-        options={[{ value: "change", label: "Expense" }, { value: "exchange", label: "Exchange" }]}
+        options={[{ value: "expense", label: "Expense" }, { value: "income", label: "Income" }, { value: "exchange", label: "Exchange" }]}
         value={kind}
-        onChange={(k) => setParams(k === "exchange" ? { type: "exchange" } : {})}
+        onChange={(k) => setParams(k === "expense" ? {} : { type: k }, { replace: true })}
       />
     </Field>
   )
   return kind === "exchange" ? (
     <ExchangeForm wallets={walletList} tagSuggestions={tags.data ?? []} toggle={toggle} />
   ) : (
-    <ChangeForm wallets={walletList} categories={categories.data ?? []} tagSuggestions={tags.data ?? []} toggle={toggle} />
+    <ChangeForm key={kind} sign={kind === "income" ? "+" : "-"} wallets={walletList} categories={categories.data ?? []} tagSuggestions={tags.data ?? []} toggle={toggle} />
   )
 }
 
 type Wallets = NonNullable<ReturnType<typeof useWallets>["data"]>["wallets"]
 type Categories = NonNullable<ReturnType<typeof useCategories>["data"]>
 
-function ChangeForm({ wallets, categories, tagSuggestions, toggle }: { wallets: Wallets; categories: Categories; tagSuggestions: ReadonlyArray<string>; toggle: React.ReactNode }) {
+function ChangeForm({ sign, wallets, categories, tagSuggestions, toggle }: { sign: "-" | "+"; wallets: Wallets; categories: Categories; tagSuggestions: ReadonlyArray<string>; toggle: React.ReactNode }) {
   const navigate = useNavigate()
   const create = useCreateChange()
   const first = wallets[0]!
   const [draft, setDraft] = useState<ChangeDraft>({
-    sign: "-",
+    sign,
     amount: "",
     currency: first.currency,
     walletId: first.id,
@@ -96,9 +97,8 @@ function ChangeForm({ wallets, categories, tagSuggestions, toggle }: { wallets: 
     )
   }
 
-  const title = draft.sign === "-" ? "Add transaction" : "Add income"
   return (
-    <FormPage title={title} backTo="/transactions" submitLabel="Save transaction" onSubmit={submit} busy={create.isPending} error={create.error?.message ?? null}>
+    <FormPage title="Add transaction" backTo="/transactions" submitLabel="Save transaction" onSubmit={submit} busy={create.isPending} error={create.error?.message ?? null}>
       {toggle}
       <TransactionForm draft={draft} onChange={setDraft} wallets={wallets} categories={categories} tagSuggestions={tagSuggestions} mode="add" errors={errors} />
     </FormPage>
@@ -151,7 +151,7 @@ function ExchangeForm({ wallets, tagSuggestions, toggle }: { wallets: Wallets; t
   ))
 
   return (
-    <FormPage title="Add exchange" backTo="/transactions" submitLabel="Save exchange" onSubmit={submit} busy={create.isPending} error={error ?? create.error?.message ?? null}>
+    <FormPage title="Add transaction" backTo="/transactions" submitLabel="Save exchange" onSubmit={submit} busy={create.isPending} error={error ?? create.error?.message ?? null}>
       {toggle}
       <Field label="From wallet" htmlFor="from">
         <Select id="from" value={source} onChange={(e) => setSource(e.target.value as WalletId)}>
