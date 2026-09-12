@@ -33,7 +33,6 @@ export interface TransactionFormProps {
   wallets: ReadonlyArray<Wallet>
   categories: ReadonlyArray<Category>
   tagSuggestions: ReadonlyArray<string>
-  /** On add the type tabs choose expense or income, so the sign is display-only; on edit the sign itself toggles. */
   mode: "add" | "edit"
   transactionType?: Transaction["type"]
   errors?: Partial<Record<"amount" | "wallet", string>>
@@ -43,7 +42,7 @@ export interface TransactionFormProps {
 export function TransactionForm({ draft, onChange, wallets, categories, tagSuggestions, mode, transactionType = "change", errors }: TransactionFormProps) {
   const disabled = false
   const isChange = transactionType === "change"
-  const signToggles = mode === "edit" && isChange
+  const signToggles = isChange
   const set = <K extends keyof ChangeDraft>(key: K, value: ChangeDraft[K]) => onChange({ ...draft, [key]: value })
 
   // Only currencies a Wallet holds can be chosen: a Transaction entered by hand always has a Wallet.

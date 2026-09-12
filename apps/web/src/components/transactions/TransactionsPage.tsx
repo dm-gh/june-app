@@ -2,12 +2,12 @@ import type { LocalDate, Transaction, TransactionId } from "@june/shared"
 import { PencilSimple, Trash, X } from "@phosphor-icons/react"
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router"
-import { useCategories, useDeleteTransactions, useMe, useTransactions } from "../../api/queries"
+import { useCategories, useDeleteTransactions, useTransactions } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { PeriodHeader } from "../../layout/PeriodHeader"
-import { dayHeading, signedMoney } from "../../lib/format"
+import { dayHeading } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
-import { Card, Dialog, Empty, ErrorNotice, IconButton, Label, Loading, Menu } from "../../ui"
+import { Dialog, Empty, ErrorNotice, IconButton, Label, Loading, Menu } from "../../ui"
 import { TransactionCard } from "./TransactionCard"
 
 /** Spent in the period: negative Changes, in Default Currency, skipping Hidden rows and rows with no rate. */
@@ -30,7 +30,6 @@ const groupByDay = (rows: ReadonlyArray<Transaction>): Array<[LocalDate, Array<T
 export function TransactionsPage() {
   const navigate = useNavigate()
   const { period } = usePeriod()
-  const me = useMe()
   const transactions = useTransactions(period)
   const categories = useCategories()
   const remove = useDeleteTransactions()
@@ -40,7 +39,6 @@ export function TransactionsPage() {
 
   const categoryById = useMemo(() => new Map((categories.data ?? []).map((c) => [c.id, c])), [categories.data])
   const groups = useMemo(() => groupByDay(transactions.data ?? []), [transactions.data])
-  const defaultCurrency = me.data?.defaultCurrency ?? "USD"
 
   const toggle = (id: TransactionId) =>
     setSelected((s) => {
@@ -81,15 +79,7 @@ export function TransactionsPage() {
           />
         </header>
       ) : (
-        <>
-          <PeriodHeader title="Transactions" />
-          <Card accent="accent" className="mb-4">
-            <Label as="div">Spent</Label>
-            <div className="mt-1 font-mono text-2xl font-bold tabular-nums">
-              {transactions.data ? signedMoney(spentMinor(transactions.data), defaultCurrency) : "…"}
-            </div>
-          </Card>
-        </>
+        <PeriodHeader title="Transactions" />
       )}
 
       {transactions.isPending ? <Loading /> : null}

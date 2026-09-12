@@ -57,6 +57,7 @@ The "Screens · Desktop" page mirrors every mobile screen at 1440×1024. The bot
 ## Where the code departs from the mocks (decided 2026-09-12, after using the app)
 - Add wallet has no field hints and no Wallet order banner.
 - Add category: the title is the preview ("ADD 🚌 TRANSPORT", the name on the category's colour, shrinking to fit two lines); there is no Preview row. The emoji is picked from a full emoji panel; names are capped at 50 characters; slugs transliterate non-Latin names. Edit category shows no "fixed" hint under the type toggle.
-- Add transaction is always titled ADD TRANSACTION and its type tabs are Expense / Income / Exchange; the sign box beside the amount only reflects the tab. On Edit the sign box is the toggle.
+- Add transaction is always titled ADD TRANSACTION. The type tabs stay as mocked: the first reads Expense or Income after the sign, the second is Exchange.
+- Transactions has no Spent panel; the period's totals live on Analysis.
 - There is no read-only Transaction view: a card opens the edit form, with Delete behind its options menu.
 - Hover: the element rises 2px while its shadow stays put (the shadow grows), rather than the whole thing moving.
