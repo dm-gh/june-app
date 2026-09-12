@@ -55,7 +55,6 @@ Google sign-in via Better Auth, wrapped in a thin in-house Effect layer (Better 
 ## Explicitly out of the MVP
 - Budgets and targets per Category
 - Recurring or scheduled Transactions
-- CSV or bank statement import
 - Sharing Wallets between Users
 - Receipt attachments
 - LLM extraction from free text or screenshots
@@ -65,5 +64,10 @@ Google sign-in via Better Auth, wrapped in a thin in-house Effect layer (Better 
 - Manual per-Transaction Exchange Rate override
 
 First candidates after launch: LLM extraction, budgets.
+
+## Round 2 (designed 2026-09-12, see docs/figma.md "Round 2 screens")
+- Filters: one set shared by Transactions and Analysis, kept in the URL: Transaction Type (all, expense, income), Categories, Tags, Wallets.
+- Analysis gains Per day (bars plus running total), Share of spending (donut), Income vs expense by month, By tag and By wallet.
+- CSV Import in June's own template (`date,amount,currency,category,description,tags`) with a preview, per-row skipping with reasons, and an optional duplicate skip. Bank formats stay out: the User reshapes an export into the template.
 
 ## Still open

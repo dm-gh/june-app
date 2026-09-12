@@ -81,6 +81,14 @@ _Avoid_: orphan, pending, inbox
 An Apple Shortcuts automation on the User's iPhone, built by the User in the Shortcuts app by following June's guide, which shows every action with the User's Categories, currencies and capture URL filled in, that captures a Transaction by sending amount, currency, category slug, description, and the phone's local date to June, without asking for the date. It is the primary capture method; the in-app form is secondary. A Shortcut never names a Wallet; the Wallet is resolved by Wallet Order.
 _Avoid_: webhook (that names the transport, not the capture method), integration
 
+**CSV Import**:
+A batch of Changes created from a file in June's own template, one row per Transaction. Each row obeys the same rules as a capture: the Wallet comes from Wallet Order and the row's currency, an unknown Category slug means Uncategorised, a currency no Wallet holds means Unassigned. A row June cannot read is skipped and reported by line; the rest still import.
+_Avoid_: upload, sync, bank import
+
+**Filter**:
+A User's narrowing of what Transactions and Analysis show inside the selected period: by Transaction Type (expense or income), Category, Tag, or Wallet. One set applies to both screens at once. A Filter never changes what is stored.
+_Avoid_: search, query, segment
+
 **Capture Token**:
 A per-User secret embedded in the URL the Shortcut posts to. It identifies the User without a sign-in session. Regenerating it invalidates every Shortcut built with the previous URL.
 _Avoid_: API key, webhook secret, token (bare)
