@@ -17,6 +17,9 @@ export const moneyCode = (minor: number, currency: string): string => {
 export const signedMoney = (minor: number, currency: string): string =>
   `${minor < 0 ? "−" : minor > 0 ? "+" : ""}${moneyCode(minor, currency)}`
 
+/** "−USD 12.00" when below zero, "USD 12.00" otherwise: a Balance, which is not a flow. */
+export const balanceMoney = (minor: number, currency: string): string => `${minor < 0 ? "−" : ""}${moneyCode(minor, currency)}`
+
 /** Day-group heading: "TODAY · 12 SEP", "YESTERDAY · 11 SEP", "10 SEP", "28 DEC 2025". */
 export const dayHeading = (date: LocalDate): string => {
   const today = todayLocal()

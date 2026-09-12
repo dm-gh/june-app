@@ -8,8 +8,8 @@ import { Link, useNavigate } from "react-router"
 import { signOut } from "../../api/auth"
 import { useCategories, useMe, useReorderWallets, useSetDefaultCurrency, useWallets } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
-import { hueColor, moneyCode } from "../../lib/format"
-import { Button, Card, Display, ErrorNotice, Field, Heading, Label, Loading, Select, Text } from "../../ui"
+import { balanceMoney, hueColor } from "../../lib/format"
+import { Button, Card, cn, Display, ErrorNotice, Field, Heading, Label, Loading, Select, Text } from "../../ui"
 
 const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" })
 
@@ -23,7 +23,7 @@ function WalletRow({ wallet, index }: { wallet: Wallet; index: number }) {
           <div className="truncate font-heading font-bold">{wallet.name}</div>
           <div className="font-mono text-xs text-grey-ink">{wallet.currency}</div>
         </Link>
-        <span className="font-mono text-sm font-bold tabular-nums">{moneyCode(wallet.balanceMinor, wallet.currency)}</span>
+        <span className={cn("font-mono text-sm font-bold tabular-nums", wallet.balanceMinor < 0 && "text-coral-ink")}>{balanceMoney(wallet.balanceMinor, wallet.currency)}</span>
         <button type="button" aria-label="Drag to reorder" className="cursor-grab touch-none p-1 active:cursor-grabbing" {...attributes} {...listeners}>
           <DotsSixVertical size={22} weight="bold" />
         </button>
