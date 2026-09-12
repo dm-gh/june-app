@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from "react"
 import { useNavigate } from "react-router"
 import { Button, Display, ErrorNotice, IconButton, Menu, type MenuItem } from "../ui"
 import { AppShell } from "./AppShell"
+import { StickyBar } from "./StickyBar"
 
 export interface FormPageProps {
   title: ReactNode
@@ -19,8 +20,9 @@ export interface FormPageProps {
 }
 
 /**
- * Every form screen: ghost Back arrow, Display title, fields, and an action bar that always sits
- * at the bottom (sticky on phones, pinned to the column's end on desktop). No rule above the bar.
+ * Every form screen: a Back arrow and options menu that stay at the top while the page scrolls,
+ * Display title, fields, and an action bar that always sits at the bottom (sticky on phones,
+ * pinned to the column's end on desktop). No rule above the bar.
  */
 export function FormPage({ title, backTo, menu, submitLabel, onSubmit, busy, canSubmit = true, error, children }: FormPageProps) {
   const navigate = useNavigate()
@@ -32,11 +34,13 @@ export function FormPage({ title, backTo, menu, submitLabel, onSubmit, busy, can
   return (
     <AppShell fullscreen width="form">
       <form onSubmit={submit} className="flex flex-1 flex-col">
-        <div className="-ml-2.5 flex items-center justify-between">
-          <IconButton icon={ArrowLeft} label="Back" onClick={back} />
-          {menu ? <Menu items={menu} /> : null}
-        </div>
-        <Display size="sm" className="mt-4 mb-5">
+        <StickyBar className="pb-2">
+          <div className="-ml-2.5 flex items-center justify-between">
+            <IconButton icon={ArrowLeft} label="Back" onClick={back} />
+            {menu ? <Menu items={menu} /> : null}
+          </div>
+        </StickyBar>
+        <Display size="sm" className="mt-2 mb-5">
           {title}
         </Display>
         <div className="flex flex-col gap-5">{children}</div>

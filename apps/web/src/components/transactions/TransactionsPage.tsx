@@ -5,6 +5,7 @@ import { useNavigate } from "react-router"
 import { useCategories, useDeleteTransactions, useTransactions } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { PeriodHeader } from "../../layout/PeriodHeader"
+import { StickyBar } from "../../layout/StickyBar"
 import { dayHeading } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
 import { Dialog, Empty, ErrorNotice, IconButton, Label, Loading, Menu } from "../../ui"
@@ -64,21 +65,23 @@ export function TransactionsPage() {
   return (
     <AppShell>
       {selecting ? (
-        <header className="-mx-2.5 mb-4 flex items-center justify-between">
-          <IconButton icon={X} label="Cancel selection" onClick={exitSelection} />
-          <span className="font-heading text-xl font-bold">{ids.length} selected</span>
-          <Menu
-            items={[
-              {
-                label: `Edit ${ids.length} items`,
-                icon: PencilSimple,
-                disabled: ids.length === 0,
-                onSelect: () => navigate("/transactions/bulk-edit", { state: { ids } })
-              },
-              { label: `Delete ${ids.length} items`, icon: Trash, danger: true, disabled: ids.length === 0, onSelect: () => setConfirmDelete(true) }
-            ]}
-          />
-        </header>
+        <StickyBar className="pb-4">
+          <header className="-mx-2.5 flex items-center justify-between">
+            <IconButton icon={X} label="Cancel selection" onClick={exitSelection} />
+            <span className="font-heading text-xl font-bold">{ids.length} selected</span>
+            <Menu
+              items={[
+                {
+                  label: `Edit ${ids.length} items`,
+                  icon: PencilSimple,
+                  disabled: ids.length === 0,
+                  onSelect: () => navigate("/transactions/bulk-edit", { state: { ids } })
+                },
+                { label: `Delete ${ids.length} items`, icon: Trash, danger: true, disabled: ids.length === 0, onSelect: () => setConfirmDelete(true) }
+              ]}
+            />
+          </header>
+        </StickyBar>
       ) : (
         <PeriodHeader title="Transactions" />
       )}
