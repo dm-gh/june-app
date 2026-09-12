@@ -53,6 +53,7 @@ The "Screens · Desktop" page mirrors every mobile screen at 1440×1024. The bot
 - Edit wallet (name, Init balance; currency read-only) with Delete behind the options menu and a confirmation dialog.
 - Delete on Edit category, with confirmation.
 - Tag input: space-separated, suggestions list of existing Tags; bulk edit shows shared Tags as removable chips plus an add field.
+- Settings → Shortcut: the Shortcut card is a short blurb with "Open the guide"; the guide page (`/settings/shortcut`) walks through the Shortcuts app actions, each drawn as an action card with the User's values and copy buttons, and holds the capture URL generation. Exists in code only.
 
 ## Where the code departs from the mocks (decided 2026-09-12, after using the app)
 - Add wallet has no field hints and no Wallet order banner.

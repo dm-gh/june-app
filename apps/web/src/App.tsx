@@ -4,6 +4,7 @@ import { AnalysisPage } from "./components/analysis/AnalysisPage"
 import { RequireAuth, SignInPage } from "./components/auth/SignInPage"
 import { AddCategoryPage, EditCategoryPage } from "./components/settings/CategoryFormPage"
 import { SettingsPage } from "./components/settings/SettingsPage"
+import { ShortcutPage } from "./components/settings/ShortcutPage"
 import { AddWalletPage, EditWalletPage } from "./components/settings/WalletFormPage"
 import { AddTransactionPage } from "./components/transactions/AddTransactionPage"
 import { BulkEditPage } from "./components/transactions/BulkEditPage"
@@ -60,6 +61,7 @@ export function App() {
                   <Route path="transactions/:id" element={<EditTransactionPage />} />
                   <Route path="analysis" element={<AnalysisPage />} />
                   <Route path="settings" element={<SettingsPage />} />
+                  <Route path="settings/shortcut" element={<ShortcutPage />} />
                   <Route path="settings/wallets/new" element={<AddWalletPage />} />
                   <Route path="settings/wallets/:id" element={<EditWalletPage />} />
                   <Route path="settings/categories/new" element={<AddCategoryPage />} />

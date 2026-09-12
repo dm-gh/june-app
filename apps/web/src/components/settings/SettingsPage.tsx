@@ -6,10 +6,10 @@ import { DotsSixVertical } from "@phosphor-icons/react"
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router"
 import { signOut } from "../../api/auth"
-import { useCategories, useMe, useRegenerateCaptureToken, useReorderWallets, useSetDefaultCurrency, useWallets } from "../../api/queries"
+import { useCategories, useMe, useReorderWallets, useSetDefaultCurrency, useWallets } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { hueColor, moneyCode } from "../../lib/format"
-import { Button, Card, Dialog, Display, ErrorNotice, Field, Heading, Input, Label, Loading, Select, Text } from "../../ui"
+import { Button, Card, Display, ErrorNotice, Field, Heading, Label, Loading, Select, Text } from "../../ui"
 
 const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" })
 
@@ -55,10 +55,7 @@ export function SettingsPage() {
   const categories = useCategories()
   const reorder = useReorderWallets()
   const setCurrency = useSetDefaultCurrency()
-  const regenerate = useRegenerateCaptureToken()
   const [order, setOrder] = useState<Array<Wallet>>([])
-  const [confirmRegenerate, setConfirmRegenerate] = useState(false)
-  const [issued, setIssued] = useState<{ token: string; captureUrl: string } | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
   useEffect(() => {
@@ -146,28 +143,13 @@ export function SettingsPage() {
         Shortcut
       </Heading>
       <Card accent="sky">
-        <Text className="text-sm">Generates an Apple Shortcut with your categories baked in. Run it from the home screen to capture a transaction in one tap.</Text>
-        <Label as="div" className="mt-4 mb-1.5">
-          Capture token
-        </Label>
-        {issued ? (
-          <>
-            <Input readOnly value={issued.captureUrl} onFocus={(e) => e.target.select()} className="font-mono text-sm" />
-            <Text className="mt-2 font-mono text-xs">Shown once. Copy the URL into your Shortcut now.</Text>
-          </>
-        ) : (
-          <div className="flex gap-2">
-            <Input readOnly value={me.data?.hasCaptureToken ? "jn_••••••••••••••••" : "No token yet"} className="font-mono" />
-            <Button variant="danger" onClick={() => setConfirmRegenerate(true)} disabled={regenerate.isPending}>
-              Regenerate
-            </Button>
-          </div>
-        )}
-        <Button className="mt-3 w-full" disabled title="Shortcut file generation is not built yet">
-          Download Shortcut
+        <Text className="text-sm">
+          Capture a transaction from your iPhone in one tap. The guide walks you through building the Shortcut in the Shortcuts app, with your
+          categories, currencies and capture URL filled in.
+        </Text>
+        <Button className="mt-3 w-full" onClick={() => navigate("/settings/shortcut")}>
+          Open the guide
         </Button>
-        <Text className="mt-2 font-mono text-xs text-coral-ink">Regenerating invalidates every installed Shortcut.</Text>
-        {regenerate.isError ? <ErrorNotice message={regenerate.error.message} /> : null}
       </Card>
 
       <div className="mt-8 mb-8">
@@ -177,23 +159,6 @@ export function SettingsPage() {
         </button>
       </div>
 
-      <Dialog
-        open={confirmRegenerate}
-        title="Regenerate the capture token?"
-        body="Every Shortcut already installed stops working until it is generated again with the new token."
-        confirmLabel="Regenerate"
-        danger
-        busy={regenerate.isPending}
-        onConfirm={() =>
-          regenerate.mutate(undefined, {
-            onSuccess: (result) => {
-              setIssued(result)
-              setConfirmRegenerate(false)
-            }
-          })
-        }
-        onCancel={() => setConfirmRegenerate(false)}
-      />
     </AppShell>
   )
 }

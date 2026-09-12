@@ -11,4 +11,8 @@ Recording a Transaction has to be nearly frictionless or it will not happen. We 
 - The capture endpoint never rejects for a bad category or an unmatched currency; it stores the Transaction as Uncategorised or Unassigned instead. It rejects only malformed bodies and invalid currencies.
 - The Wallet for a captured Transaction is resolved server-side by Wallet Order, so Wallet Order is a real domain rule, not a UI nicety.
 - Regenerating a Capture Token invalidates the installed Shortcut, so token rotation must be paired with re-generating the Shortcut.
-- Shortcut generation and delivery is an MVP feature, not tooling.
+- Shortcut delivery is an MVP feature, not tooling.
+
+## Addendum (2026-09-12)
+
+A web service cannot produce a signed `.shortcut` file that iOS will import, so June does not generate the Shortcut. Instead Settings → Shortcut is a guide that lists every action to add in the Shortcuts app, each shown with the User's own capture URL, currencies and Category slugs, so building it is copying values rather than designing anything.
