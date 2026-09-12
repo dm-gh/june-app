@@ -284,8 +284,14 @@ export function ShortcutPage() {
         </Notice>
       </Step>
 
-      <Step n={9} title="Finish">
-        <Action name="Show Notification" tint="bg-grey" params={[["Title", <Value copy>Saved to June</Value>]]} />
+      <Step n={9} title="Show June's answer">
+        <Text className="text-sm">June answers every capture with a short message. Two actions turn it into the notification you see after the tap.</Text>
+        <Action name="Get Dictionary Value" tint="bg-lavender" params={[["Get", "Value"], ["Key", <Value copy>message</Value>], ["Dictionary", <Variable name="Contents of URL" />]]} />
+        <Action name="Show Notification" tint="bg-grey" params={[["Title", <Variable name="Dictionary Value" />]]} />
+        <Notice accent="green" label="What it shows">
+          <p className="font-mono">✅ Saved 22 GEL | ☕ Coffee</p>
+          <p className="font-mono">❌ Error: currency "XYZ" is invalid</p>
+        </Notice>
         <Text className="text-sm">
           Run it once to test, then in the Shortcut's details choose <strong>Add to Home Screen</strong>. Regenerating the capture URL later means pasting the new one into step 8.
         </Text>

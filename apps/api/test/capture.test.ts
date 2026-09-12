@@ -23,8 +23,10 @@ it.scoped("capture resolves the Wallet by Wallet Order and the Category by slug"
       path: { token: h.captureToken },
       payload: { amount: -4.5, currency: usd, category: "food", description: "coffee", date: "2026-09-10" as LocalDate }
     })
+    if (!captured.ok) throw new Error(captured.message)
     expect(captured.unassigned).toBe(false)
     expect(captured.uncategorised).toBe(false)
+    expect(captured.message).toBe("✅ Saved 4.5 USD | Food")
 
     const tx = yield* h.client.transactions.get({ path: { id: captured.id } })
     expect(tx.walletId).toBe(card.id)
@@ -49,20 +51,25 @@ it.scoped("capture never rejects an unknown slug, a wrong-type slug or an unmatc
       path: { token: h.captureToken },
       payload: { amount: -1, currency: usd, category: "nope" }
     })
+    if (!unknownSlug.ok) throw new Error(unknownSlug.message)
     expect(unknownSlug.uncategorised).toBe(true)
+    expect(unknownSlug.message).toBe("✅ Saved 1 USD | Uncategorised")
 
     // "salary" is an Income Category; a negative amount cannot carry it.
     const wrongType = yield* h.client.capture.capture({
       path: { token: h.captureToken },
       payload: { amount: -1, currency: usd, category: "salary" }
     })
+    if (!wrongType.ok) throw new Error(wrongType.message)
     expect(wrongType.uncategorised).toBe(true)
 
     const noWallet = yield* h.client.capture.capture({
       path: { token: h.captureToken },
       payload: { amount: -20, currency: gel }
     })
+    if (!noWallet.ok) throw new Error(noWallet.message)
     expect(noWallet.unassigned).toBe(true)
+    expect(noWallet.message).toBe("✅ Saved 20 GEL | Uncategorised (no GEL wallet)")
     const tx = yield* h.client.transactions.get({ path: { id: noWallet.id } })
     expect(tx.walletId).toBeNull()
     expect(tx.currency).toBe("GEL")
@@ -71,28 +78,43 @@ it.scoped("capture never rejects an unknown slug, a wrong-type slug or an unmatc
   })
 )
 
-it.scoped("capture rejects an unknown token, a made-up currency, and too many decimals", () =>
+it.scoped("capture answers a bad currency, amount or date with a message the Shortcut can show", () =>
   Effect.gen(function* () {
     const h = yield* makeHarness()
     const unknown = yield* rawPost(h.handler, "/api/capture/not-a-token", { amount: -1, currency: "USD" })
     expect(unknown.status).toBe(404)
 
-    const badCurrency = yield* rawPost(h.handler, `/api/capture/${h.captureToken}`, { amount: -1, currency: "XYZ" })
-    expect(badCurrency.status).toBe(400)
+    const answer = (body: unknown) =>
+      rawPost(h.handler, `/api/capture/${h.captureToken}`, body).pipe(
+        Effect.flatMap((res) => Effect.promise(() => res.json().then((json) => ({ status: res.status, json: json as { ok: boolean; message: string } }))))
+      )
+    const badCurrency = yield* answer({ amount: -1, currency: "XYZ" })
+    expect(badCurrency.status).toBe(200)
+    expect(badCurrency.json).toEqual({ ok: false, message: '❌ Error: currency "XYZ" is invalid' })
 
-    const decimals = yield* rawPost(h.handler, `/api/capture/${h.captureToken}`, { amount: -1.005, currency: "USD" })
-    expect(decimals.status).toBe(422)
-    expect(((yield* Effect.promise(() => decimals.json())) as { message: string }).message).toContain("2 decimals")
+    const decimals = yield* answer({ amount: -1.005, currency: "USD" })
+    expect(decimals.json.ok).toBe(false)
+    expect(decimals.json.message).toContain("2 decimals")
 
-    const zero = yield* rawPost(h.handler, `/api/capture/${h.captureToken}`, { amount: 0, currency: "USD" })
-    expect(zero.status).toBe(422)
+    const zero = yield* answer({ amount: 0, currency: "USD" })
+    expect(zero.json.message).toBe("❌ Error: amount is zero")
+
+    const text = yield* answer({ amount: "abc", currency: "USD" })
+    expect(text.json.message).toBe('❌ Error: amount "abc" is not a number')
+
+    const date = yield* answer({ amount: -1, currency: "USD", date: "12/09/2026" })
+    expect(date.json.message).toBe('❌ Error: date "12/09/2026" must be YYYY-MM-DD')
+
+    // A string amount with a comma, as some keyboards type it, is accepted; income carries a plus.
+    const comma = yield* answer({ amount: "22,5", currency: "usd" })
+    expect(comma.json.message).toBe("✅ Saved +22.5 USD | Uncategorised (no USD wallet)")
 
     // Regenerating the token invalidates the old one.
     const issued = yield* h.client.settings.regenerateCaptureToken()
     const old = yield* rawPost(h.handler, `/api/capture/${h.captureToken}`, { amount: -1, currency: "USD" })
     expect(old.status).toBe(404)
     const fresh = yield* rawPost(h.handler, `/api/capture/${issued.token}`, { amount: -1, currency: "USD" })
-    expect(fresh.status).toBe(201)
+    expect(fresh.status).toBe(200)
     expect(issued.captureUrl).toBe(`http://june.test/api/capture/${issued.token}`)
   })
 )

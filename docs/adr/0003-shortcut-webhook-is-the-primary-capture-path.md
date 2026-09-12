@@ -8,7 +8,7 @@ Recording a Transaction has to be nearly frictionless or it will not happen. We 
 
 ## Consequences
 
-- The capture endpoint never rejects for a bad category or an unmatched currency; it stores the Transaction as Uncategorised or Unassigned instead. It rejects only malformed bodies and invalid currencies.
+- The capture endpoint never rejects for a bad category or an unmatched currency; it stores the Transaction as Uncategorised or Unassigned instead. Since 2026-09-13 it also answers a bad amount, currency or date with status 200 and a ready-to-show message (`✅ Saved 22 GEL | ☕ Coffee`, `❌ Error: currency "XYZ" is invalid`), because Shortcuts aborts the run on any error status and the User would see nothing useful. An unknown token stays a 404.
 - The Wallet for a captured Transaction is resolved server-side by Wallet Order, so Wallet Order is a real domain rule, not a UI nicety.
 - Regenerating a Capture Token invalidates the installed Shortcut, so token rotation must be paired with re-generating the Shortcut.
 - Shortcut delivery is an MVP feature, not tooling.

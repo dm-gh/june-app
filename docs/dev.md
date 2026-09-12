@@ -22,7 +22,7 @@ schema changes and add a new numbered migration.
 pnpm dev            # api on :3000 (tsx watch) and web on Vite, which proxies /api to the api
 ```
 `@june/shared` is consumed from its TypeScript source in development: its package exports carry a `june-source`
-condition that the api's dev scripts (`node --conditions=june-source`), Vite and Vitest select. `pnpm build`
+condition that the api's dev scripts (`node --conditions=june-source`), and Vite select; Vitest aliases the package to `packages/shared/src/index.ts` instead, since it hands node_modules packages to Node untransformed. `pnpm build`
 compiles it to `dist`, which the built api and web use.
 
 ## Production build and deploy
