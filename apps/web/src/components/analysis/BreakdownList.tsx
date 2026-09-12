@@ -59,9 +59,9 @@ export interface BreakdownListProps {
   onRowClick?: (key: string) => void
 }
 
-/** Rows of chip, amount, share and a bar scaled to the largest row. */
+/** Rows of chip, amount, share and a bar scaled to the largest row, excluded rows included. */
 export function BreakdownList({ slices, look, currency, total, excluded, onRowClick }: BreakdownListProps) {
-  const max = slices[0]?.sum ?? 0
+  const max = slices.reduce((m, s) => Math.max(m, s.sum), 0)
   return (
     <div className="flex flex-col gap-3">
       {slices.map(({ key, sum }) => {
@@ -87,8 +87,8 @@ export function BreakdownList({ slices, look, currency, total, excluded, onRowCl
                 <span className="font-mono text-sm font-bold tabular-nums">{moneyCode(sum, currency)}</span>
               </span>
             </div>
-            <div className="mt-1.5 h-3 border-2 border-ink bg-white">
-              <div className="h-full" style={{ width: `${max > 0 ? (sum / max) * 100 : 0}%`, background: l.color ?? "var(--color-grey)" }} />
+            <div className="mt-1.5 h-3 overflow-hidden border-2 border-ink bg-white">
+              <div className="h-full" style={{ width: `${max > 0 ? Math.min(100, (sum / max) * 100) : 0}%`, background: l.color ?? "var(--color-grey)" }} />
             </div>
           </Row>
         )
