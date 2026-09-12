@@ -8,7 +8,7 @@ Design work lives in the author's personal Figma account, never the work account
   - Variables: Primitives (13 colours, hidden), Color (19 semantic aliases), Spacing (22 floats), Typography (10 strings). Every variable carries WEB code syntax matching the Tailwind theme.
   - Styles: 4 hard-shadow effect styles, 18 text styles mirroring the Typography/Button/Badge/Amount components.
   - Component sets: Badge (8), Button (48), Input (4), Select (4), Textarea (4), Field (3), Card (27), Amount (12).
-  - Screens page (added 2026-09-12): screen-level components Nav bar (3), Transaction row (Kind × Hidden, 4), Sign toggle (2), Checkbox (2), Icon (9 Phosphor Bold glyphs), Icon button (Close, Menu, Back), Menu, Dialog, Hue slider, Top bar, Period sheet, plus the MVP screens as 390-wide phone frames: Sign in, Transactions (plus Selecting, Selecting · Menu, Selecting · Delete, Period), Bulk edit, Transaction (plus · Menu, · Delete), Edit transaction, Add transaction (Expense and Income states), Add exchange, Analysis, Settings, Add wallet, Add category.
+  - Screens page (added 2026-09-12): screen-level components Nav bar (3), Transaction row (Kind × Hidden, 4), Sign toggle (2), Checkbox (2), Icon (9 Phosphor Bold glyphs), Icon button (Close, Menu, Back), Menu, Dialog, Hue slider, Top bar, Period sheet, plus the MVP screens as 390-wide phone frames (and, on Screens · Desktop, the same screens at 1440×1024 with the Sidebar nav): Sign in, Transactions (plus Selecting, Selecting · Menu, Selecting · Delete, Period), Bulk edit, Transaction (plus · Menu, · Delete), Edit transaction, Add transaction (Expense and Income states), Add exchange, Analysis, Settings, Add wallet, Add category.
   - Badge has a Size axis (MD 28px, SM 20px); SM is the corner tag on transaction cards. Effect styles Shadow/Hard SM Coral and Shadow/Hard SM Green colour the amount field by sign.
   - Phone screen titles use the text style Display/SM (Syne ExtraBold 24px, uppercase like all Display styles); the code equivalent is `font-display text-3xl` and should be added to the Display component as a size prop when screens are implemented.
 
@@ -39,6 +39,10 @@ Design work lives in the author's personal Figma account, never the work account
 - Transaction view is the Edit transaction form with every control in its Disabled (read-only) state and no action bar. Header: ghost Back icon on the left, ghost Menu icon on the right (Edit with pencil, Delete with trash in coral).
 - Edit transaction: same form as Add transaction with the current values filled in, titled EDIT TRANSACTION, ghost Back icon in the header, Save changes. There is no type toggle: a Transaction's Transaction Type is fixed once recorded, since a Change, an Init and an Exchange are different things.
 - Every Delete, single or bulk, opens the Dialog over a 50% ink scrim: Cancel (ghost) or Delete (coral Danger button).
+
+## Desktop variants
+
+The "Screens · Desktop" page mirrors every mobile screen at 1440×1024. The bottom Nav bar is replaced by a Sidebar nav component (240px left rail: brand, Analysis / Transactions / Settings with the active item as an accent block, an Add transaction button with the Plus icon, and the session block). Content sits in a centred column: 720px for Transactions, Analysis and Settings, 560px for every form, 440px for Sign in, which has no sidebar. The column is built from the same content as the phone screen, so both stay in step. Menus anchor under the header's menu button; dialogs and the Period sheet open centred over a 50% ink scrim, the sheet gaining a full border and large hard shadow.
 
 ## Constraints
 
