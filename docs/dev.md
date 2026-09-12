@@ -21,7 +21,23 @@ schema changes and add a new numbered migration.
 ```sh
 pnpm dev            # api on :3000 (tsx watch) and web on Vite, which proxies /api to the api
 ```
-In production one service serves both: `WEB_DIST` points the api at the built web app.
+`@june/shared` is consumed from its TypeScript source in development: its package exports carry a `june-source`
+condition that the api's dev scripts (`node --conditions=june-source`), Vite and Vitest select. `pnpm build`
+compiles it to `dist`, which the built api and web use.
+
+## Production build and deploy
+```sh
+pnpm build                         # shared → api (dist/) → web (dist/)
+pnpm start                         # runs pending migrations, then serves the api and the web build
+docker build -t june .             # the same, as the image Railway builds
+```
+The image runs `node dist/db/migrate.js && node dist/main.js`, so migrations apply on every deploy before the
+server starts. `railway.json` points Railway at the Dockerfile and health-checks `/api/health`.
+
+Railway setup, once per project: a Postgres service (Railway injects `DATABASE_URL` when it is referenced as
+`${{Postgres.DATABASE_URL}}`), and on the app service the variables from `.env.example` except `PORT` and
+`WEB_DIST`, which the image sets. `BASE_URL` is the public domain Railway assigns, and that domain's
+`/api/auth/callback/google` must be added to the Google OAuth client's redirect URIs.
 
 ## Tests
 ```sh

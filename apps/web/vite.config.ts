@@ -1,6 +1,6 @@
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defaultClientConditions, defineConfig } from "vite"
 import { VitePWA } from "vite-plugin-pwa"
 
 export default defineConfig({
@@ -20,6 +20,8 @@ export default defineConfig({
       }
     })
   ],
+  // In development @june/shared resolves to its TypeScript source; builds and production use its dist.
+  resolve: { conditions: ["june-source", ...defaultClientConditions] },
   server: {
     proxy: { "/api": "http://localhost:3000" }
   }
