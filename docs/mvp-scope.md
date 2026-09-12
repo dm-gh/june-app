@@ -66,8 +66,8 @@ Google sign-in via Better Auth, wrapped in a thin in-house Effect layer (Better 
 First candidates after launch: LLM extraction, budgets.
 
 ## Round 2 (designed 2026-09-12, see docs/figma.md "Round 2 screens")
-- Filters: one set shared by Transactions and Analysis, kept in the URL: Transaction Type (all, expense, income), Categories, Tags, Wallets.
-- Analysis becomes: Per day (bars plus running total), By category, Income vs expense, By tag, By wallet, each breakdown capped at five rows with an All page behind it (the categories page opens with a Share donut). Charts show days for a period of a month or less, months beyond. Over time and the Wallet balances list are removed. Rows on the All pages toggle that item in the shared filter.
+- Filters: one set shared by Transactions and Analysis, kept in the URL, by exclusion (everything selected until deselected): Transaction Type as a multiselect of expense, income, exchange (Init follows income), Categories, Wallets, Tags.
+- Analysis becomes: Per day (bars plus running total), By category, Income vs expense, By tag, By wallet, each breakdown capped at five rows with an All page behind it (the categories page opens with a Share donut). Charts show days for a period of a month or less, months beyond. Over time and the Wallet balances list are removed. Tapping a row on an All page deselects that item from the shared filter (half opacity, moved to the bottom).
 - CSV Import in June's own template (`date,amount,currency,category,description,tags`) with a preview, per-row skipping with reasons, and an optional duplicate skip. Bank formats stay out: the User reshapes an export into the template.
 
 ## Still open

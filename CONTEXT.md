@@ -86,7 +86,7 @@ A batch of Changes created from a file in June's own template, one row per Trans
 _Avoid_: upload, sync, bank import
 
 **Filter**:
-A User's narrowing of what Transactions and Analysis show inside the selected period: by Transaction Type (expense or income), Category, Tag, or Wallet. One set applies to both screens at once. A Filter never changes what is stored.
+A User's narrowing of what Transactions and Analysis show inside the selected period, by deselecting Transaction Types (expense, income, exchange; an Init counts as income), Categories, Wallets, or Tags. Everything is selected until deselected. One set applies to both screens at once. A Filter never changes what is stored.
 _Avoid_: search, query, segment
 
 **Capture Token**:
