@@ -33,7 +33,7 @@ The external service June fetches Exchange Rates from when a date is not yet cac
 _Avoid_: rate API, feed
 
 **Transaction**:
-A single movement of money recorded by a User: a signed amount in a valid currency, on a date, in at most one Wallet, with an optional Category, a free-text description, and zero or more Tags. A Transaction's currency always equals its Wallet's currency when it has one. A currency that is not a real ISO currency is rejected at capture. Every Transaction has exactly one Transaction Type.
+A single movement of money recorded by a User: a signed amount in a valid currency, on a date, in at most one Wallet, with an optional Category, a free-text description, and zero or more Tags. A Transaction's currency always equals its Wallet's currency when it has one. A currency that is not a real ISO currency is rejected at capture. Every Transaction has exactly one Transaction Type. A Transaction may be marked Hidden from analysis.
 _Avoid_: entry, record, expense (when income is also meant), payment
 
 **Transaction Type**:
@@ -53,8 +53,17 @@ The Transaction Type that moves money from one Wallet to another. If the Wallets
 _Avoid_: transfer, conversion, move
 
 **Category**:
-A classification of a Transaction from the User's own list (e.g. Groceries, Rent). Each Category has a display name, a stable slug, and an optional emoji shown wherever the Category appears. A Transaction has at most one Category.
+A classification of a Transaction from the User's own list (e.g. Groceries, Rent). Each Category has a Category Type, a display name, a stable slug, a Hue, and an optional emoji shown wherever the Category appears. A Transaction has at most one Category, and only one whose Category Type matches the sign of its amount.
+
+**Category Type**:
+Expense or Income. Categories form two separate lists, one per Category Type. A negative Change may only carry an Expense Category, a positive Change only an Income Category.
+
+**Hue**:
+The one number (0 to 359 on the colour wheel) a User picks for a Category. June fixes saturation and lightness, so every Category colour belongs to the same family and only the hue tells them apart.
 _Avoid_: type, group, label
+
+**Hidden from analysis**:
+A flag a User sets on a single Transaction. A hidden Transaction stays in the Transactions list, greyed out, and still counts towards its Wallet's Balance, but it appears in no analysis breakdown.
 
 **Uncategorised**:
 The state of a Transaction that has no Category, whether captured with an unknown slug or deliberately left blank. Shown as a greyed-out bucket in analysis; never rejected at capture.

@@ -31,12 +31,18 @@ export default Effect.flatMap(SqlClient.SqlClient, (sql) =>
       constraint wallet_user_position_unique unique (user_id, position) deferrable initially immediate
     );
 
+    -- Expense and Income Categories are two separate lists; a Change Transaction may only use a
+    -- Category whose type matches the sign of its amount.
+    create type category_type as enum ('expense', 'income');
+
     create table category (
       id         uuid primary key default gen_random_uuid(),
       user_id    uuid not null references app_user(id) on delete cascade,
+      type       category_type not null,
       name       text not null,
       slug       text not null,
-      color      text,
+      -- Only the hue is chosen by the User; saturation and lightness are fixed in the app.
+      hue        smallint not null check (hue between 0 and 359),
       created_at timestamptz not null default now(),
       constraint category_user_slug_unique unique (user_id, slug)
     );
@@ -64,6 +70,8 @@ export default Effect.flatMap(SqlClient.SqlClient, (sql) =>
       currency     char(3) not null,
       occurred_on  date not null,
       description  text not null default '',
+      -- Hidden from analysis: still listed (greyed out) but excluded from every analysis breakdown.
+      hidden_from_analysis boolean not null default false,
       category_id  uuid references category(id) on delete set null,
       exchange_id  uuid,
       created_at   timestamptz not null default now(),
