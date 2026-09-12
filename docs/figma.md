@@ -20,7 +20,7 @@ Design work lives in the author's personal Figma account, never the work account
 
 ## Screen decisions captured in the mocks
 
-- Bottom tab bar with three tabs: Transactions, Analysis, Settings. Add transaction is a full-screen form reached from a floating "+ Add" button, with no tab bar.
+- Bottom tab bar with three tabs: Analysis, Transactions (centre), Settings. When Transactions is active its tab shrinks to 28px and a square yellow "+" button slides up out of it, overlapping the top border of the bar. That button opens Add transaction, a full-screen form with no tab bar. There is no floating action button. The bar keeps the same 80px height in every state so content never jumps between tabs.
 - Transaction list is grouped by day. The amount is the dominant element of a card, the description sits under it in small ink text, the Category is a small tag flush in the card's top-right corner, and the Wallet is not shown. Uncategorised rows show a grey tag, Unassigned rows grey the whole card.
 - Categories show an emoji before the name wherever they appear. Tags appear under the description on a card as small `#` chips (Badge Size=SM with prefix).
 - Add wallet: name, currency, opening balance (explained as the Init transaction), and a note that new wallets go last in Wallet Order.
