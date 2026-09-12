@@ -9,6 +9,9 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
+      // The api lives on the same origin: an OAuth callback or a capture URL must reach the server,
+      // never be answered with the cached app shell.
+      workbox: { navigateFallbackDenylist: [/^\/api\//] },
       manifest: {
         name: "June",
         short_name: "June",
