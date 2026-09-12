@@ -6,6 +6,7 @@ import { useNavigate, useParams } from "react-router"
 import { useCreateWallet, useDeleteWallet, useMe, useUpdateWallet, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { Dialog, Field, Input, Loading, Select } from "../../ui"
+import { AmountInput } from "../../ui/AmountInput"
 
 const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" })
 
@@ -26,6 +27,7 @@ export function AddWalletPage() {
   const [name, setName] = useState("")
   const [currency, setCurrency] = useState<string>("")
   const [opening, setOpening] = useState("0")
+  const [sign, setSign] = useState<"-" | "+">("+")
   const [error, setError] = useState<string | null>(null)
   const effectiveCurrency = currency || me.data?.defaultCurrency || "USD"
 
@@ -35,7 +37,7 @@ export function AddWalletPage() {
     if (Either.isLeft(minor)) return setError(minor.left)
     setError(null)
     create.mutate(
-      { name: name.trim(), currency: effectiveCurrency as CurrencyCode, initMinor: minor.right as MinorAmount },
+      { name: name.trim(), currency: effectiveCurrency as CurrencyCode, initMinor: ((sign === "-" ? -1 : 1) * minor.right) as MinorAmount },
       { onSuccess: () => navigate("/settings") }
     )
   }
@@ -50,8 +52,8 @@ export function AddWalletPage() {
           <CurrencyOptions />
         </Select>
       </Field>
-      <Field label="Opening balance" htmlFor="opening">
-        <Input id="opening" inputMode="decimal" value={opening} onChange={(e) => setOpening(e.target.value.replace(",", "."))} className="font-mono font-bold" />
+      <Field label="Opening balance" htmlFor="opening" hint="Tap the sign for a balance below zero">
+        <AmountInput id="opening" value={opening} onChange={setOpening} sign={sign} onSignChange={setSign} />
       </Field>
     </FormPage>
   )
@@ -66,13 +68,15 @@ export function EditWalletPage() {
   const wallet = wallets.data?.wallets.find((w) => w.id === id)
   const [name, setName] = useState<string | null>(null)
   const [opening, setOpening] = useState<string | null>(null)
+  const [sign, setSign] = useState<"-" | "+">("+")
   const [confirm, setConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (wallet && name === null) {
       setName(wallet.name)
-      setOpening((wallet.initMinor / 10 ** currencyExponent(wallet.currency)).toFixed(currencyExponent(wallet.currency)))
+      setOpening((Math.abs(wallet.initMinor) / 10 ** currencyExponent(wallet.currency)).toFixed(currencyExponent(wallet.currency)))
+      setSign(wallet.initMinor < 0 ? "-" : "+")
     }
   }, [wallet, name])
 
@@ -89,7 +93,10 @@ export function EditWalletPage() {
     const minor = toMinor(Number(opening || "0"), wallet.currency)
     if (Either.isLeft(minor)) return setError(minor.left)
     setError(null)
-    update.mutate({ id: wallet.id as WalletId, payload: { name: name.trim(), initMinor: minor.right as MinorAmount } }, { onSuccess: () => navigate("/settings") })
+    update.mutate(
+      { id: wallet.id as WalletId, payload: { name: name.trim(), initMinor: ((sign === "-" ? -1 : 1) * minor.right) as MinorAmount } },
+      { onSuccess: () => navigate("/settings") }
+    )
   }
 
   return (
@@ -110,8 +117,8 @@ export function EditWalletPage() {
           <CurrencyOptions />
         </Select>
       </Field>
-      <Field label="Opening balance" htmlFor="opening" hint="The wallet's Init transaction">
-        <Input id="opening" inputMode="decimal" value={opening} onChange={(e) => setOpening(e.target.value.replace(",", "."))} className="font-mono font-bold" />
+      <Field label="Opening balance" htmlFor="opening" hint="The wallet's Init transaction. Tap the sign for a balance below zero">
+        <AmountInput id="opening" value={opening} onChange={setOpening} sign={sign} onSignChange={setSign} />
       </Field>
       <Dialog
         open={confirm}

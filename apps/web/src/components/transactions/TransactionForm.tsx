@@ -42,7 +42,8 @@ export interface TransactionFormProps {
 export function TransactionForm({ draft, onChange, wallets, categories, tagSuggestions, mode, transactionType = "change", errors }: TransactionFormProps) {
   const disabled = false
   const isChange = transactionType === "change"
-  const signToggles = isChange
+  // A Change flips between expense and income; an Init flips below zero; an Exchange leg has a fixed side.
+  const signToggles = transactionType !== "exchange"
   const set = <K extends keyof ChangeDraft>(key: K, value: ChangeDraft[K]) => onChange({ ...draft, [key]: value })
 
   // Only currencies a Wallet holds can be chosen: a Transaction entered by hand always has a Wallet.
@@ -56,7 +57,12 @@ export function TransactionForm({ draft, onChange, wallets, categories, tagSugge
 
   return (
     <>
-      <Field label="Amount" htmlFor="amount" error={errors?.amount} hint={signToggles ? "Tap the sign to switch between expense and income" : undefined}>
+      <Field
+        label="Amount"
+        htmlFor="amount"
+        error={errors?.amount}
+        hint={isChange ? "Tap the sign to switch between expense and income" : transactionType === "init" ? "Tap the sign for a balance below zero" : undefined}
+      >
         <AmountInput
           id="amount"
           value={draft.amount}
