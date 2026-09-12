@@ -152,6 +152,19 @@ export function SettingsPage() {
         </Button>
       </Card>
 
+      <Heading as="h2" className="mt-8 mb-3">
+        Import
+      </Heading>
+      <Card accent="lavender">
+        <Text className="text-sm">
+          Bring in transactions from a CSV file in June's template: one row per transaction, with the date, amount, currency, category
+          slug, description and tags.
+        </Text>
+        <Button className="mt-3 w-full" onClick={() => navigate("/settings/import")}>
+          Import from CSV
+        </Button>
+      </Card>
+
       <div className="mt-8 mb-8">
         <div className="font-mono text-xs text-grey-ink">Signed in as {me.data?.email ?? "…"}</div>
         <button type="button" onClick={() => signOut().then(() => navigate("/sign-in"))} className="mt-2 font-heading font-bold hover:underline">

@@ -1,126 +1,156 @@
-import type { Category, LocalDate, Transaction } from "@june/shared"
-import { useMemo } from "react"
-import { Bar, BarChart, Cell, ResponsiveContainer, XAxis } from "recharts"
+import type { Category, Wallet } from "@june/shared"
+import { CaretRight } from "@phosphor-icons/react"
+import { type ReactNode, useMemo } from "react"
+import { useNavigate } from "react-router"
+import { Bar, BarChart, Cell, ComposedChart, Line, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { useCategories, useMe, useTransactions, useWallets } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { PeriodHeader } from "../../layout/PeriodHeader"
-import { hueColor, moneyCode } from "../../lib/format"
-import { addMonths, monthEnd, monthStart, type Period, usePeriod } from "../../lib/period"
-import { Badge, Card, Empty, ErrorNotice, Heading, Label, Loading } from "../../ui"
-import { incomeMinor, spentMinor } from "../transactions/TransactionsPage"
+import { filterRows, slugLookup, useFilter } from "../../lib/filter"
+import { moneyCode, signedMoney } from "../../lib/format"
+import { todayLocal, usePeriod } from "../../lib/period"
+import { Card, Empty, ErrorNotice, Heading, Label, Loading } from "../../ui"
+import { breakdown, elapsedBuckets, flowSeries, granularityFor, incomeMinor, spendSeries, spentMinor } from "./analysis"
+import { BreakdownList, type Dimension, dimensionTitle, keysOf, lookOf } from "./BreakdownList"
 
-const counts = (rows: ReadonlyArray<Transaction>) => rows.filter((t) => t.type === "change" && !t.hiddenFromAnalysis)
+const ROWS = 5
 
-/** Expense totals per Category (null key is Uncategorised), largest first. */
-const byCategory = (rows: ReadonlyArray<Transaction>) => {
-  const sums = new Map<string | null, number>()
-  for (const t of counts(rows)) {
-    if (t.amountMinor >= 0) continue
-    sums.set(t.categoryId, (sums.get(t.categoryId) ?? 0) + Math.abs(t.defaultMinor ?? 0))
-  }
-  return [...sums.entries()].sort((a, b) => b[1] - a[1])
+const tick = { fontFamily: "Space Mono", fontSize: 11 }
+
+/** Section heading with an optional figure on the right, or an "All ›" link when the list is capped. */
+function SectionHeading({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
+  return (
+    <div className="mt-6 mb-3 flex items-baseline justify-between gap-3">
+      <Heading as="h2">{children}</Heading>
+      {aside ? <div className="shrink-0 whitespace-nowrap">{aside}</div> : null}
+    </div>
+  )
 }
 
-const monthLabel = new Intl.DateTimeFormat("en", { month: "short" })
+function AllLink({ to }: { to: string }) {
+  const navigate = useNavigate()
+  return (
+    <button type="button" onClick={() => navigate(to)} className="inline-flex items-center gap-0.5 px-1 font-heading text-sm font-bold hover:underline">
+      All
+      <CaretRight size={14} weight="bold" />
+    </button>
+  )
+}
 
+/** Spent / Income cards, Per day, By category, Income vs expense, By wallet, By tag. Every section obeys the Filter. */
 export function AnalysisPage() {
   const { period } = usePeriod()
+  const { filter } = useFilter()
   const me = useMe()
   const transactions = useTransactions(period)
   const categories = useCategories()
   const wallets = useWallets()
-  // Six months ending with the period's month, for the Over time bars.
-  const trailing: Period = useMemo(() => ({ from: monthStart(addMonths(period.to, -5)), to: monthEnd(period.to) }), [period.to])
-  const history = useTransactions(trailing)
   const currency = me.data?.defaultCurrency ?? "USD"
+  const today = todayLocal()
 
   const categoryById = useMemo(() => new Map<string, Category>((categories.data ?? []).map((c) => [c.id, c])), [categories.data])
-  const buckets = useMemo(() => byCategory(transactions.data ?? []), [transactions.data])
-  const maxBucket = buckets[0]?.[1] ?? 0
-  const months = useMemo(() => {
-    const result: Array<{ key: LocalDate; label: string; spent: number; current: boolean }> = []
-    for (let i = 5; i >= 0; i--) {
-      const start = monthStart(addMonths(period.to, -i))
-      const end = monthEnd(start)
-      const spent = Math.abs(spentMinor((history.data ?? []).filter((t) => t.occurredOn >= start && t.occurredOn <= end)))
-      result.push({ key: start, label: monthLabel.format(new Date(start)), spent, current: i === 0 })
-    }
-    return result
-  }, [history.data, period.to])
+  const categoryBySlug = useMemo(() => new Map<string, Category>((categories.data ?? []).map((c) => [c.slug, c])), [categories.data])
+  const walletById = useMemo(() => new Map<string, Wallet>((wallets.data?.wallets ?? []).map((w) => [w.id, w])), [wallets.data])
+  const slugOf = useMemo(() => slugLookup(categories.data), [categories.data])
+  const rows = useMemo(() => filterRows(transactions.data ?? [], filter, slugOf), [transactions.data, filter, slugOf])
+
+  const spent = spentMinor(rows)
+  const income = incomeMinor(rows)
+  const spend = useMemo(() => spendSeries(rows, period, today), [rows, period, today])
+  const flow = useMemo(() => flowSeries(rows, period), [rows, period])
+  const granularity = granularityFor(period)
+  const average = Math.abs(spent) / elapsedBuckets(period, today)
+  const slices = useMemo(
+    () => ({
+      categories: breakdown(rows, keysOf("categories", categoryById)),
+      wallets: breakdown(rows, keysOf("wallets", categoryById)),
+      tags: breakdown(rows, keysOf("tags", categoryById))
+    }),
+    [rows, categoryById]
+  )
+  const look = (dimension: Dimension) => (key: string) => lookOf(dimension, key, categoryBySlug, walletById)
+  const total = Math.abs(spent)
+
+  const section = (dimension: Dimension, title: string) => {
+    const all = slices[dimension]
+    return (
+      <>
+        <SectionHeading aside={all.length > ROWS ? <AllLink to={`/analysis/${dimension}`} /> : undefined}>{title}</SectionHeading>
+        {transactions.data && all.length === 0 ? <Empty>No spending by {dimensionTitle[dimension].toLowerCase()} in this period.</Empty> : null}
+        <BreakdownList slices={all.slice(0, ROWS)} look={look(dimension)} currency={currency} total={total} />
+      </>
+    )
+  }
 
   return (
     <AppShell>
       <PeriodHeader title="Analysis" />
       {transactions.isError ? <ErrorNotice message={transactions.error.message} /> : null}
+      {transactions.isPending ? <Loading /> : null}
       <div className="grid grid-cols-2 gap-3">
         <Card accent="coral" className="p-3">
           <Label as="div">Spent · {currency}</Label>
-          <div className="mt-1 font-mono text-xl font-bold tabular-nums">{transactions.data ? moneyCode(spentMinor(transactions.data), currency) : "…"}</div>
+          <div className="mt-1 font-mono text-xl font-bold tabular-nums">{transactions.data ? moneyCode(spent, currency) : "…"}</div>
         </Card>
         <Card accent="green" className="p-3">
           <Label as="div">Income · {currency}</Label>
-          <div className="mt-1 font-mono text-xl font-bold tabular-nums">{transactions.data ? moneyCode(incomeMinor(transactions.data), currency) : "…"}</div>
+          <div className="mt-1 font-mono text-xl font-bold tabular-nums">{transactions.data ? moneyCode(income, currency) : "…"}</div>
         </Card>
       </div>
 
-      <Heading as="h2" className="mt-6 mb-3">
-        By category
-      </Heading>
-      {transactions.isPending ? <Loading /> : null}
-      {transactions.data && buckets.length === 0 ? <Empty>No expenses in this period.</Empty> : null}
-      <div className="flex flex-col gap-3">
-        {buckets.map(([id, sum]) => {
-          const category = id === null ? undefined : categoryById.get(id)
-          const color = category ? hueColor(category.hue) : undefined
-          return (
-            <div key={id ?? "uncategorised"}>
-              <div className="flex items-center justify-between gap-3">
-                <Badge accent={category ? "paper" : "grey"} style={color ? { background: color } : undefined}>
-                  {category ? `${category.emoji ? `${category.emoji} ` : ""}${category.name}` : "Uncategorised"}
-                </Badge>
-                <span className="font-mono text-sm font-bold tabular-nums">{moneyCode(sum, currency)}</span>
-              </div>
-              <div className="mt-1.5 h-3 border-2 border-ink bg-white">
-                <div className="h-full" style={{ width: `${maxBucket > 0 ? (sum / maxBucket) * 100 : 0}%`, background: color ?? "var(--color-grey)" }} />
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      <Heading as="h2" className="mt-6 mb-3">
-        Over time
-      </Heading>
-      <Card className="h-44 p-2">
+      <SectionHeading
+        aside={
+          transactions.data ? (
+            <span className="font-mono text-sm tabular-nums text-grey-ink">
+              avg {moneyCode(Math.round(average), currency)} / {granularity}
+            </span>
+          ) : undefined
+        }
+      >
+        {granularity === "day" ? "Per day" : "Per month"}
+      </SectionHeading>
+      <Card className="h-48 p-2">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={months} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontFamily: "Space Mono", fontSize: 12 }} />
-            <Bar dataKey="spent" isAnimationActive={false} stroke="#000" strokeWidth={3}>
-              {months.map((m) => (
-                <Cell key={m.key} fill={m.current ? "var(--color-accent)" : "#000"} />
+          <ComposedChart data={spend} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={tick} interval="preserveStartEnd" minTickGap={12} />
+            <YAxis yAxisId="bars" hide />
+            <YAxis yAxisId="line" hide domain={[0, "dataMax"]} />
+            <Bar yAxisId="bars" dataKey="spent" isAnimationActive={false} stroke="#000" strokeWidth={2}>
+              {spend.map((p) => (
+                <Cell key={p.key} fill={p.when === "today" ? "var(--color-accent)" : p.when === "future" ? "var(--color-grey)" : "#000"} />
               ))}
             </Bar>
+            <Line yAxisId="line" type="monotone" dataKey="total" dot={false} isAnimationActive={false} stroke="var(--color-coral)" strokeWidth={3} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </Card>
+
+      {section("categories", "By category")}
+
+      <SectionHeading
+        aside={
+          transactions.data ? (
+            <span className="font-mono text-sm font-bold tabular-nums">net {signedMoney(income + spent, currency)}</span>
+          ) : undefined
+        }
+      >
+        Income vs expense
+      </SectionHeading>
+      <Card className="h-48 p-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={flow} stackOffset="sign" margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={tick} interval="preserveStartEnd" minTickGap={12} />
+            <YAxis hide />
+            <ReferenceLine y={0} stroke="#000" strokeWidth={2} />
+            <Bar dataKey="income" stackId="flow" isAnimationActive={false} fill="var(--color-green)" stroke="#000" strokeWidth={2} />
+            <Bar dataKey="expense" stackId="flow" isAnimationActive={false} fill="var(--color-coral)" stroke="#000" strokeWidth={2} />
           </BarChart>
         </ResponsiveContainer>
       </Card>
 
-      <div className="mt-6 mb-3 flex items-baseline justify-between">
-        <Heading as="h2">Wallets</Heading>
-        {wallets.data?.totalDefaultMinor != null ? (
-          <span className="font-mono text-sm font-bold tabular-nums">≈ {moneyCode(wallets.data.totalDefaultMinor, currency)}</span>
-        ) : null}
-      </div>
-      <div className="flex flex-col gap-3 pb-6">
-        {(wallets.data?.wallets ?? []).map((w) => (
-          <Card key={w.id} className="flex items-center justify-between p-3">
-            <div>
-              <div className="font-heading font-bold">{w.name}</div>
-              <div className="font-mono text-xs text-grey-ink">{w.currency}</div>
-            </div>
-            <span className="font-mono text-base font-bold tabular-nums">{moneyCode(w.balanceMinor, w.currency)}</span>
-          </Card>
-        ))}
-      </div>
+      {section("wallets", "By wallet")}
+      {section("tags", "By tag")}
+      <div className="pb-6" />
     </AppShell>
   )
 }

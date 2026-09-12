@@ -1,4 +1,4 @@
-import type { Transaction, TransactionId, WalletId } from "@june/shared"
+import type { TransactionId, WalletId } from "@june/shared"
 import { PencilSimple, Trash, X } from "@phosphor-icons/react"
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router"
@@ -6,22 +6,17 @@ import { useCategories, useDeleteTransactions, useTransactions, useWallets } fro
 import { AppShell } from "../../layout/AppShell"
 import { PeriodHeader } from "../../layout/PeriodHeader"
 import { StickyBar } from "../../layout/StickyBar"
+import { filterItems, isEmptyFilter, slugLookup, useFilter } from "../../lib/filter"
 import { dayHeading } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
 import { Dialog, Empty, ErrorNotice, IconButton, Label, Loading, Menu } from "../../ui"
 import { groupByDay, itemIds, toItems } from "./listItems"
 import { TransactionCard } from "./TransactionCard"
 
-/** Spent in the period: negative Changes, in Default Currency, skipping Hidden rows and rows with no rate. */
-export const spentMinor = (rows: ReadonlyArray<Transaction>): number =>
-  rows.reduce((sum, t) => (t.type === "change" && !t.hiddenFromAnalysis && t.amountMinor < 0 ? sum + (t.defaultMinor ?? 0) : sum), 0)
-
-export const incomeMinor = (rows: ReadonlyArray<Transaction>): number =>
-  rows.reduce((sum, t) => (t.type === "change" && !t.hiddenFromAnalysis && t.amountMinor > 0 ? sum + (t.defaultMinor ?? 0) : sum), 0)
-
 export function TransactionsPage() {
   const navigate = useNavigate()
   const { period } = usePeriod()
+  const { filter } = useFilter()
   const transactions = useTransactions(period)
   const categories = useCategories()
   const wallets = useWallets()
@@ -33,7 +28,8 @@ export function TransactionsPage() {
   const categoryById = useMemo(() => new Map((categories.data ?? []).map((c) => [c.id, c])), [categories.data])
   const walletNames = useMemo(() => new Map((wallets.data?.wallets ?? []).map((w) => [w.id, w.name])), [wallets.data])
   const walletName = (id: WalletId | null) => (id === null ? null : (walletNames.get(id) ?? null))
-  const items = useMemo(() => toItems(transactions.data ?? []), [transactions.data])
+  const slugOf = useMemo(() => slugLookup(categories.data), [categories.data])
+  const items = useMemo(() => filterItems(toItems(transactions.data ?? []), filter, slugOf), [transactions.data, filter, slugOf])
   const groups = useMemo(() => groupByDay(items), [items])
 
   /** An item is selected as a whole: both legs of an Exchange go in and out together. */
@@ -86,6 +82,9 @@ export function TransactionsPage() {
       {transactions.isPending ? <Loading /> : null}
       {transactions.isError ? <ErrorNotice message={transactions.error.message} /> : null}
       {transactions.data && transactions.data.length === 0 ? <Empty>Nothing recorded in this period.</Empty> : null}
+      {transactions.data && transactions.data.length > 0 && items.length === 0 && !isEmptyFilter(filter) ? (
+        <Empty>Nothing in this period matches the filter.</Empty>
+      ) : null}
 
       <div className="flex flex-col gap-4 pb-6">
         {groups.map(([day, rows]) => (

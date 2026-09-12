@@ -1,7 +1,8 @@
 import { HttpApiBuilder, HttpApiError } from "@effect/platform"
-import { type CaptureResult, currencyExponent, fromMinor, isCurrency, JuneApi, LocalDate, todayUtc, toMinor } from "@june/shared"
-import { Effect, Either, Option, Schema } from "effect"
+import { type CaptureResult, currencyExponent, fromMinor, JuneApi } from "@june/shared"
+import { Effect, Either, Option } from "effect"
 import { CategoriesRepo } from "../categories/Categories.js"
+import { readChange } from "../transactions/readChange.js"
 import { categoryFits } from "../transactions/Transactions.js"
 import { TransactionsRepo } from "../transactions/TransactionsRepo.js"
 import { WalletsRepo } from "../wallets/WalletsRepo.js"
@@ -30,17 +31,9 @@ export const CaptureHandlersLive = HttpApiBuilder.group(JuneApi, "capture", (han
         const userId = yield* tokens.resolveUser(path.token).pipe(
           Effect.flatMap(Option.match({ onNone: () => new HttpApiError.NotFound(), onSome: Effect.succeed }))
         )
-        const amount = typeof payload.amount === "number" ? payload.amount : Number(payload.amount.trim().replace(",", "."))
-        if (!Number.isFinite(amount)) return refuse(`amount "${payload.amount}" is not a number`)
-        const currency = payload.currency.trim().toUpperCase()
-        if (!isCurrency(currency)) return refuse(`currency "${payload.currency}" is invalid`)
-        const parsed = toMinor(amount, currency)
-        if (Either.isLeft(parsed)) return refuse(parsed.left)
-        const amountMinor = parsed.right
-        if (amountMinor === 0) return refuse("amount is zero")
-        const dateInput = payload.date?.trim() ?? ""
-        const date = dateInput === "" ? Either.right(todayUtc()) : Schema.decodeUnknownEither(LocalDate)(dateInput)
-        if (Either.isLeft(date)) return refuse(`date "${dateInput}" must be YYYY-MM-DD`)
+        const read = readChange({ amount: payload.amount, currency: payload.currency, date: payload.date ?? "" })
+        if (Either.isLeft(read)) return refuse(read.left)
+        const { amountMinor, currency, occurredOn } = read.right
 
         // Wallet Order resolves the Wallet; no match means Unassigned.
         const wallet = yield* wallets.firstWithCurrency(userId, currency)
@@ -56,7 +49,7 @@ export const CaptureHandlersLive = HttpApiBuilder.group(JuneApi, "capture", (han
           type: "change",
           amountMinor,
           currency,
-          occurredOn: date.right,
+          occurredOn,
           description: payload.description?.trim() ?? "",
           tags: [],
           hiddenFromAnalysis: false,

@@ -4,6 +4,7 @@ import { Effect, Layer } from "effect"
 import { AuthenticationLive } from "../auth/AuthenticationLive.js"
 import { CaptureHandlersLive } from "../capture/Capture.js"
 import { CategoriesHandlersLive } from "../categories/Categories.js"
+import { ImportHandlersLive } from "../import/Import.js"
 import { SettingsHandlersLive } from "../settings/Settings.js"
 import { TagsHandlersLive } from "../tags/Tags.js"
 import { TransactionsHandlersLive } from "../transactions/Transactions.js"
@@ -21,7 +22,8 @@ export const HandlersLive = Layer.mergeAll(
   TagsHandlersLive,
   TransactionsHandlersLive,
   SettingsHandlersLive,
-  CaptureHandlersLive
+  CaptureHandlersLive,
+  ImportHandlersLive
 )
 
 export const ApiLive = HttpApiBuilder.api(JuneApi).pipe(Layer.provide(HandlersLive), Layer.provide(AuthenticationLive))

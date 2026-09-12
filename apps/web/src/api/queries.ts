@@ -7,6 +7,7 @@ import type {
   CreateWallet,
   CurrencyCode,
   ExchangeId,
+  ImportRequest,
   TransactionId,
   UpdateCategory,
   UpdateExchange,
@@ -134,5 +135,11 @@ export const useSetDefaultCurrency = () =>
     "transaction",
     "wallets"
   ])
+
+/** A preview records nothing, so nothing is invalidated. */
+export const useImportPreview = () =>
+  useMutation({ mutationFn: (payload: Payload<typeof ImportRequest>) => run(api.import.run({ payload })) })
+
+export const useImportRun = () => useInvalidating((payload: Payload<typeof ImportRequest>) => run(api.import.run({ payload })), money)
 
 export const useRegenerateCaptureToken = () => useInvalidating(() => run(api.settings.regenerateCaptureToken()), ["me"])

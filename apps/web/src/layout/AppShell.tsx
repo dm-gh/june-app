@@ -1,19 +1,28 @@
 import { Plus } from "@phosphor-icons/react"
-import type { ReactNode } from "react"
+import { type ReactNode, useContext } from "react"
 import { NavLink, useMatch, useNavigate } from "react-router"
 import { signOut } from "../api/auth"
 import { useMe } from "../api/queries"
+import { FilterContext, filterSearch } from "../lib/filter"
 import { Button, cn, Display } from "../ui"
 
 const tabs = [
-  { to: "/analysis", label: "Analysis" },
-  { to: "/transactions", label: "Transactions" },
-  { to: "/settings", label: "Settings" }
+  { to: "/analysis", label: "Analysis", filtered: true },
+  { to: "/transactions", label: "Transactions", filtered: true },
+  { to: "/settings", label: "Settings", filtered: false }
 ] as const
+
+/** Transactions and Analysis share the Filter, so their tab links carry it. */
+const useTabLinks = () => {
+  const filter = useContext(FilterContext)
+  const search = filter ? filterSearch(filter.filter) : ""
+  return tabs.map((tab) => ({ ...tab, link: { pathname: tab.to, search: tab.filtered ? search : "" } }))
+}
 
 /** Phone: the bottom tab bar. The plus button slides out from behind the Transactions tab when it is active. */
 function TabBar() {
   const navigate = useNavigate()
+  const tabs = useTabLinks()
   const onTransactions = useMatch({ path: "/transactions", end: false }) !== null
   return (
     <nav
@@ -42,7 +51,7 @@ function TabBar() {
                 </button>
               ) : null}
               <NavLink
-                to={tab.to}
+                to={tab.link}
                 className={({ isActive }) =>
                   cn(
                     "relative z-10 inline-flex items-center justify-center border-3 px-3 font-heading text-sm font-bold",
@@ -65,6 +74,7 @@ function TabBar() {
 function Sidebar() {
   const me = useMe()
   const navigate = useNavigate()
+  const tabs = useTabLinks()
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r-3 border-ink bg-paper p-6 md:flex">
       <Display size="sm" as="div">
@@ -74,7 +84,7 @@ function Sidebar() {
         {tabs.map((tab) => (
           <NavLink
             key={tab.to}
-            to={tab.to}
+            to={tab.link}
             className={({ isActive }) =>
               cn(
                 "border-3 px-3 py-2 font-heading font-bold",

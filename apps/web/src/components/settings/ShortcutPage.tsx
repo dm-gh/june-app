@@ -1,11 +1,11 @@
 import type { CaptureTokenIssued } from "@june/shared"
-import { ArrowLeft, Check, Copy } from "@phosphor-icons/react"
+import { ArrowLeft } from "@phosphor-icons/react"
 import { type ReactNode, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
 import { useCategories, useMe, useRegenerateCaptureToken, useWallets } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { StickyBar } from "../../layout/StickyBar"
-import { Button, Card, cn, Dialog, Display, ErrorNotice, Heading, IconButton, Label, Notice, Text } from "../../ui"
+import { Button, Card, cn, CopyButton, Dialog, Display, ErrorNotice, Heading, IconButton, Label, Notice, Text } from "../../ui"
 
 /** The plain token is shown once by the api; the tab remembers it so a reload mid-setup does not lose it. */
 const STORAGE_KEY = "june.capture-url"
@@ -17,26 +17,6 @@ const readIssued = (): CaptureTokenIssued | null => {
   } catch {
     return null
   }
-}
-
-function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
-  const [copied, setCopied] = useState(false)
-  const copy = () =>
-    navigator.clipboard.writeText(value).then(() => {
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 1500)
-    })
-  return (
-    <button
-      type="button"
-      onClick={copy}
-      aria-label={`${label}: ${value}`}
-      className="inline-flex h-7 shrink-0 items-center gap-1 border-2 border-ink bg-paper px-2 font-heading text-xs font-bold hover:bg-ink/5"
-    >
-      {copied ? <Check size={14} weight="bold" /> : <Copy size={14} weight="bold" />}
-      {copied ? "Copied" : label}
-    </button>
-  )
 }
 
 /** A value to type into the Shortcuts app, with a copy button. Only a long value (the URL) may break mid-word. */

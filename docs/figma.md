@@ -12,7 +12,7 @@ Design work lives in the author's personal Figma account, never the work account
   - Badge has a Size axis (MD 28px, SM 20px); SM is the corner tag on transaction cards. Effect styles Shadow/Hard SM Coral and Shadow/Hard SM Green colour the amount field by sign.
   - Phone screen titles use the text style Display/SM (Syne ExtraBold 24px, uppercase like all Display styles); the code equivalent is `font-display text-3xl` and should be added to the Display component as a size prop when screens are implemented.
 
-## Round 2 screens (added 2026-09-12, not yet implemented)
+## Round 2 screens (added 2026-09-12, implemented 2026-09-13)
 
 Second row on the Screens page (y ≈ 6200), plus two new screen-level components beside the Period sheet: **Filter sheet** and **Shortcut action**.
 
@@ -75,3 +75,6 @@ The "Screens · Desktop" page mirrors every mobile screen at 1440×1024. The bot
 - Dates are never picked with the system control: a Date field opens June's own calendar in a sheet (with Yesterday and Today shortcuts), and the Period sheet fills whichever of From or To is active from the same calendar.
 - There is no read-only Transaction view: a card opens the edit form, with Delete behind its options menu. Either leg of an Exchange opens the Exchange form (both Wallets, both amounts, shared date, description and tags), never a single-leg form.
 - Hover: the element rises 2px while its shadow stays put (the shadow grows), rather than the whole thing moving.
+- Filters (implemented 2026-09-13): the URL carries what is deselected (`xtype`, `xcat` by slug, `xwallet` by id, `xtag`), so a Category or Tag created later is included without touching a link. The Category chips apply to Changes only; an Init or an Exchange has no Category and is never hidden by them. A row with no Tags always passes the Tag chips (there is no Untagged chip). An Exchange stays listed while either of its Wallets is selected. The chip row reads "All", the one remaining item in its colour, "5 of 7" on the accent, or "None" in grey; the marquee drifts at about 28px/s after two idle seconds and is off under prefers-reduced-motion.
+- Analysis (implemented 2026-09-13): the All › link shows only when a section has more than five rows. Breakdowns are of spending only. On an All page the shares and the donut are measured over the selected rows; a deselected row keeps its amount and loses its share. The average in the Per day heading is over the buckets that have started.
+- Import (implemented 2026-09-13): reached from a lavender Import card on Settings. The header may list the six columns in any order and extra columns are ignored; the template card lists the User's slugs. A duplicate is a Change with the same date, amount, currency, Wallet, Category and description (Tags are not compared); the checkbox to skip them appears only when there are any, checked by default. After an import the period jumps to the dates the file covered.
