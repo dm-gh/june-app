@@ -10,7 +10,7 @@ import { filterRows, slugLookup, useFilter } from "../../lib/filter"
 import { moneyCode, signedMoney } from "../../lib/format"
 import { todayLocal, usePeriod } from "../../lib/period"
 import { Card, Empty, ErrorNotice, Heading, Label, Loading } from "../../ui"
-import { breakdown, elapsedBuckets, flowSeries, granularityFor, incomeMinor, spendSeries, spentMinor } from "./analysis"
+import { breakdown, elapsedBuckets, flowSeries, granularityFor, incomeMinor, sideOf, spendSeries, spentMinor } from "./analysis"
 import { BreakdownList, type Dimension, dimensionTitle, keysOf, lookOf } from "./BreakdownList"
 
 const ROWS = 5
@@ -60,23 +60,34 @@ export function AnalysisPage() {
   const flow = useMemo(() => flowSeries(rows, period), [rows, period])
   const granularity = granularityFor(period)
   const average = Math.abs(spent) / elapsedBuckets(period, today)
+  // The breakdowns show spending, or income once Expense is deselected in the Type filter.
+  const side = sideOf(filter.types)
   const slices = useMemo(
     () => ({
-      categories: breakdown(rows, keysOf("categories", categoryById)),
-      wallets: breakdown(rows, keysOf("wallets", categoryById)),
-      tags: breakdown(rows, keysOf("tags", categoryById))
+      categories: breakdown(rows, keysOf("categories", categoryById), side),
+      wallets: breakdown(rows, keysOf("wallets", categoryById), side),
+      tags: breakdown(rows, keysOf("tags", categoryById), side)
     }),
-    [rows, categoryById]
+    [rows, categoryById, side]
   )
   const look = (dimension: Dimension) => (key: string) => lookOf(dimension, key, categoryBySlug, walletById)
-  const total = Math.abs(spent)
+  const total = side === "expense" ? Math.abs(spent) : income
 
   const section = (dimension: Dimension, title: string) => {
     const all = slices[dimension]
+    const noun = dimensionTitle[dimension].toLowerCase()
     return (
       <>
-        <SectionHeading aside={all.length > ROWS ? <AllLink to={`/analysis/${dimension}`} /> : undefined}>{title}</SectionHeading>
-        {transactions.data && all.length === 0 ? <Empty>No spending by {dimensionTitle[dimension].toLowerCase()} in this period.</Empty> : null}
+        <SectionHeading aside={all.length > 0 ? <AllLink to={`/analysis/${dimension}`} /> : undefined}>
+          {title}
+          {side === "income" ? <span className="text-grey-ink"> · income</span> : null}
+        </SectionHeading>
+        {transactions.data && all.length === 0 ? (
+          <Empty>
+            No {side === "expense" ? "spending" : "income"} by {noun} in this period.
+            {side === "expense" ? " Deselect Expense in the filter to see income instead." : ""}
+          </Empty>
+        ) : null}
         <BreakdownList slices={all.slice(0, ROWS)} look={look(dimension)} currency={currency} total={total} />
       </>
     )

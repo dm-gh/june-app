@@ -100,11 +100,17 @@ export interface Slice {
   readonly sum: number
 }
 
-/** Expense totals per key, largest first. `keysOf` may return several keys (a row with two Tags counts in both) or none. */
-export const breakdown = (rows: ReadonlyArray<Transaction>, keysOf: (t: Transaction) => ReadonlyArray<string>): Array<Slice> => {
+/** Which side of the ledger the breakdowns show: spending unless Expense is deselected and Income is not. */
+export type Side = "expense" | "income"
+
+export const sideOf = (excludedTypes: ReadonlyArray<string>): Side =>
+  excludedTypes.includes("expense") && !excludedTypes.includes("income") ? "income" : "expense"
+
+/** Totals per key on one side, largest first. `keysOf` may return several keys (a row with two Tags counts in both) or none. */
+export const breakdown = (rows: ReadonlyArray<Transaction>, keysOf: (t: Transaction) => ReadonlyArray<string>, side: Side = "expense"): Array<Slice> => {
   const sums = new Map<string, number>()
   for (const t of counted(rows)) {
-    if (t.amountMinor >= 0) continue
+    if (side === "expense" ? t.amountMinor >= 0 : t.amountMinor <= 0) continue
     for (const key of keysOf(t)) sums.set(key, (sums.get(key) ?? 0) + Math.abs(value(t)))
   }
   return [...sums.entries()].map(([key, sum]) => ({ key, sum })).sort((a, b) => b.sum - a.sum)

@@ -8,7 +8,7 @@ import { filterRows, slugLookup, toggleIn, useFilter } from "../../lib/filter"
 import { moneyCode } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
 import { Card, Empty, ErrorNotice, Label, Loading, Text } from "../../ui"
-import { breakdown } from "./analysis"
+import { breakdown, incomeMinor, sideOf, spentMinor } from "./analysis"
 import { BreakdownList, type Dimension, dimensionTitle, keysOf, lookOf } from "./BreakdownList"
 
 /**
@@ -35,12 +35,21 @@ export function BreakdownPage({ dimension }: { dimension: Dimension }) {
     () => filterRows(transactions.data ?? [], { ...filter, [dimension]: [] }, slugOf),
     [transactions.data, filter, dimension, slugOf]
   )
+  const side = sideOf(filter.types)
   const slices = useMemo(() => {
-    const all = breakdown(rows, keysOf(dimension, categoryById))
+    const all = breakdown(rows, keysOf(dimension, categoryById), side)
     return [...all.filter((s) => !excluded.has(s.key)), ...all.filter((s) => excluded.has(s.key))]
-  }, [rows, dimension, categoryById, excluded])
+  }, [rows, dimension, categoryById, excluded, side])
   const selected = slices.filter((s) => !excluded.has(s.key))
-  const total = selected.reduce((sum, s) => sum + s.sum, 0)
+  // Categories and Wallets partition the rows, so their shares add up to the whole. A row can carry
+  // several Tags, so Tag shares are measured against the period's total under the full Filter.
+  const fullyFiltered = useMemo(() => filterRows(transactions.data ?? [], filter, slugOf), [transactions.data, filter, slugOf])
+  const total =
+    dimension === "tags"
+      ? side === "expense"
+        ? Math.abs(spentMinor(fullyFiltered))
+        : incomeMinor(fullyFiltered)
+      : selected.reduce((sum, s) => sum + s.sum, 0)
   const look = (key: string) => lookOf(dimension, key, categoryBySlug, walletById)
 
   return (
@@ -51,7 +60,7 @@ export function BreakdownPage({ dimension }: { dimension: Dimension }) {
 
       {dimension === "categories" && selected.length > 0 ? (
         <Card className="mb-5 p-3">
-          <Label as="div">Share of spending</Label>
+          <Label as="div">Share of {side === "expense" ? "spending" : "income"}</Label>
           <div className="relative h-56">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -75,7 +84,7 @@ export function BreakdownPage({ dimension }: { dimension: Dimension }) {
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
               <Label as="div" className="text-grey-ink">
-                Spent
+                {side === "expense" ? "Spent" : "Income"}
               </Label>
               <div className="font-mono text-base font-bold tabular-nums">{moneyCode(total, currency)}</div>
             </div>
@@ -83,7 +92,12 @@ export function BreakdownPage({ dimension }: { dimension: Dimension }) {
         </Card>
       ) : null}
 
-      {transactions.data && slices.length === 0 ? <Empty>No spending by {dimensionTitle[dimension].toLowerCase()} in this period.</Empty> : null}
+      {transactions.data && slices.length === 0 ? (
+        <Empty>
+          No {side === "expense" ? "spending" : "income"} by {dimensionTitle[dimension].toLowerCase()} in this period.
+          {side === "expense" ? " Deselect Expense in the filter to see income instead." : ""}
+        </Empty>
+      ) : null}
       <BreakdownList slices={slices} look={look} currency={currency} total={total} excluded={excluded} onRowClick={(key) => setFilter(toggleIn(filter, dimension, key))} />
       {slices.length > 0 ? (
         <Text className="mt-4 pb-6 text-sm text-grey-ink">Tap a row to leave it out of the filter; tap again to bring it back.</Text>
