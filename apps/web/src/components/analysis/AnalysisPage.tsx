@@ -2,11 +2,12 @@ import type { Category, Wallet } from "@june/shared"
 import { CaretRight } from "@phosphor-icons/react"
 import { type ReactNode, useMemo } from "react"
 import { useNavigate } from "react-router"
-import { Bar, BarChart, Cell, ComposedChart, Line, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, Cell, ComposedChart, LabelList, type LabelProps, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { useCategories, useMe, useTransactions, useWallets } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { PeriodHeader } from "../../layout/PeriodHeader"
 import { filterRows, slugLookup, useFilter } from "../../lib/filter"
+import { fromMinor } from "@june/shared"
 import { moneyCode, signedMoney } from "../../lib/format"
 import { todayLocal, usePeriod } from "../../lib/period"
 import { Card, Empty, ErrorNotice, Heading, Label, Loading } from "../../ui"
@@ -16,6 +17,66 @@ import { BreakdownList, type Dimension, dimensionTitle, keysOf, lookOf } from ".
 const ROWS = 5
 
 const tick = { fontFamily: "Space Mono", fontSize: 11 }
+
+const compactFormat = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 })
+/** "128", "1.2K": the amount on a bar, without the currency, which the section heading names. */
+const compact = (minor: number, currency: string): string => compactFormat.format(Math.abs(fromMinor(minor, currency)))
+
+/** Room above the bars for a label; rotated labels need more. */
+const labelMargin = (buckets: number) => (buckets > 12 ? 40 : 18)
+
+/**
+ * The amount over (or, for a negative bar, under) its bar. Zero bars stay unlabelled. With more
+ * than twelve buckets the labels stand upright so neighbours never collide.
+ */
+const amountLabel = (currency: string, buckets: number) =>
+  function AmountLabel(props: LabelProps) {
+    const value = Number(props.value ?? 0)
+    if (value === 0) return null
+    const x = Number(props.x ?? 0) + Number(props.width ?? 0) / 2
+    // A bar below the zero line comes with a negative height.
+    const y0 = Number(props.y ?? 0)
+    const y1 = y0 + Number(props.height ?? 0)
+    const top = Math.min(y0, y1)
+    const bottom = Math.max(y0, y1)
+    const rotated = buckets > 12
+    const below = value < 0
+    const y = below ? bottom + 4 : top - 4
+    const text = compact(value, currency)
+    return (
+      <text
+        x={x}
+        y={y}
+        fontFamily="Space Mono"
+        fontSize={9}
+        fontWeight={700}
+        fill="#000"
+        textAnchor={rotated ? (below ? "end" : "start") : "middle"}
+        dominantBaseline={rotated ? "middle" : below ? "hanging" : "auto"}
+        transform={rotated ? `rotate(-90 ${x} ${y})` : undefined}
+      >
+        {text}
+      </text>
+    )
+  }
+
+/** Tap a bar: the day and its full amounts in a bordered card. */
+function ChartTip({ active, label, payload, currency }: { active?: boolean; label?: string; payload?: ReadonlyArray<{ dataKey?: string | number; value?: number | string }>; currency: string }) {
+  if (!active || !payload || payload.length === 0) return null
+  const rows = payload.filter((p) => Number(p.value) !== 0)
+  if (rows.length === 0) return null
+  const names: Record<string, string> = { spent: "Spent", total: "So far", income: "Income", expense: "Expense" }
+  return (
+    <div className="border-3 border-ink bg-paper px-2.5 py-1.5 font-mono text-xs shadow-hard-sm">
+      <div className="font-heading font-bold">{label}</div>
+      {rows.map((p) => (
+        <div key={String(p.dataKey)} className="tabular-nums">
+          {names[String(p.dataKey)] ?? String(p.dataKey)} {moneyCode(Number(p.value), currency)}
+        </div>
+      ))}
+    </div>
+  )
+}
 
 /** Section heading with an optional figure on the right, or an "All ›" link when the list is capped. */
 function SectionHeading({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
@@ -120,16 +181,18 @@ export function AnalysisPage() {
       >
         {granularity === "day" ? "Per day" : "Per month"}
       </SectionHeading>
-      <Card className="h-48 p-2">
+      <Card className="h-52 p-2">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={spend} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+          <ComposedChart data={spend} margin={{ top: labelMargin(spend.length), right: 8, left: 8, bottom: 0 }}>
             <XAxis dataKey="label" axisLine={false} tickLine={false} tick={tick} interval="preserveStartEnd" minTickGap={12} />
             <YAxis yAxisId="bars" hide />
             <YAxis yAxisId="line" hide domain={[0, "dataMax"]} />
+            <Tooltip cursor={{ fill: "rgba(0,0,0,0.06)" }} content={<ChartTip currency={currency} />} />
             <Bar yAxisId="bars" dataKey="spent" isAnimationActive={false} stroke="#000" strokeWidth={2}>
               {spend.map((p) => (
                 <Cell key={p.key} fill={p.when === "today" ? "var(--color-accent)" : p.when === "future" ? "var(--color-grey)" : "#000"} />
               ))}
+              <LabelList dataKey="spent" content={amountLabel(currency, spend.length)} />
             </Bar>
             <Line yAxisId="line" type="monotone" dataKey="total" dot={false} isAnimationActive={false} stroke="var(--color-coral)" strokeWidth={3} />
           </ComposedChart>
@@ -147,14 +210,20 @@ export function AnalysisPage() {
       >
         Income vs expense
       </SectionHeading>
-      <Card className="h-48 p-2">
+      <Card className="h-56 p-2">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={flow} stackOffset="sign" margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
             <XAxis dataKey="label" axisLine={false} tickLine={false} tick={tick} interval="preserveStartEnd" minTickGap={12} />
-            <YAxis hide />
+            {/* Headroom on both sides of the zero line so the labels clear the tallest bars and the axis. */}
+            <YAxis hide domain={[(min: number) => min * (flow.length > 12 ? 1.6 : 1.3), (max: number) => max * (flow.length > 12 ? 1.6 : 1.3)]} />
+            <Tooltip cursor={{ fill: "rgba(0,0,0,0.06)" }} content={<ChartTip currency={currency} />} />
             <ReferenceLine y={0} stroke="#000" strokeWidth={2} />
-            <Bar dataKey="income" stackId="flow" isAnimationActive={false} fill="var(--color-green)" stroke="#000" strokeWidth={2} />
-            <Bar dataKey="expense" stackId="flow" isAnimationActive={false} fill="var(--color-coral)" stroke="#000" strokeWidth={2} />
+            <Bar dataKey="income" stackId="flow" isAnimationActive={false} fill="var(--color-green)" stroke="#000" strokeWidth={2}>
+              <LabelList dataKey="income" content={amountLabel(currency, flow.length)} />
+            </Bar>
+            <Bar dataKey="expense" stackId="flow" isAnimationActive={false} fill="var(--color-coral)" stroke="#000" strokeWidth={2}>
+              <LabelList dataKey="expense" content={amountLabel(currency, flow.length)} />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </Card>
