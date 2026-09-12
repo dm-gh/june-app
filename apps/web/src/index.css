@@ -5,8 +5,8 @@
   --color-*: initial;
   --color-ink: #000000;
   --color-paper: #fffdf5;
-  /* The one accent: primary buttons, active nav tab, plus button, checked boxes, selected days. Khaki candidate; was yellow. */
-  --color-accent: #bacc66;
+  /* The one accent: primary buttons, active nav tab, plus button, checked boxes, selected days. Was yellow. */
+  --color-accent: #d2ee85;
   --color-yellow: #ffd23f;
   --color-coral: #ff6b6b;
   --color-sky: #74b9ff;
