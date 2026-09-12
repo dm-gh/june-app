@@ -98,7 +98,15 @@ export function BreakdownPage({ dimension }: { dimension: Dimension }) {
           {side === "expense" ? " Deselect Expense in the filter to see income instead." : ""}
         </Empty>
       ) : null}
-      <BreakdownList slices={slices} look={look} currency={currency} total={total} excluded={excluded} onRowClick={(key) => setFilter(toggleIn(filter, dimension, key))} />
+      <BreakdownList
+        slices={slices}
+        look={look}
+        currency={currency}
+        total={total}
+        excluded={excluded}
+        onRowClick={(key) => setFilter(toggleIn(filter, dimension, key))}
+        showNative={dimension === "wallets"}
+      />
       {slices.length > 0 ? (
         <Text className="mt-4 pb-6 text-sm text-grey-ink">Tap a row to leave it out of the filter; tap again to bring it back.</Text>
       ) : (

@@ -57,14 +57,16 @@ export interface BreakdownListProps {
   /** Keys drawn at half opacity, after the rest. */
   excluded?: ReadonlySet<string>
   onRowClick?: (key: string) => void
+  /** Show the amount in the row's own currency, with the Default Currency figure in parentheses. */
+  showNative?: boolean
 }
 
 /** Rows of chip, amount, share and a bar scaled to the largest row, excluded rows included. */
-export function BreakdownList({ slices, look, currency, total, excluded, onRowClick }: BreakdownListProps) {
+export function BreakdownList({ slices, look, currency, total, excluded, onRowClick, showNative }: BreakdownListProps) {
   const max = slices.reduce((m, s) => Math.max(m, s.sum), 0)
   return (
     <div className="flex flex-col gap-3">
-      {slices.map(({ key, sum }) => {
+      {slices.map(({ key, sum, native }) => {
         const l = look(key)
         const out = excluded?.has(key) ?? false
         const Row = onRowClick ? "button" : "div"
@@ -84,7 +86,14 @@ export function BreakdownList({ slices, look, currency, total, excluded, onRowCl
                 {total !== undefined && !out ? (
                   <span className="font-mono text-xs text-grey-ink tabular-nums">{total > 0 ? `${Math.round((sum / total) * 100)}%` : "0%"}</span>
                 ) : null}
-                <span className="font-mono text-sm font-bold tabular-nums">{moneyCode(sum, currency)}</span>
+                {showNative && native && native.currency !== currency ? (
+                  <span className="font-mono text-sm tabular-nums">
+                    <span className="font-bold">{moneyCode(native.minor, native.currency)}</span>{" "}
+                    <span className="text-grey-ink">({moneyCode(sum, currency)})</span>
+                  </span>
+                ) : (
+                  <span className="font-mono text-sm font-bold tabular-nums">{moneyCode(sum, currency)}</span>
+                )}
               </span>
             </div>
             <div className="mt-1.5 h-3 overflow-hidden border-2 border-ink bg-white">

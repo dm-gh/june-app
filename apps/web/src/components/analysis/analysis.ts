@@ -97,7 +97,10 @@ export const elapsedBuckets = (p: Period, today: LocalDate): number => {
 
 export interface Slice {
   readonly key: string
+  /** In Default Currency. */
   readonly sum: number
+  /** The same rows in their own currency, when they all share one (a Wallet's rows always do). */
+  readonly native: { readonly minor: number; readonly currency: string } | null
 }
 
 /** Which side of the ledger the breakdowns show: spending unless Expense is deselected and Income is not. */
@@ -108,12 +111,20 @@ export const sideOf = (excludedTypes: ReadonlyArray<string>): Side =>
 
 /** Totals per key on one side, largest first. `keysOf` may return several keys (a row with two Tags counts in both) or none. */
 export const breakdown = (rows: ReadonlyArray<Transaction>, keysOf: (t: Transaction) => ReadonlyArray<string>, side: Side = "expense"): Array<Slice> => {
-  const sums = new Map<string, number>()
+  const sums = new Map<string, { sum: number; minor: number; currency: string | null }>()
   for (const t of counted(rows)) {
     if (side === "expense" ? t.amountMinor >= 0 : t.amountMinor <= 0) continue
-    for (const key of keysOf(t)) sums.set(key, (sums.get(key) ?? 0) + Math.abs(value(t)))
+    for (const key of keysOf(t)) {
+      const acc = sums.get(key) ?? { sum: 0, minor: 0, currency: t.currency }
+      acc.sum += Math.abs(value(t))
+      acc.minor += Math.abs(t.amountMinor)
+      if (acc.currency !== t.currency) acc.currency = null
+      sums.set(key, acc)
+    }
   }
-  return [...sums.entries()].map(([key, sum]) => ({ key, sum })).sort((a, b) => b.sum - a.sum)
+  return [...sums.entries()]
+    .map(([key, { sum, minor, currency }]) => ({ key, sum, native: currency === null ? null : { minor, currency } }))
+    .sort((a, b) => b.sum - a.sum)
 }
 
 export const spentMinor = (rows: ReadonlyArray<Transaction>): number =>

@@ -88,7 +88,7 @@ export function AnalysisPage() {
             {side === "expense" ? " Deselect Expense in the filter to see income instead." : ""}
           </Empty>
         ) : null}
-        <BreakdownList slices={all.slice(0, ROWS)} look={look(dimension)} currency={currency} total={total} />
+        <BreakdownList slices={all.slice(0, ROWS)} look={look(dimension)} currency={currency} total={total} showNative={dimension === "wallets"} />
       </>
     )
   }
