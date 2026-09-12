@@ -5,8 +5,11 @@
   --color-*: initial;
   --color-ink: #000000;
   --color-paper: #fffdf5;
-  /* The one accent: primary buttons, active nav tab, plus button, checked boxes, selected days. Was yellow. */
-  --color-accent: #d2ee85;
+  /* Accent family. accent: primary buttons, active nav tab, plus button, checked boxes, selected days.
+     accent-strong: cover and sign-in brand only. accent-soft: large quiet surfaces such as the Spent panel. */
+  --color-accent: #cef366;
+  --color-accent-strong: #bdef36;
+  --color-accent-soft: #e6f9b2;
   --color-yellow: #ffd23f;
   --color-coral: #ff6b6b;
   --color-sky: #74b9ff;
