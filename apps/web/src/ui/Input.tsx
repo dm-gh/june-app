@@ -1,5 +1,5 @@
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from "react"
-import { cn } from "./cn.js"
+import { cn } from "./cn"
 
 /** Shared look for every text-like control. Focus is a hard offset shadow, not a glow. */
 export const controlClass = cn(

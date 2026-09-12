@@ -1,0 +1,129 @@
+import { Plus } from "@phosphor-icons/react"
+import type { ReactNode } from "react"
+import { NavLink, useNavigate } from "react-router"
+import { signOut } from "../api/auth"
+import { useMe } from "../api/queries"
+import { Button, cn, Display } from "../ui"
+
+const tabs = [
+  { to: "/analysis", label: "Analysis" },
+  { to: "/transactions", label: "Transactions" },
+  { to: "/settings", label: "Settings" }
+] as const
+
+/** Phone: the bottom tab bar. The plus button slides out of the Transactions tab when it is active. */
+function TabBar() {
+  const navigate = useNavigate()
+  return (
+    <nav
+      aria-label="Main"
+      className="fixed inset-x-0 bottom-0 z-10 h-[calc(80px+env(safe-area-inset-bottom))] border-t-3 border-ink bg-paper pb-[env(safe-area-inset-bottom)] md:hidden"
+    >
+      <ul className="grid h-20 grid-cols-3 items-center">
+        {tabs.map((tab) => (
+          <li key={tab.to} className="relative flex justify-center">
+            <NavLink
+              to={tab.to}
+              className={({ isActive }) =>
+                cn(
+                  "inline-flex items-center justify-center border-3 px-3 font-heading text-sm font-bold",
+                  isActive ? "border-ink bg-accent shadow-hard-sm" : "border-transparent text-grey-ink",
+                  isActive && tab.to === "/transactions" ? "h-7 text-xs" : "h-11"
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && tab.to === "/transactions" ? (
+                    <button
+                      type="button"
+                      aria-label="Add transaction"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        navigate("/transactions/new")
+                      }}
+                      className="absolute -top-10 left-1/2 flex size-11 -translate-x-1/2 items-center justify-center border-3 border-ink bg-accent shadow-hard-sm lift"
+                    >
+                      <Plus size={24} weight="bold" />
+                    </button>
+                  ) : null}
+                  {tab.label}
+                </>
+              )}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
+
+/** Desktop: the 240px left rail. */
+function Sidebar() {
+  const me = useMe()
+  const navigate = useNavigate()
+  return (
+    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r-3 border-ink bg-paper p-6 md:flex">
+      <Display size="sm" as="div">
+        June
+      </Display>
+      <nav aria-label="Main" className="mt-8 flex flex-col gap-2">
+        {tabs.map((tab) => (
+          <NavLink
+            key={tab.to}
+            to={tab.to}
+            className={({ isActive }) =>
+              cn(
+                "border-3 px-3 py-2 font-heading font-bold",
+                isActive ? "border-ink bg-accent shadow-hard-sm" : "border-transparent text-grey-ink hover:text-ink"
+              )
+            }
+          >
+            {tab.label}
+          </NavLink>
+        ))}
+      </nav>
+      <div className="mt-auto flex flex-col gap-4">
+        <Button onClick={() => navigate("/transactions/new")}>
+          <Plus size={20} weight="bold" />
+          Add transaction
+        </Button>
+        <div className="font-mono text-xs text-grey-ink">{me.data?.email ?? ""}</div>
+        <button
+          type="button"
+          onClick={() => signOut().then(() => navigate("/sign-in"))}
+          className="self-start font-heading text-sm font-bold hover:underline"
+        >
+          Sign out
+        </button>
+      </div>
+    </aside>
+  )
+}
+
+export interface AppShellProps {
+  /** Phone screens without the tab bar (full-screen forms). */
+  fullscreen?: boolean
+  /** Content column width: lists 720px, forms 560px. */
+  width?: "list" | "form"
+  children: ReactNode
+}
+
+export function AppShell({ fullscreen = false, width = "list", children }: AppShellProps) {
+  return (
+    <div className="min-h-dvh md:flex">
+      <Sidebar />
+      <main className={cn("flex min-h-dvh flex-1 flex-col", !fullscreen && "pb-[calc(80px+env(safe-area-inset-bottom))] md:pb-0")}>
+        <div
+          className={cn(
+            "mx-auto flex w-full flex-1 flex-col px-4 pt-4 md:px-8 md:pt-8",
+            width === "form" ? "max-w-[calc(560px+4rem)]" : "max-w-[calc(720px+4rem)]"
+          )}
+        >
+          {children}
+        </div>
+      </main>
+      {fullscreen ? null : <TabBar />}
+    </div>
+  )
+}

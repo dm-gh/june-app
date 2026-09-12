@@ -13,7 +13,7 @@ export default defineConfig({
         name: "June",
         short_name: "June",
         description: "Personal finance tracker",
-        theme_color: "#FFD23F",
+        theme_color: "#CEF366",
         background_color: "#FFFDF5",
         display: "standalone",
         icons: []

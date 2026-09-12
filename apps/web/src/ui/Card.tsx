@@ -1,11 +1,12 @@
 import type { HTMLAttributes } from "react"
-import { cn } from "./cn.js"
+import { cn } from "./cn"
 
-export type Accent = "paper" | "white" | "yellow" | "coral" | "sky" | "green" | "orange" | "lavender" | "grey"
+export type Accent = "paper" | "white" | "accent" | "yellow" | "coral" | "sky" | "green" | "orange" | "lavender" | "grey"
 
 export const accentBg: Record<Accent, string> = {
   paper: "bg-paper",
   white: "bg-white",
+  accent: "bg-accent",
   yellow: "bg-yellow",
   coral: "bg-coral",
   sky: "bg-sky",

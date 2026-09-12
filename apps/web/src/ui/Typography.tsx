@@ -1,17 +1,26 @@
 import type { ComponentPropsWithoutRef, ElementType } from "react"
-import { cn } from "./cn.js"
+import { cn } from "./cn"
 
 type TextProps<T extends ElementType> = { as?: T; className?: string } & Omit<
   ComponentPropsWithoutRef<T>,
   "as" | "className"
 >
 
-/** Oversized, declarative. Page titles and hero numbers only. */
-export function Display<T extends ElementType = "h1">({ as, className, ...rest }: TextProps<T>) {
+/** Oversized, declarative. Page titles and hero numbers only. `sm` is the screen title size (Figma Display/SM). */
+export function Display<T extends ElementType = "h1">({
+  as,
+  size = "md",
+  className,
+  ...rest
+}: TextProps<T> & { size?: "sm" | "md" }) {
   const Tag = (as ?? "h1") as ElementType
   return (
     <Tag
-      className={cn("font-display text-5xl font-extrabold uppercase leading-none tracking-tight sm:text-6xl", className)}
+      className={cn(
+        "font-display font-extrabold uppercase leading-none tracking-tight",
+        size === "sm" ? "text-3xl" : "text-5xl sm:text-6xl",
+        className
+      )}
       {...rest}
     />
   )

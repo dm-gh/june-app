@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from "react"
-import { type Accent, accentBg } from "./Card.js"
-import { cn } from "./cn.js"
+import { type Accent, accentBg } from "./Card"
+import { cn } from "./cn"
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   accent?: Accent

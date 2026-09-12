@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
-import { cn } from "./cn.js"
-import { Label } from "./Typography.js"
+import { cn } from "./cn"
+import { Label } from "./Typography"
 
 export interface FieldProps {
   label: string

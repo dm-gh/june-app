@@ -13,7 +13,7 @@ import {
   Select,
   Text,
   Textarea
-} from "../ui/index.js"
+} from "../ui/index"
 
 const swatches = [
   ["paper", "bg-paper"],
