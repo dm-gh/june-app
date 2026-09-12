@@ -14,7 +14,7 @@ Source: https://neubrutalism.com/ (captured 2026-09-11). Adopted as June's visua
 | Orange | `#FFA552` |
 | Lavender | `#B8A9FA` |
 
-Accent: soft lime #E6F9B2, chosen 2026-09-12. Used for every control and accent surface: primary buttons, the active nav tab, the plus button, checked boxes, selected calendar days and the Spent panel. Its bold companion accent-strong #BDEF36 appears only on the sign-in screen (brand block and Google button) and the cover. Yellow stays in the palette for categories and badges. In Figma the accent is `Primitives/accent` with modes Khaki and Yellow; the Accent lab frame on Foundations holds candidate swatches.
+Accent: lime #CEF366, chosen 2026-09-12, the only accent. Used for primary buttons, the active nav tab, the plus button, checked boxes, selected calendar days, the Spent panel, the sign-in brand block and the cover. Yellow stays in the palette for categories and badges only. Yellow stays in the palette for categories and badges. In Figma the accent is `Primitives/accent` with modes Khaki and Yellow; the Accent lab frame on Foundations holds candidate swatches.
 
 One neutral base, one dark outline, limited saturated accents. No gradients.
 
