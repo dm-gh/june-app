@@ -114,7 +114,8 @@ function EditChangePage({ id }: { id: TransactionId }) {
   const submit = () => {
     const parsed = toMinor(Number(draft.amount), draft.currency)
     const next: typeof errors = {}
-    if (draft.amount.trim() === "" || Either.isLeft(parsed) || parsed.right === 0) {
+    // An opening balance may be zero; a Change may not.
+    if (draft.amount.trim() === "" || Either.isLeft(parsed) || (parsed.right === 0 && t.type !== "init")) {
       next.amount = Either.isLeft(parsed) ? parsed.left : "Enter an amount"
     }
     if (draft.walletId === "") next.wallet = `Create a ${draft.currency} wallet first`
