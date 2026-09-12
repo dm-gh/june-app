@@ -8,6 +8,8 @@ export interface MenuItem {
   label: string
   icon: Icon
   danger?: boolean
+  /** A greyed item stays visible so the option is discoverable, but does nothing. */
+  disabled?: boolean
   onSelect: () => void
 }
 
@@ -45,13 +47,15 @@ export function Menu({ items, label = "Options" }: MenuProps) {
               key={item.label}
               type="button"
               role="menuitem"
+              disabled={item.disabled}
               onClick={() => {
                 setOpen(false)
                 item.onSelect()
               }}
               className={cn(
                 "flex w-full items-center gap-3 border-b-3 border-ink px-4 py-3 text-left font-heading font-bold last:border-b-0 hover:bg-ink/5",
-                item.danger && "text-coral-ink"
+                item.danger && "text-coral-ink",
+                "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
               )}
             >
               <item.icon size={20} weight="bold" />

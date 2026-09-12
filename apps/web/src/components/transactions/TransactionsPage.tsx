@@ -72,9 +72,10 @@ export function TransactionsPage() {
               {
                 label: `Edit ${ids.length} items`,
                 icon: PencilSimple,
+                disabled: ids.length === 0,
                 onSelect: () => navigate("/transactions/bulk-edit", { state: { ids } })
               },
-              { label: `Delete ${ids.length} items`, icon: Trash, danger: true, onSelect: () => setConfirmDelete(true) }
+              { label: `Delete ${ids.length} items`, icon: Trash, danger: true, disabled: ids.length === 0, onSelect: () => setConfirmDelete(true) }
             ]}
           />
         </header>

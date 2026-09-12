@@ -104,7 +104,78 @@
   background: transparent;
 }
 
-/* Native date inputs keep the bordered control look. */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
+/*
+ * emoji-picker-react injects its own stylesheet at runtime, so June restyles it here: paper
+ * ground, ink borders, no radius, accent hover, heading-font category labels.
+ */
+.EmojiPickerReact.june-emoji {
+  --epr-bg-color: var(--color-paper);
+  --epr-text-color: var(--color-ink);
+  --epr-picker-border-color: var(--color-ink);
+  --epr-picker-border-radius: 0;
+  --epr-highlight-color: var(--color-ink);
+  --epr-hover-bg-color: var(--color-accent);
+  --epr-hover-bg-color-reduced-opacity: var(--color-accent);
+  --epr-focus-bg-color: var(--color-accent);
+  --epr-emoji-hover-color: var(--color-accent);
+  --epr-search-input-bg-color: var(--color-white);
+  --epr-search-input-bg-color-active: var(--color-white);
+  --epr-search-border-color: var(--color-ink);
+  --epr-search-border-color-active: var(--color-ink);
+  --epr-search-input-border-radius: 0;
+  --epr-search-input-height: 44px;
+  --epr-search-input-text-color: var(--color-ink);
+  --epr-search-input-placeholder-color: var(--color-grey-ink);
+  --epr-category-label-bg-color: var(--color-paper);
+  --epr-category-label-text-color: var(--color-ink);
+  --epr-category-icon-active-color: var(--color-ink);
+  --epr-category-icon-inactive-color: var(--color-grey-ink);
+  --epr-emoji-size: 28px;
+  --epr-header-padding: 12px 12px 0;
+  --epr-horizontal-padding: 12px;
+  border-width: 3px;
+  font-family: var(--font-sans);
+}
+.june-emoji .epr-search-container input {
+  border-width: 3px;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  transition: none;
+}
+.june-emoji .epr-search-container input:focus {
+  box-shadow: 5px 5px 0 0 var(--color-ink);
+}
+.june-emoji .epr-search-container .epr-icn-search {
+  filter: brightness(0);
+}
+.june-emoji .epr-category-nav {
+  border-bottom: 3px solid var(--color-ink);
+  padding-bottom: 8px;
+}
+.june-emoji .epr-cat-btn {
+  border-radius: 0;
+  filter: grayscale(1) contrast(1.4);
+}
+.june-emoji .epr-cat-btn.epr-active {
+  background-color: var(--color-accent);
+  box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+.june-emoji .epr-emoji-category-label {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.june-emoji .epr-emoji > *,
+.june-emoji .epr-emoji:hover > * {
+  border-radius: 0;
+}
+.june-emoji .epr-emoji:hover > * {
+  box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+.june-emoji .epr-emoji-variation-picker {
+  border-radius: 0;
+  border: 3px solid var(--color-ink);
+  box-shadow: 5px 5px 0 0 var(--color-ink);
 }

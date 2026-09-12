@@ -23,14 +23,17 @@ const segmenter = new Intl.Segmenter()
 /** Exactly one grapheme, and a pictographic one: "🚌" yes, "ab" or "🚌🚌" no. */
 const isSingleEmoji = (s: string): boolean => [...segmenter.segment(s)].length === 1 && /\p{Extended_Pictographic}/u.test(s)
 
-/** The title doubles as the preview: "ADD 🚌 TRANSPORT" with the name on the category's colour. */
+/** The title doubles as the preview: "Add" followed by the very badge a Transaction card will wear. */
 function TitlePreview({ verb, draft }: { verb: "Add" | "Edit"; draft: Draft }) {
   const name = draft.name.trim()
   return (
-    <FitText max={30} min={16} maxLines={2}>
+    <FitText max={30} min={16} maxLines={2} className="leading-normal">
       {verb}{" "}
       {name ? (
-        <span className="px-1" style={{ background: hueColor(draft.hue), boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone" }}>
+        <span
+          className="inline border-3 border-ink px-2 py-0.5 font-heading text-[0.8em] font-bold tracking-wide uppercase"
+          style={{ background: hueColor(draft.hue), boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone" }}
+        >
           {draft.emoji ? `${draft.emoji} ` : ""}
           {name}
         </span>
@@ -79,6 +82,7 @@ function CategoryFields({ draft, onChange, slug, typeLocked }: { draft: Draft; o
         {picking ? (
           <Suspense fallback={<Loading />}>
             <EmojiPicker
+              className="june-emoji"
               width="100%"
               height={420}
               emojiStyle={"native" as never}

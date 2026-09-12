@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from "react-router"
 import { useCategories, useCreateChange, useCreateExchange, useMe, useTags, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { todayLocal } from "../../lib/period"
-import { AmountInput, Field, Input, Loading, Notice, Segmented, Select, Text } from "../../ui"
+import { AmountInput, DateInput, Field, Loading, Notice, Segmented, Select, Text } from "../../ui"
 import { type ChangeDraft, TransactionForm } from "./TransactionForm"
 
 type Kind = "change" | "exchange"
@@ -174,7 +174,7 @@ function ExchangeForm({ wallets, tagSuggestions, toggle }: { wallets: Wallets; t
         </Field>
       </div>
       <Field label="Date" htmlFor="date">
-        <Input id="date" type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value as LocalDate)} />
+        <DateInput id="date" value={date} onChange={setDate} />
       </Field>
       {sameCurrency ? null : (
         <Notice accent="sky" label="Different currencies">

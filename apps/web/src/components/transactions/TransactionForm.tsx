@@ -1,6 +1,6 @@
 import { type Category, type CategoryId, currencyExponent, type LocalDate, type Transaction, type Wallet, type WalletId } from "@june/shared"
 import { useMemo } from "react"
-import { Checkbox, Field, Input, Select, TagInput } from "../../ui"
+import { Checkbox, DateInput, Field, Input, Select, TagInput } from "../../ui"
 import { AmountInput } from "../../ui/AmountInput"
 
 export interface ChangeDraft {
@@ -115,7 +115,7 @@ export function TransactionForm({ draft, onChange, wallets, categories, tagSugge
         </Field>
       ) : null}
       <Field label="Date" htmlFor="date">
-        <Input id="date" type="date" value={draft.date} disabled={disabled} onChange={(e) => e.target.value && set("date", e.target.value as LocalDate)} />
+        <DateInput id="date" value={draft.date} disabled={disabled} onChange={(d) => set("date", d)} />
       </Field>
       <Field label="Description" htmlFor="description">
         <Input id="description" value={draft.description} disabled={disabled} onChange={(e) => set("description", e.target.value)} placeholder="What was it?" />
