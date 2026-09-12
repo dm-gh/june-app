@@ -11,8 +11,8 @@ import { fromMinor } from "@june/shared"
 import { moneyCode, signedMoney } from "../../lib/format"
 import { todayLocal, usePeriod } from "../../lib/period"
 import { Card, Empty, ErrorNotice, Heading, Label, Loading } from "../../ui"
-import { breakdown, elapsedBuckets, flowSeries, granularityFor, incomeMinor, sideOf, spendSeries, spentMinor } from "./analysis"
-import { BreakdownList, type Dimension, dimensionTitle, keysOf, lookOf } from "./BreakdownList"
+import { breakdown, breakdownBoth, elapsedBuckets, flowSeries, granularityFor, incomeMinor, sideOf, spendSeries, spentMinor } from "./analysis"
+import { BreakdownList, type Dimension, dimensionTitle, FlowList, keysOf, lookOf } from "./BreakdownList"
 
 const ROWS = 5
 
@@ -121,38 +121,42 @@ export function AnalysisPage() {
   const flow = useMemo(() => flowSeries(rows, period), [rows, period])
   const granularity = granularityFor(period)
   const average = Math.abs(spent) / elapsedBuckets(period, today)
-  // The breakdowns show spending, or income once Expense is deselected in the Type filter.
+  // By category shows spending, or income once Expense is deselected in the Type filter. Wallets and Tags show both sides.
   const side = sideOf(filter.types)
-  const slices = useMemo(
-    () => ({
-      categories: breakdown(rows, keysOf("categories", categoryById), side),
-      wallets: breakdown(rows, keysOf("wallets", categoryById), side),
-      tags: breakdown(rows, keysOf("tags", categoryById), side)
-    }),
-    [rows, categoryById, side]
-  )
+  const categorySlices = useMemo(() => breakdown(rows, keysOf("categories", categoryById), side), [rows, categoryById, side])
+  const walletSlices = useMemo(() => breakdownBoth(rows, keysOf("wallets", categoryById)), [rows, categoryById])
+  const tagSlices = useMemo(() => breakdownBoth(rows, keysOf("tags", categoryById)), [rows, categoryById])
   const look = (dimension: Dimension) => (key: string) => lookOf(dimension, key, categoryBySlug, walletById)
   const total = side === "expense" ? Math.abs(spent) : income
 
-  const section = (dimension: Dimension, title: string) => {
-    const all = slices[dimension]
-    const noun = dimensionTitle[dimension].toLowerCase()
-    return (
-      <>
-        <SectionHeading aside={all.length > 0 ? <AllLink to={`/analysis/${dimension}`} /> : undefined}>
-          {title}
-          {side === "income" ? <span className="text-grey-ink"> · income</span> : null}
-        </SectionHeading>
-        {transactions.data && all.length === 0 ? (
-          <Empty>
-            No {side === "expense" ? "spending" : "income"} by {noun} in this period.
-            {side === "expense" ? " Deselect Expense in the filter to see income instead." : ""}
-          </Empty>
-        ) : null}
-        <BreakdownList slices={all.slice(0, ROWS)} look={look(dimension)} currency={currency} total={total} showNative={dimension === "wallets"} />
-      </>
-    )
-  }
+  const heading = (dimension: Dimension, title: string, count: number) => (
+    <SectionHeading aside={count > 0 ? <AllLink to={`/analysis/${dimension}`} /> : undefined}>
+      {title}
+      {dimension === "categories" && side === "income" ? <span className="text-grey-ink"> · income</span> : null}
+    </SectionHeading>
+  )
+  const nothing = (dimension: Dimension) =>
+    transactions.data ? <Empty>Nothing by {dimensionTitle[dimension].toLowerCase()} in this period.</Empty> : null
+
+  const categorySection = (
+    <>
+      {heading("categories", "By category", categorySlices.length)}
+      {transactions.data && categorySlices.length === 0 ? (
+        <Empty>
+          No {side === "expense" ? "spending" : "income"} by category in this period.
+          {side === "expense" ? " Deselect Expense in the filter to see income instead." : ""}
+        </Empty>
+      ) : null}
+      <BreakdownList slices={categorySlices.slice(0, ROWS)} look={look("categories")} currency={currency} total={total} />
+    </>
+  )
+  const flowSection = (dimension: "wallets" | "tags", title: string, slices: typeof walletSlices) => (
+    <>
+      {heading(dimension, title, slices.length)}
+      {slices.length === 0 ? nothing(dimension) : null}
+      <FlowList slices={slices.slice(0, ROWS)} look={look(dimension)} currency={currency} showNative={dimension === "wallets"} />
+    </>
+  )
 
   return (
     <AppShell>
@@ -199,7 +203,7 @@ export function AnalysisPage() {
         </ResponsiveContainer>
       </Card>
 
-      {section("categories", "By category")}
+      {categorySection}
 
       <SectionHeading
         aside={
@@ -228,8 +232,8 @@ export function AnalysisPage() {
         </ResponsiveContainer>
       </Card>
 
-      {section("wallets", "By wallet")}
-      {section("tags", "By tag")}
+      {flowSection("wallets", "By wallet", walletSlices)}
+      {flowSection("tags", "By tag", tagSlices)}
       <div className="pb-6" />
     </AppShell>
   )

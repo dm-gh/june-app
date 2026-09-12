@@ -127,6 +127,29 @@ export const breakdown = (rows: ReadonlyArray<Transaction>, keysOf: (t: Transact
     .sort((a, b) => b.sum - a.sum)
 }
 
+/** One side of a two-sided row. */
+export interface SideSum {
+  readonly sum: number
+  readonly native: { readonly minor: number; readonly currency: string } | null
+}
+
+export interface TwoSidedSlice {
+  readonly key: string
+  readonly expense: SideSum
+  readonly income: SideSum
+}
+
+/** Spending and income per key, both at once, largest movement first. Wallets and Tags read this way. */
+export const breakdownBoth = (rows: ReadonlyArray<Transaction>, keysOf: (t: Transaction) => ReadonlyArray<string>): Array<TwoSidedSlice> => {
+  const expense = new Map(breakdown(rows, keysOf, "expense").map((s) => [s.key, s]))
+  const income = new Map(breakdown(rows, keysOf, "income").map((s) => [s.key, s]))
+  const none: SideSum = { sum: 0, native: null }
+  const side = (s: Slice | undefined): SideSum => (s ? { sum: s.sum, native: s.native } : none)
+  return [...new Set([...expense.keys(), ...income.keys()])]
+    .map((key) => ({ key, expense: side(expense.get(key)), income: side(income.get(key)) }))
+    .sort((a, b) => b.expense.sum + b.income.sum - (a.expense.sum + a.income.sum))
+}
+
 export const spentMinor = (rows: ReadonlyArray<Transaction>): number =>
   counted(rows).reduce((sum, t) => (t.amountMinor < 0 ? sum + value(t) : sum), 0)
 

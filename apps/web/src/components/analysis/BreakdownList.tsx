@@ -1,8 +1,8 @@
 import type { Category, Transaction, Wallet } from "@june/shared"
 import { UNASSIGNED, UNCATEGORISED } from "../../lib/filter"
-import { hueColor, moneyCode } from "../../lib/format"
+import { hueColor, moneyCode, signedMoney } from "../../lib/format"
 import { Badge, cn } from "../../ui"
-import type { Slice } from "./analysis"
+import type { SideSum, Slice, TwoSidedSlice } from "./analysis"
 
 export type Dimension = "categories" | "wallets" | "tags"
 
@@ -98,6 +98,68 @@ export function BreakdownList({ slices, look, currency, total, excluded, onRowCl
             </div>
             <div className="mt-1.5 h-3 overflow-hidden border-2 border-ink bg-white">
               <div className="h-full" style={{ width: `${max > 0 ? Math.min(100, (sum / max) * 100) : 0}%`, background: l.color ?? "var(--color-grey)" }} />
+            </div>
+          </Row>
+        )
+      })}
+    </div>
+  )
+}
+
+export interface FlowListProps {
+  slices: ReadonlyArray<TwoSidedSlice>
+  look: (key: string) => RowLook
+  currency: string
+  excluded?: ReadonlySet<string>
+  onRowClick?: (key: string) => void
+  showNative?: boolean
+}
+
+/** "−GEL 119.84 (USD 45.57)" on the spent line, "+…" on the income line, grey when nothing moved. */
+function SideAmount({ side, sign, currency, showNative }: { side: SideSum; sign: -1 | 1; currency: string; showNative: boolean }) {
+  if (side.sum === 0) return <span className="font-mono text-sm text-grey-ink tabular-nums">{moneyCode(0, currency)}</span>
+  const tone = sign < 0 ? "text-coral-ink" : "text-green-ink"
+  const native = showNative && side.native && side.native.currency !== currency ? side.native : null
+  return (
+    <span className="font-mono text-sm tabular-nums">
+      <span className={cn("font-bold", tone)}>{signedMoney(sign * (native ? native.minor : side.sum), native ? native.currency : currency)}</span>
+      {native ? <span className="text-grey-ink"> ({moneyCode(side.sum, currency)})</span> : null}
+    </span>
+  )
+}
+
+/** Rows with both sides: a coral bar for spending and a green one for income, each scaled to the largest amount on either side. */
+export function FlowList({ slices, look, currency, excluded, onRowClick, showNative = false }: FlowListProps) {
+  const max = slices.reduce((m, s) => Math.max(m, s.expense.sum, s.income.sum), 0)
+  const width = (sum: number) => `${max > 0 ? Math.min(100, (sum / max) * 100) : 0}%`
+  return (
+    <div className="flex flex-col gap-3">
+      {slices.map((s) => {
+        const l = look(s.key)
+        const out = excluded?.has(s.key) ?? false
+        const Row = onRowClick ? "button" : "div"
+        return (
+          <Row
+            key={s.key}
+            type={onRowClick ? "button" : undefined}
+            aria-pressed={onRowClick ? !out : undefined}
+            onClick={onRowClick ? () => onRowClick(s.key) : undefined}
+            className={cn("block w-full text-left transition-opacity", out && "opacity-50", onRowClick && "cursor-pointer")}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <Badge accent={l.muted ? "grey" : "paper"} {...(l.prefix ? { prefix: l.prefix } : {})} className="min-w-0" style={l.color ? { background: l.color } : undefined}>
+                <span className="truncate">{l.label}</span>
+              </Badge>
+              <span className="flex shrink-0 flex-col items-end gap-0.5">
+                <SideAmount side={s.expense} sign={-1} currency={currency} showNative={showNative} />
+                <SideAmount side={s.income} sign={1} currency={currency} showNative={showNative} />
+              </span>
+            </div>
+            <div className="mt-1.5 h-2.5 overflow-hidden border-2 border-ink bg-white">
+              <div className="h-full bg-coral" style={{ width: width(s.expense.sum) }} />
+            </div>
+            <div className="mt-1 h-2.5 overflow-hidden border-2 border-ink bg-white">
+              <div className="h-full bg-green" style={{ width: width(s.income.sum) }} />
             </div>
           </Row>
         )

@@ -8,8 +8,8 @@ import { filterRows, slugLookup, toggleIn, useFilter } from "../../lib/filter"
 import { moneyCode } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
 import { Card, Empty, ErrorNotice, Label, Loading, Text } from "../../ui"
-import { breakdown, incomeMinor, sideOf, spentMinor } from "./analysis"
-import { BreakdownList, type Dimension, dimensionTitle, keysOf, lookOf } from "./BreakdownList"
+import { breakdown, breakdownBoth, sideOf } from "./analysis"
+import { BreakdownList, type Dimension, dimensionTitle, FlowList, keysOf, lookOf } from "./BreakdownList"
 
 /**
  * The All page behind a capped section. Rows obey every part of the Filter except their own
@@ -36,21 +36,16 @@ export function BreakdownPage({ dimension }: { dimension: Dimension }) {
     [transactions.data, filter, dimension, slugOf]
   )
   const side = sideOf(filter.types)
-  const slices = useMemo(() => {
-    const all = breakdown(rows, keysOf(dimension, categoryById), side)
-    return [...all.filter((s) => !excluded.has(s.key)), ...all.filter((s) => excluded.has(s.key))]
-  }, [rows, dimension, categoryById, excluded, side])
+  const twoSided = dimension !== "categories"
+  // Selected rows first, deselected ones at the foot.
+  const order = <T extends { key: string }>(all: ReadonlyArray<T>) => [...all.filter((s) => !excluded.has(s.key)), ...all.filter((s) => excluded.has(s.key))]
+  const slices = useMemo(() => order(breakdown(rows, keysOf(dimension, categoryById), side)), [rows, dimension, categoryById, excluded, side]) // eslint-disable-line react-hooks/exhaustive-deps
+  const flows = useMemo(() => (twoSided ? order(breakdownBoth(rows, keysOf(dimension, categoryById))) : []), [rows, dimension, categoryById, excluded, twoSided]) // eslint-disable-line react-hooks/exhaustive-deps
   const selected = slices.filter((s) => !excluded.has(s.key))
-  // Categories and Wallets partition the rows, so their shares add up to the whole. A row can carry
-  // several Tags, so Tag shares are measured against the period's total under the full Filter.
-  const fullyFiltered = useMemo(() => filterRows(transactions.data ?? [], filter, slugOf), [transactions.data, filter, slugOf])
-  const total =
-    dimension === "tags"
-      ? side === "expense"
-        ? Math.abs(spentMinor(fullyFiltered))
-        : incomeMinor(fullyFiltered)
-      : selected.reduce((sum, s) => sum + s.sum, 0)
+  const total = selected.reduce((sum, s) => sum + s.sum, 0)
   const look = (key: string) => lookOf(dimension, key, categoryBySlug, walletById)
+  const count = twoSided ? flows.length : slices.length
+  const toggle = (key: string) => setFilter(toggleIn(filter, dimension, key))
 
   return (
     <AppShell>
@@ -92,22 +87,18 @@ export function BreakdownPage({ dimension }: { dimension: Dimension }) {
         </Card>
       ) : null}
 
-      {transactions.data && slices.length === 0 ? (
+      {transactions.data && count === 0 ? (
         <Empty>
-          No {side === "expense" ? "spending" : "income"} by {dimensionTitle[dimension].toLowerCase()} in this period.
-          {side === "expense" ? " Deselect Expense in the filter to see income instead." : ""}
+          {twoSided ? "Nothing" : `No ${side === "expense" ? "spending" : "income"}`} by {dimensionTitle[dimension].toLowerCase()} in this period.
+          {!twoSided && side === "expense" ? " Deselect Expense in the filter to see income instead." : ""}
         </Empty>
       ) : null}
-      <BreakdownList
-        slices={slices}
-        look={look}
-        currency={currency}
-        total={total}
-        excluded={excluded}
-        onRowClick={(key) => setFilter(toggleIn(filter, dimension, key))}
-        showNative={dimension === "wallets"}
-      />
-      {slices.length > 0 ? (
+      {twoSided ? (
+        <FlowList slices={flows} look={look} currency={currency} excluded={excluded} onRowClick={toggle} showNative={dimension === "wallets"} />
+      ) : (
+        <BreakdownList slices={slices} look={look} currency={currency} total={total} excluded={excluded} onRowClick={toggle} />
+      )}
+      {count > 0 ? (
         <Text className="mt-4 pb-6 text-sm text-grey-ink">Tap a row to leave it out of the filter; tap again to bring it back.</Text>
       ) : (
         <div className="pb-6" />
