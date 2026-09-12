@@ -30,7 +30,11 @@ it.scoped("a Wallet's Balance is its Init plus every Change, converted at today'
     expect(list.totalDefaultMinor).toBe(Math.round(74.5 * 2.7 * 100) + 500)
 
     // Editing the opening balance edits the Init.
-    const updated = yield* h.client.wallets.update({ path: { id: card.id }, payload: { initMinor: minor(20_000), name: "Main card" } })
+    const updated = yield* h.client.wallets.update({
+      path: { id: card.id },
+      payload: { initMinor: minor(20_000), name: "Main card", initOn: "2026-01-01" as LocalDate }
+    })
+    expect(updated.initOn).toBe("2026-01-01")
     expect(updated.name).toBe("Main card")
     expect(updated.initMinor).toBe(20_000)
     expect(updated.balanceMinor).toBe(17_450)

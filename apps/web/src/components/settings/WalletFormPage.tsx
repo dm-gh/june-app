@@ -1,11 +1,12 @@
-import { allCurrencies, type CurrencyCode, currencyExponent, type MinorAmount, toMinor, type WalletId } from "@june/shared"
+import { allCurrencies, type CurrencyCode, currencyExponent, type LocalDate, type MinorAmount, toMinor, type WalletId } from "@june/shared"
 import { Trash } from "@phosphor-icons/react"
 import { Either } from "effect"
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCreateWallet, useDeleteWallet, useMe, useUpdateWallet, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
-import { Dialog, Field, Input, Loading, Select } from "../../ui"
+import { todayLocal } from "../../lib/period"
+import { DateInput, Dialog, Field, Input, Loading, Select } from "../../ui"
 
 const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" })
 
@@ -26,6 +27,7 @@ export function AddWalletPage() {
   const [name, setName] = useState("")
   const [currency, setCurrency] = useState<string>("")
   const [opening, setOpening] = useState("0")
+  const [openingOn, setOpeningOn] = useState<LocalDate>(todayLocal())
   const [error, setError] = useState<string | null>(null)
   const effectiveCurrency = currency || me.data?.defaultCurrency || "USD"
 
@@ -35,7 +37,7 @@ export function AddWalletPage() {
     if (Either.isLeft(minor)) return setError(minor.left)
     setError(null)
     create.mutate(
-      { name: name.trim(), currency: effectiveCurrency as CurrencyCode, initMinor: minor.right as MinorAmount },
+      { name: name.trim(), currency: effectiveCurrency as CurrencyCode, initMinor: minor.right as MinorAmount, initOn: openingOn },
       { onSuccess: () => navigate("/settings") }
     )
   }
@@ -53,6 +55,9 @@ export function AddWalletPage() {
       <Field label="Opening balance" htmlFor="opening">
         <Input id="opening" inputMode="decimal" value={opening} onChange={(e) => setOpening(e.target.value.replace(",", "."))} className="font-mono font-bold" />
       </Field>
+      <Field label="Balance as of" htmlFor="opening-on">
+        <DateInput id="opening-on" value={openingOn} onChange={setOpeningOn} />
+      </Field>
     </FormPage>
   )
 }
@@ -66,6 +71,7 @@ export function EditWalletPage() {
   const wallet = wallets.data?.wallets.find((w) => w.id === id)
   const [name, setName] = useState<string | null>(null)
   const [opening, setOpening] = useState<string | null>(null)
+  const [openingOn, setOpeningOn] = useState<LocalDate | null>(null)
   const [confirm, setConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -73,10 +79,11 @@ export function EditWalletPage() {
     if (wallet && name === null) {
       setName(wallet.name)
       setOpening((wallet.initMinor / 10 ** currencyExponent(wallet.currency)).toFixed(currencyExponent(wallet.currency)))
+      setOpeningOn(wallet.initOn)
     }
   }, [wallet, name])
 
-  if (!wallet || name === null || opening === null) {
+  if (!wallet || name === null || opening === null || openingOn === null) {
     return (
       <FormPage title="Edit wallet" backTo="/settings">
         <Loading />
@@ -89,7 +96,10 @@ export function EditWalletPage() {
     const minor = toMinor(Number(opening || "0"), wallet.currency)
     if (Either.isLeft(minor)) return setError(minor.left)
     setError(null)
-    update.mutate({ id: wallet.id as WalletId, payload: { name: name.trim(), initMinor: minor.right as MinorAmount } }, { onSuccess: () => navigate("/settings") })
+    update.mutate(
+      { id: wallet.id as WalletId, payload: { name: name.trim(), initMinor: minor.right as MinorAmount, initOn: openingOn } },
+      { onSuccess: () => navigate("/settings") }
+    )
   }
 
   return (
@@ -112,6 +122,9 @@ export function EditWalletPage() {
       </Field>
       <Field label="Opening balance" htmlFor="opening" hint="The wallet's Init transaction">
         <Input id="opening" inputMode="decimal" value={opening} onChange={(e) => setOpening(e.target.value.replace(",", "."))} className="font-mono font-bold" />
+      </Field>
+      <Field label="Balance as of" htmlFor="opening-on">
+        <DateInput id="opening-on" value={openingOn} onChange={setOpeningOn} />
       </Field>
       <Dialog
         open={confirm}

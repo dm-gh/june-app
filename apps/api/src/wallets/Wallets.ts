@@ -46,6 +46,7 @@ export const WalletsHandlersLive = HttpApiBuilder.group(JuneApi, "wallets", (han
             position: row.position,
             balanceMinor,
             initMinor: Option.isSome(init) ? init.value.amountMinor : 0,
+            initOn: Option.isSome(init) ? init.value.occurredOn : today,
             balanceDefaultMinor: rates.convert(table, balanceMinor, row.currency, user.defaultCurrency, today)
           } as Wallet)
         }
@@ -97,10 +98,13 @@ export const WalletsHandlersLive = HttpApiBuilder.group(JuneApi, "wallets", (han
           if (payload.name !== undefined) {
             row = Option.getOrElse(yield* wallets.rename(user.id, path.id, payload.name), () => row)
           }
-          if (payload.initMinor !== undefined) {
+          if (payload.initMinor !== undefined || payload.initOn !== undefined) {
             const init = yield* transactions.initOf(user.id, path.id)
             if (Option.isSome(init)) {
-              yield* transactions.update(user.id, init.value.id, { amountMinor: payload.initMinor })
+              yield* transactions.update(user.id, init.value.id, {
+                ...(payload.initMinor !== undefined ? { amountMinor: payload.initMinor } : {}),
+                ...(payload.initOn !== undefined ? { occurredOn: payload.initOn } : {})
+              })
             }
           }
           return yield* one(user, row)
