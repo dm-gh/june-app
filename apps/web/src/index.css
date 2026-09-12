@@ -5,6 +5,8 @@
   --color-*: initial;
   --color-ink: #000000;
   --color-paper: #fffdf5;
+  /* The one accent: primary buttons, active nav tab, plus button, checked boxes, selected days. Khaki candidate; was yellow. */
+  --color-accent: #bacc66;
   --color-yellow: #ffd23f;
   --color-coral: #ff6b6b;
   --color-sky: #74b9ff;
@@ -50,7 +52,7 @@
     border-radius: 0;
   }
   ::selection {
-    background: var(--color-yellow);
+    background: var(--color-accent);
   }
 }
 

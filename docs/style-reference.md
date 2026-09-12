@@ -14,6 +14,8 @@ Source: https://neubrutalism.com/ (captured 2026-09-11). Adopted as June's visua
 | Orange | `#FFA552` |
 | Lavender | `#B8A9FA` |
 
+Accent: khaki #BACC66 (hsl 65, 50%, 60%), candidate since 2026-09-12. Used for primary buttons, the active nav tab, the plus button, checked boxes, selected calendar days and the summary card. Yellow stays in the palette for categories and badges. In Figma the accent is `Primitives/accent` with modes Khaki and Yellow; the Accent lab frame on Foundations holds candidate swatches.
+
 One neutral base, one dark outline, limited saturated accents. No gradients.
 
 ## Structure
