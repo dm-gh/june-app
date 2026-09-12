@@ -76,15 +76,18 @@ export function TransactionCard({ transaction: t, category, selecting, selected,
           {selected ? <Check size={18} weight="bold" /> : null}
         </span>
       ) : null}
-      {corner ? (
-        <Badge
-          className={cn("absolute top-0 right-0 h-5 border-t-0 border-r-0 px-1.5 text-[10px]", t.type !== "change" && "bg-paper text-grey-ink")}
-          style={corner.style}
-        >
-          {corner.label}
-        </Badge>
-      ) : null}
-      <div className={cn("font-mono text-2xl font-bold tabular-nums", tone)}>{signedMoney(t.amountMinor, t.currency)}</div>
+      {/* Reverse row that wraps: the badge sits in the corner and, when the amount cannot fit beside it, the amount drops below it. */}
+      <div className="flex flex-row-reverse flex-wrap justify-end gap-x-2">
+        {corner ? (
+          <Badge
+            className={cn("-mt-3 -mr-3 ml-auto h-5 max-w-full border-t-0 border-r-0 px-1.5 text-[10px]", t.type !== "change" && "bg-paper text-grey-ink")}
+            style={corner.style}
+          >
+            <span className="truncate">{corner.label}</span>
+          </Badge>
+        ) : null}
+        <div className={cn("font-mono text-2xl font-bold tabular-nums whitespace-nowrap", tone)}>{signedMoney(t.amountMinor, t.currency)}</div>
+      </div>
       {t.description ? (
         <div className={cn("mt-0.5 font-sans text-base", t.hiddenFromAnalysis && "text-grey-ink")}>{t.description}</div>
       ) : null}

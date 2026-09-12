@@ -10,7 +10,7 @@ import { FitText } from "../../ui/FitText"
 
 const EmojiPicker = lazy(() => import("emoji-picker-react"))
 
-const NAME_MAX = 50
+const NAME_MAX = 25
 
 interface Draft {
   type: CategoryType

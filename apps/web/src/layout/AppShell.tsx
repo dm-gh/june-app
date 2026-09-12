@@ -1,6 +1,6 @@
 import { Plus } from "@phosphor-icons/react"
 import type { ReactNode } from "react"
-import { NavLink, useNavigate } from "react-router"
+import { NavLink, useMatch, useNavigate } from "react-router"
 import { signOut } from "../api/auth"
 import { useMe } from "../api/queries"
 import { Button, cn, Display } from "../ui"
@@ -11,48 +11,51 @@ const tabs = [
   { to: "/settings", label: "Settings" }
 ] as const
 
-/** Phone: the bottom tab bar. The plus button slides out of the Transactions tab when it is active. */
+/** Phone: the bottom tab bar. The plus button slides out from behind the Transactions tab when it is active. */
 function TabBar() {
   const navigate = useNavigate()
+  const onTransactions = useMatch({ path: "/transactions", end: false }) !== null
   return (
     <nav
       aria-label="Main"
       className="fixed inset-x-0 bottom-0 z-10 h-[calc(80px+env(safe-area-inset-bottom))] border-t-3 border-ink bg-paper pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       <ul className="grid h-20 grid-cols-3 items-center">
-        {tabs.map((tab) => (
-          <li key={tab.to} className="relative flex justify-center">
-            <NavLink
-              to={tab.to}
-              className={({ isActive }) =>
-                cn(
-                  "inline-flex items-center justify-center border-3 px-3 font-heading text-sm font-bold",
-                  isActive ? "border-ink bg-accent shadow-hard-sm" : "border-transparent text-grey-ink",
-                  isActive && tab.to === "/transactions" ? "h-7 text-xs" : "h-11"
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  {isActive && tab.to === "/transactions" ? (
-                    <button
-                      type="button"
-                      aria-label="Add transaction"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        navigate("/transactions/new")
-                      }}
-                      className="absolute -top-10 left-1/2 flex size-11 -translate-x-1/2 items-center justify-center border-3 border-ink bg-accent shadow-hard-sm lift"
-                    >
-                      <Plus size={24} weight="bold" />
-                    </button>
-                  ) : null}
-                  {tab.label}
-                </>
-              )}
-            </NavLink>
-          </li>
-        ))}
+        {tabs.map((tab) => {
+          const withPlus = tab.to === "/transactions"
+          return (
+            <li key={tab.to} className="relative flex justify-center">
+              {withPlus ? (
+                <button
+                  type="button"
+                  aria-label="Add transaction"
+                  aria-hidden={!onTransactions}
+                  tabIndex={onTransactions ? 0 : -1}
+                  onClick={() => navigate("/transactions/new")}
+                  className={cn(
+                    "absolute bottom-full left-1/2 mb-1 flex size-11 -translate-x-1/2 items-center justify-center border-3 border-ink bg-accent shadow-hard-sm lift",
+                    "transition-[translate,opacity] duration-200 ease-out",
+                    onTransactions ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-[calc(100%+4px)] opacity-0"
+                  )}
+                >
+                  <Plus size={24} weight="bold" />
+                </button>
+              ) : null}
+              <NavLink
+                to={tab.to}
+                className={({ isActive }) =>
+                  cn(
+                    "relative z-10 inline-flex items-center justify-center border-3 px-3 font-heading text-sm font-bold",
+                    isActive ? "border-ink bg-accent shadow-hard-sm" : "border-transparent text-grey-ink",
+                    isActive && withPlus ? "h-7 text-xs" : "h-11"
+                  )
+                }
+              >
+                {tab.label}
+              </NavLink>
+            </li>
+          )
+        })}
       </ul>
     </nav>
   )

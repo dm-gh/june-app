@@ -6,8 +6,8 @@ import { RuleViolation } from "./errors.js"
 
 const CategoryPath = Schema.Struct({ id: CategoryId })
 
-/** A Category name is at most 50 characters. */
-export const CategoryName = Schema.NonEmptyTrimmedString.pipe(Schema.maxLength(50))
+/** A Category name is at most 25 characters: it must fit a card badge next to an amount on a phone. */
+export const CategoryName = Schema.NonEmptyTrimmedString.pipe(Schema.maxLength(25))
 
 export class CreateCategory extends Schema.Class<CreateCategory>("CreateCategory")({
   type: CategoryType,
