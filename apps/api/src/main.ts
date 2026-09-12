@@ -1,31 +1,34 @@
-import { HttpApi, HttpApiBuilder, HttpApiEndpoint, HttpApiGroup, HttpMiddleware, HttpServer } from "@effect/platform"
-import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
-import { Config, Effect, Layer, Schema } from "effect"
+import { HttpApiBuilder, HttpMiddleware, HttpServer } from "@effect/platform"
+import { NodeHttpClient, NodeHttpServer, NodeRuntime } from "@effect/platform-node"
+import { Effect, Layer } from "effect"
 import { createServer } from "node:http"
+import { AuthLive } from "./auth/Auth.js"
+import { AuthRoutesLive } from "./auth/AuthRoutes.js"
+import { CaptureTokensLive } from "./capture/CaptureTokens.js"
+import { CategoriesRepoLive } from "./categories/Categories.js"
+import { AppConfig, AppConfigLive } from "./config.js"
+import { PgLive } from "./db/PgLive.js"
+import { ApiLive } from "./http/Api.js"
+import { StaticRoutesLive } from "./http/Static.js"
+import { OpenExchangeRatesLive } from "./rates/RateProvider.js"
+import { RatesLive } from "./rates/Rates.js"
+import { TransactionsRepoLive } from "./transactions/TransactionsRepo.js"
+import { WalletsRepoLive } from "./wallets/WalletsRepo.js"
 
-class HealthGroup extends HttpApiGroup.make("health").add(
-  HttpApiEndpoint.get("status", "/health").addSuccess(Schema.Struct({ ok: Schema.Literal(true) }))
-) {}
-
-class JuneApi extends HttpApi.make("june").add(HealthGroup) {}
-
-const HealthLive = HttpApiBuilder.group(JuneApi, "health", (handlers) =>
-  handlers.handle("status", () => Effect.succeed({ ok: true as const }))
+/** Every service the handlers need, wired from configuration and the database. */
+export const ServicesLive = Layer.mergeAll(AuthLive, RatesLive, CaptureTokensLive, WalletsRepoLive, CategoriesRepoLive, TransactionsRepoLive).pipe(
+  Layer.provideMerge(Layer.mergeAll(CaptureTokensLive, OpenExchangeRatesLive)),
+  Layer.provideMerge(Layer.mergeAll(AppConfigLive, PgLive, NodeHttpClient.layerUndici))
 )
 
-const ApiLive = HttpApiBuilder.api(JuneApi).pipe(Layer.provide(HealthLive))
-
-const ServerLive = HttpApiBuilder.serve(HttpMiddleware.logger).pipe(
+const HttpLive = HttpApiBuilder.serve(HttpMiddleware.logger).pipe(
+  Layer.provide([AuthRoutesLive, StaticRoutesLive]),
   Layer.provide(ApiLive),
   HttpServer.withLogAddress,
   Layer.provide(
-    Layer.unwrapEffect(
-      Config.integer("PORT").pipe(
-        Config.withDefault(3000),
-        Effect.map((port) => NodeHttpServer.layer(createServer, { port }))
-      )
-    )
-  )
+    Layer.unwrapEffect(AppConfig.pipe(Effect.map((config) => NodeHttpServer.layer(createServer, { port: config.port }))))
+  ),
+  Layer.provide(ServicesLive)
 )
 
-NodeRuntime.runMain(Layer.launch(ServerLive))
+NodeRuntime.runMain(Layer.launch(HttpLive))

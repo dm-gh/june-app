@@ -7,8 +7,9 @@
     "dev": "tsx watch src/main.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "db:migrate": "tsx src/db/migrate.ts"
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@effect/platform": "0.97.2",
@@ -16,11 +17,17 @@
     "@effect/sql": "0.52.1",
     "@effect/sql-pg": "0.53.0",
     "@june/shared": "workspace:*",
-    "effect": "3.22.2"
+    "better-auth": "1.7.4",
+    "effect": "3.22.2",
+    "kysely": "0.29.5",
+    "pg": "8.23.0"
   },
   "devDependencies": {
+    "@effect/vitest": "0.30.0",
     "@types/node": "22.20.2",
+    "@types/pg": "8.23.1",
     "tsx": "4.23.13",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "5.0.0"
   }
 }
