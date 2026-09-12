@@ -58,6 +58,7 @@ The "Screens · Desktop" page mirrors every mobile screen at 1440×1024. The bot
 - Add wallet has no field hints and no Wallet order banner.
 - Add category: the title is the preview ("ADD" followed by the same bordered badge a Transaction card wears, shrinking to fit two lines); there is no Preview row. The emoji is picked from a full emoji panel restyled in June's look; names are capped at 25 characters; slugs transliterate non-Latin names. Edit category shows no "fixed" hint under the type toggle.
 - Add transaction is always titled ADD TRANSACTION. The type tabs stay as mocked: the first reads Expense or Income after the sign, the second is Exchange.
+- A Transaction card names its Wallet in the bottom-right corner (Unassigned in grey). An Exchange is one card with both amounts and "From → To" there, not two cards; selecting it selects both legs.
 - Transactions has no Spent panel; the period's totals live on Analysis. In selection mode with nothing selected, Edit and Delete are greyed in the menu.
 - Dates are never picked with the system control: a Date field opens June's own calendar in a sheet (with Yesterday and Today shortcuts), and the Period sheet fills whichever of From or To is active from the same calendar.
 - There is no read-only Transaction view: a card opens the edit form, with Delete behind its options menu. Either leg of an Exchange opens the Exchange form (both Wallets, both amounts, shared date, description and tags), never a single-leg form.
