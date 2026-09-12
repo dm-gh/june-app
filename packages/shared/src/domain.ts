@@ -79,8 +79,6 @@ export class Wallet extends Schema.Class<Wallet>("Wallet")({
   balanceMinor: MinorAmount,
   /** Amount of the Wallet's Init Transaction. */
   initMinor: MinorAmount,
-  /** Date of the Init Transaction: the day the opening balance was true. */
-  initOn: LocalDate,
   /** Balance converted into Default Currency at today's rate; null when no rate is known. */
   balanceDefaultMinor: Schema.NullOr(MinorAmount)
 }) {}

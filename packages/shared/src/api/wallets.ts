@@ -24,9 +24,7 @@ export class CreateWallet extends Schema.Class<CreateWallet>("CreateWallet")({
 
 export class UpdateWallet extends Schema.Class<UpdateWallet>("UpdateWallet")({
   name: Schema.optional(Schema.NonEmptyTrimmedString),
-  initMinor: Schema.optional(MinorAmount),
-  /** Moves the Init Transaction to another day. */
-  initOn: Schema.optional(LocalDate)
+  initMinor: Schema.optional(MinorAmount)
 }) {}
 
 export class WalletOrder extends Schema.Class<WalletOrder>("WalletOrder")({

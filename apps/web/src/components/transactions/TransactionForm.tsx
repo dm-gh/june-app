@@ -114,9 +114,11 @@ export function TransactionForm({ draft, onChange, wallets, categories, tagSugge
           </Select>
         </Field>
       ) : null}
-      <Field label="Date" htmlFor="date">
-        <DateInput id="date" value={draft.date} disabled={disabled} onChange={(d) => set("date", d)} />
-      </Field>
+      {isChange ? (
+        <Field label="Date" htmlFor="date">
+          <DateInput id="date" value={draft.date} disabled={disabled} onChange={(d) => set("date", d)} />
+        </Field>
+      ) : null}
       <Field label="Description" htmlFor="description">
         <Input id="description" value={draft.description} disabled={disabled} onChange={(e) => set("description", e.target.value)} placeholder="What was it?" />
       </Field>

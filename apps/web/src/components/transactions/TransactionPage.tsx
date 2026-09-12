@@ -121,10 +121,10 @@ function EditChangePage({ id }: { id: TransactionId }) {
     setErrors(next)
     if (Object.keys(next).length > 0 || Either.isLeft(parsed)) return
     const amountMinor = ((draft.sign === "-" ? -1 : 1) * parsed.right) as MinorAmount
-    // An Init keeps its Wallet and currency; sending them, even unchanged, is refused by the api.
+    // An Init keeps its Wallet, currency and date; sending them, even unchanged, is refused by the api.
     const payload =
       t.type === "init"
-        ? { amountMinor, occurredOn: draft.date as LocalDate, description: draft.description.trim(), tags: draft.tags as never, hiddenFromAnalysis: draft.hidden }
+        ? { amountMinor, description: draft.description.trim(), tags: draft.tags as never, hiddenFromAnalysis: draft.hidden }
         : {
             walletId: draft.walletId as WalletId,
             amountMinor,
