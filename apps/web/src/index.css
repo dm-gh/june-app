@@ -75,6 +75,17 @@
     box-shadow: var(--shadow-none);
   }
 }
+/* A lift surface that also slides or fades: those keep their own timing, the press and hover keep lift's. */
+@utility lift-slide {
+  transition-property: translate, opacity, transform, box-shadow;
+  transition-duration: 200ms, 200ms, 80ms, 80ms;
+  transition-timing-function: ease-out;
+}
+@utility lift-fade {
+  transition-property: opacity, transform, box-shadow;
+  transition-duration: 150ms, 80ms, 80ms;
+  transition-timing-function: ease-out;
+}
 @layer utilities {
   .shadow-hard-sm { --lift-shadow: 5px 5px 0 0 #000; }
   .shadow-hard { --lift-shadow: 7px 7px 0 0 #000; }

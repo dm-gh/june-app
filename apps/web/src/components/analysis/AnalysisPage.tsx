@@ -105,7 +105,7 @@ function SideCard({ side, on, label, value, onPick }: { side: Side; on: boolean;
       type="button"
       aria-pressed={on}
       onClick={() => onPick(side)}
-      className={cn("border-3 border-ink p-3 text-left shadow-hard lift transition-opacity", side === "expense" ? "bg-coral" : "bg-green", !on && "opacity-50")}
+      className={cn("border-3 border-ink p-3 text-left shadow-hard lift lift-fade", side === "expense" ? "bg-coral" : "bg-green", !on && "opacity-50")}
     >
       <Label as="div">{label}</Label>
       <div className="mt-1 font-mono text-xl font-bold tabular-nums">{value}</div>

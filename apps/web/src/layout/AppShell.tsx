@@ -43,7 +43,7 @@ function TabBar() {
                   onClick={() => navigate("/transactions/new")}
                   className={cn(
                     "absolute bottom-full left-1/2 mb-1 flex size-11 -translate-x-1/2 items-center justify-center border-3 border-ink bg-accent shadow-hard-sm lift",
-                    "transition-[translate,opacity] duration-200 ease-out",
+                    "lift-slide",
                     onTransactions ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-[calc(100%+4px)] opacity-0"
                   )}
                 >
@@ -109,7 +109,7 @@ function Sidebar() {
                   className={cn(
                     // Straddles the rail's right border: the nav sits 24px inside the rail.
                     "absolute top-1/2 -right-6 z-10 flex size-11 -translate-y-1/2 translate-x-1/2 items-center justify-center border-3 border-ink bg-accent shadow-hard-sm lift",
-                    "transition-[translate,opacity] duration-200 ease-out",
+                    "lift-slide",
                     onTransactions ? "opacity-100" : "pointer-events-none -translate-x-1/2 opacity-0"
                   )}
                 >
