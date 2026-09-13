@@ -14,7 +14,6 @@ import { EditTransactionPage } from "./components/transactions/TransactionPage"
 import { TransactionsPage } from "./components/transactions/TransactionsPage"
 import { type Filter, FilterContext, parseFilter } from "./lib/filter"
 import { monthPeriod, type Period, PeriodContext, todayLocal } from "./lib/period"
-import { DesignShowcase } from "./pages/DesignShowcase"
 
 const PERIOD_KEY = "june.period"
 
@@ -58,7 +57,6 @@ export function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/sign-in" element={<SignInPage />} />
-        <Route path="/design" element={<DesignShowcase />} />
         <Route
           path="/*"
           element={
