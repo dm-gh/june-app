@@ -98,10 +98,25 @@ function AllLink({ to }: { to: string }) {
   )
 }
 
+/** The Spent and Income cards double as the Type filter: the side that is off reads greyed. */
+function SideCard({ side, on, label, value, onPick }: { side: Side; on: boolean; label: string; value: string; onPick: (side: Side) => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={() => onPick(side)}
+      className={cn("border-3 border-ink p-3 text-left shadow-hard lift transition-opacity", side === "expense" ? "bg-coral" : "bg-green", !on && "opacity-50")}
+    >
+      <Label as="div">{label}</Label>
+      <div className="mt-1 font-mono text-xl font-bold tabular-nums">{value}</div>
+    </button>
+  )
+}
+
 /** Spent / Income cards, Per day, By category, Income vs expense, By wallet, By tag. Every section obeys the Filter. */
 export function AnalysisPage() {
   const { period } = usePeriod()
-  const { filter } = useFilter()
+  const { filter, setFilter } = useFilter()
   const me = useMe()
   const transactions = useTransactions(period)
   const categories = useCategories()
@@ -117,6 +132,13 @@ export function AnalysisPage() {
 
   const spent = spentMinor(rows)
   const income = incomeMinor(rows)
+  // The cards ignore the Expense/Income part of the filter: a greyed card still says what it leaves out.
+  const cardRows = useMemo(
+    () => filterRows(transactions.data ?? [], { ...filter, types: filter.types.filter((t) => t === "exchange") }, slugOf),
+    [transactions.data, filter, slugOf]
+  )
+  const cardSpent = spentMinor(cardRows)
+  const cardIncome = incomeMinor(cardRows)
   const spend = useMemo(() => spendSeries(rows, period, today), [rows, period, today])
   const flow = useMemo(() => flowSeries(rows, period), [rows, period])
   const granularity = granularityFor(period)
@@ -133,6 +155,14 @@ export function AnalysisPage() {
   const walletSlices = useMemo(() => breakdownBoth(rows, keysOf("wallets", categoryById)), [rows, categoryById])
   const tagSlices = useMemo(() => breakdownBoth(rows, keysOf("tags", categoryById)), [rows, categoryById])
   const look = (dimension: Dimension) => (key: string) => lookOf(dimension, key, categoryBySlug, walletById)
+
+  /** Tapping Spent leaves only expenses on, tapping Income only income; tapping the side that is already alone brings both back. */
+  const pick = (side: Side) => {
+    const other: Side = side === "expense" ? "income" : "expense"
+    const rest = filter.types.filter((t) => t !== "expense" && t !== "income")
+    const alone = sides[side] && !sides[other]
+    setFilter({ ...filter, types: alone ? rest : [...rest, other] })
+  }
 
   const heading = (title: string, count: number, to: string) => (
     <SectionHeading aside={count > 0 ? <AllLink to={to} /> : undefined}>{title}</SectionHeading>
@@ -170,19 +200,9 @@ export function AnalysisPage() {
       <PeriodHeader title="Analysis" />
       {transactions.isError ? <ErrorNotice message={transactions.error.message} /> : null}
       {transactions.isPending ? <Loading /> : null}
-      <div className={cn("grid gap-3", sides.expense && sides.income ? "grid-cols-2" : "grid-cols-1")}>
-        {sides.expense ? (
-          <Card accent="coral" className="p-3">
-            <Label as="div">Spent · {currency}</Label>
-            <div className="mt-1 font-mono text-xl font-bold tabular-nums">{transactions.data ? moneyCode(spent, currency) : "…"}</div>
-          </Card>
-        ) : null}
-        {sides.income ? (
-          <Card accent="green" className="p-3">
-            <Label as="div">Income · {currency}</Label>
-            <div className="mt-1 font-mono text-xl font-bold tabular-nums">{transactions.data ? moneyCode(income, currency) : "…"}</div>
-          </Card>
-        ) : null}
+      <div className="grid grid-cols-2 gap-3">
+        <SideCard side="expense" on={sides.expense} label={`Spent · ${currency}`} value={transactions.data ? moneyCode(cardSpent, currency) : "…"} onPick={pick} />
+        <SideCard side="income" on={sides.income} label={`Income · ${currency}`} value={transactions.data ? moneyCode(cardIncome, currency) : "…"} onPick={pick} />
       </div>
 
       {sides.expense ? (
