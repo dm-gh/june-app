@@ -103,11 +103,8 @@ export interface Slice {
   readonly native: { readonly minor: number; readonly currency: string } | null
 }
 
-/** Which side of the ledger the breakdowns show: spending unless Expense is deselected and Income is not. */
+/** One side of the ledger. */
 export type Side = "expense" | "income"
-
-export const sideOf = (excludedTypes: ReadonlyArray<string>): Side =>
-  excludedTypes.includes("expense") && !excludedTypes.includes("income") ? "income" : "expense"
 
 /** Totals per key on one side, largest first. `keysOf` may return several keys (a row with two Tags counts in both) or none. */
 export const breakdown = (rows: ReadonlyArray<Transaction>, keysOf: (t: Transaction) => ReadonlyArray<string>, side: Side = "expense"): Array<Slice> => {

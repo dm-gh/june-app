@@ -8,7 +8,7 @@ import { filterRows, slugLookup, toggleIn, useFilter } from "../../lib/filter"
 import { moneyCode } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
 import { Card, Empty, ErrorNotice, Label, Loading, Text } from "../../ui"
-import { breakdown, breakdownBoth, sideOf } from "./analysis"
+import { breakdown, breakdownBoth, type Side } from "./analysis"
 import { BreakdownList, type Dimension, dimensionTitle, FlowList, keysOf, lookOf } from "./BreakdownList"
 
 /**
@@ -16,7 +16,7 @@ import { BreakdownList, type Dimension, dimensionTitle, FlowList, keysOf, lookOf
  * dimension, so a deselected row stays visible at half opacity at the foot of the list, and
  * tapping any row toggles it in the shared Filter. Categories open with the Share of spending donut.
  */
-export function BreakdownPage({ dimension }: { dimension: Dimension }) {
+export function BreakdownPage({ dimension, side = "expense" }: { dimension: Dimension; side?: Side }) {
   const { period } = usePeriod()
   const { filter, setFilter } = useFilter()
   const me = useMe()
@@ -35,7 +35,7 @@ export function BreakdownPage({ dimension }: { dimension: Dimension }) {
     () => filterRows(transactions.data ?? [], { ...filter, [dimension]: [] }, slugOf),
     [transactions.data, filter, dimension, slugOf]
   )
-  const side = sideOf(filter.types)
+  const sides = { expense: !filter.types.includes("expense"), income: !filter.types.includes("income") }
   const twoSided = dimension !== "categories"
   // Selected rows first, deselected ones at the foot.
   const order = <T extends { key: string }>(all: ReadonlyArray<T>) => [...all.filter((s) => !excluded.has(s.key)), ...all.filter((s) => excluded.has(s.key))]
@@ -49,7 +49,7 @@ export function BreakdownPage({ dimension }: { dimension: Dimension }) {
 
   return (
     <AppShell>
-      <PeriodHeader title={dimensionTitle[dimension]} backTo="/analysis" />
+      <PeriodHeader title={dimension === "categories" && side === "income" ? "Income categories" : dimensionTitle[dimension]} backTo="/analysis" />
       {transactions.isError ? <ErrorNotice message={transactions.error.message} /> : null}
       {transactions.isPending ? <Loading /> : null}
 
@@ -90,11 +90,20 @@ export function BreakdownPage({ dimension }: { dimension: Dimension }) {
       {transactions.data && count === 0 ? (
         <Empty>
           {twoSided ? "Nothing" : `No ${side === "expense" ? "spending" : "income"}`} by {dimensionTitle[dimension].toLowerCase()} in this period.
-          {!twoSided && side === "expense" ? " Deselect Expense in the filter to see income instead." : ""}
+
         </Empty>
       ) : null}
       {twoSided ? (
-        <FlowList slices={flows} look={look} currency={currency} excluded={excluded} onRowClick={toggle} showNative={dimension === "wallets"} hideEmptySide={dimension === "tags"} />
+        <FlowList
+          slices={flows}
+          look={look}
+          currency={currency}
+          excluded={excluded}
+          onRowClick={toggle}
+          showNative={dimension === "wallets"}
+          hideEmptySide={dimension === "tags"}
+          sides={sides}
+        />
       ) : (
         <BreakdownList slices={slices} look={look} currency={currency} total={total} excluded={excluded} onRowClick={toggle} />
       )}

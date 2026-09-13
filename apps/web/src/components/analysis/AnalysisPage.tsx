@@ -10,9 +10,9 @@ import { filterRows, slugLookup, useFilter } from "../../lib/filter"
 import { fromMinor } from "@june/shared"
 import { moneyCode, signedMoney } from "../../lib/format"
 import { todayLocal, usePeriod } from "../../lib/period"
-import { Card, Empty, ErrorNotice, Heading, Label, Loading } from "../../ui"
-import { breakdown, breakdownBoth, elapsedBuckets, flowSeries, granularityFor, incomeMinor, sideOf, spendSeries, spentMinor } from "./analysis"
-import { BreakdownList, type Dimension, dimensionTitle, FlowList, keysOf, lookOf } from "./BreakdownList"
+import { Card, cn, Empty, ErrorNotice, Heading, Label, Loading } from "../../ui"
+import { breakdown, breakdownBoth, elapsedBuckets, flowSeries, granularityFor, incomeMinor, type Side, spendSeries, spentMinor } from "./analysis"
+import { BreakdownList, type Dimension, dimensionTitle, FlowList, keysOf, lookOf, type Sides } from "./BreakdownList"
 
 const ROWS = 5
 
@@ -121,40 +121,47 @@ export function AnalysisPage() {
   const flow = useMemo(() => flowSeries(rows, period), [rows, period])
   const granularity = granularityFor(period)
   const average = Math.abs(spent) / elapsedBuckets(period, today)
-  // By category shows spending, or income once Expense is deselected in the Type filter. Wallets and Tags show both sides.
-  const side = sideOf(filter.types)
-  const categorySlices = useMemo(() => breakdown(rows, keysOf("categories", categoryById), side), [rows, categoryById, side])
+  // The Type filter decides which sides show: cards, lists and the Per day chart follow it.
+  const sides: Sides = { expense: !filter.types.includes("expense"), income: !filter.types.includes("income") }
+  const categorySlices = useMemo(
+    () => ({
+      expense: breakdown(rows, keysOf("categories", categoryById), "expense"),
+      income: breakdown(rows, keysOf("categories", categoryById), "income")
+    }),
+    [rows, categoryById]
+  )
   const walletSlices = useMemo(() => breakdownBoth(rows, keysOf("wallets", categoryById)), [rows, categoryById])
   const tagSlices = useMemo(() => breakdownBoth(rows, keysOf("tags", categoryById)), [rows, categoryById])
   const look = (dimension: Dimension) => (key: string) => lookOf(dimension, key, categoryBySlug, walletById)
-  const total = side === "expense" ? Math.abs(spent) : income
 
-  const heading = (dimension: Dimension, title: string, count: number) => (
-    <SectionHeading aside={count > 0 ? <AllLink to={`/analysis/${dimension}`} /> : undefined}>
-      {title}
-      {dimension === "categories" && side === "income" ? <span className="text-grey-ink"> · income</span> : null}
-    </SectionHeading>
+  const heading = (title: string, count: number, to: string) => (
+    <SectionHeading aside={count > 0 ? <AllLink to={to} /> : undefined}>{title}</SectionHeading>
   )
-  const nothing = (dimension: Dimension) =>
-    transactions.data ? <Empty>Nothing by {dimensionTitle[dimension].toLowerCase()} in this period.</Empty> : null
 
-  const categorySection = (
-    <>
-      {heading("categories", "By category", categorySlices.length)}
-      {transactions.data && categorySlices.length === 0 ? (
-        <Empty>
-          No {side === "expense" ? "spending" : "income"} by category in this period.
-          {side === "expense" ? " Deselect Expense in the filter to see income instead." : ""}
-        </Empty>
-      ) : null}
-      <BreakdownList slices={categorySlices.slice(0, ROWS)} look={look("categories")} currency={currency} total={total} />
-    </>
-  )
+  /** Spent or Income by category: one list per side the filter leaves on. */
+  const categorySection = (side: Side) => {
+    const slices = categorySlices[side]
+    const title = sides.expense && sides.income ? (side === "expense" ? "Spent by category" : "Income by category") : "By category"
+    return (
+      <>
+        {heading(title, slices.length, side === "expense" ? "/analysis/categories" : "/analysis/categories/income")}
+        {transactions.data && slices.length === 0 ? <Empty>No {side === "expense" ? "spending" : "income"} by category in this period.</Empty> : null}
+        <BreakdownList slices={slices.slice(0, ROWS)} look={look("categories")} currency={currency} total={side === "expense" ? Math.abs(spent) : income} />
+      </>
+    )
+  }
   const flowSection = (dimension: "wallets" | "tags", title: string, slices: typeof walletSlices) => (
     <>
-      {heading(dimension, title, slices.length)}
-      {slices.length === 0 ? nothing(dimension) : null}
-      <FlowList slices={slices.slice(0, ROWS)} look={look(dimension)} currency={currency} showNative={dimension === "wallets"} hideEmptySide={dimension === "tags"} />
+      {heading(title, slices.length, `/analysis/${dimension}`)}
+      {transactions.data && slices.length === 0 ? <Empty>Nothing by {dimensionTitle[dimension].toLowerCase()} in this period.</Empty> : null}
+      <FlowList
+        slices={slices.slice(0, ROWS)}
+        look={look(dimension)}
+        currency={currency}
+        showNative={dimension === "wallets"}
+        hideEmptySide={dimension === "tags"}
+        sides={sides}
+      />
     </>
   )
 
@@ -163,17 +170,23 @@ export function AnalysisPage() {
       <PeriodHeader title="Analysis" />
       {transactions.isError ? <ErrorNotice message={transactions.error.message} /> : null}
       {transactions.isPending ? <Loading /> : null}
-      <div className="grid grid-cols-2 gap-3">
-        <Card accent="coral" className="p-3">
-          <Label as="div">Spent · {currency}</Label>
-          <div className="mt-1 font-mono text-xl font-bold tabular-nums">{transactions.data ? moneyCode(spent, currency) : "…"}</div>
-        </Card>
-        <Card accent="green" className="p-3">
-          <Label as="div">Income · {currency}</Label>
-          <div className="mt-1 font-mono text-xl font-bold tabular-nums">{transactions.data ? moneyCode(income, currency) : "…"}</div>
-        </Card>
+      <div className={cn("grid gap-3", sides.expense && sides.income ? "grid-cols-2" : "grid-cols-1")}>
+        {sides.expense ? (
+          <Card accent="coral" className="p-3">
+            <Label as="div">Spent · {currency}</Label>
+            <div className="mt-1 font-mono text-xl font-bold tabular-nums">{transactions.data ? moneyCode(spent, currency) : "…"}</div>
+          </Card>
+        ) : null}
+        {sides.income ? (
+          <Card accent="green" className="p-3">
+            <Label as="div">Income · {currency}</Label>
+            <div className="mt-1 font-mono text-xl font-bold tabular-nums">{transactions.data ? moneyCode(income, currency) : "…"}</div>
+          </Card>
+        ) : null}
       </div>
 
+      {sides.expense ? (
+        <>
       <SectionHeading
         aside={
           transactions.data ? (
@@ -202,8 +215,11 @@ export function AnalysisPage() {
           </ComposedChart>
         </ResponsiveContainer>
       </Card>
+        </>
+      ) : null}
 
-      {categorySection}
+      {sides.expense ? categorySection("expense") : null}
+      {sides.income ? categorySection("income") : null}
 
       <SectionHeading
         aside={

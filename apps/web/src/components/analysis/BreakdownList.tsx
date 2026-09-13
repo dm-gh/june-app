@@ -115,7 +115,16 @@ export interface FlowListProps {
   showNative?: boolean
   /** Leave out a side that has nothing, line and bar both; Wallets keep both sides. */
   hideEmptySide?: boolean
+  /** Which sides the Type filter leaves on. */
+  sides?: Sides
 }
+
+export interface Sides {
+  readonly expense: boolean
+  readonly income: boolean
+}
+
+export const bothSides: Sides = { expense: true, income: true }
 
 /** "−GEL 119.84 (USD 45.57)" on the spent line, "+…" on the income line, grey when nothing moved. */
 function SideAmount({ side, sign, currency, showNative }: { side: SideSum; sign: -1 | 1; currency: string; showNative: boolean }) {
@@ -131,7 +140,7 @@ function SideAmount({ side, sign, currency, showNative }: { side: SideSum; sign:
 }
 
 /** Rows with both sides: a coral bar for spending and a green one for income, each scaled to the largest amount on either side. */
-export function FlowList({ slices, look, currency, excluded, onRowClick, showNative = false, hideEmptySide = false }: FlowListProps) {
+export function FlowList({ slices, look, currency, excluded, onRowClick, showNative = false, hideEmptySide = false, sides = bothSides }: FlowListProps) {
   const max = slices.reduce((m, s) => Math.max(m, s.expense.sum, s.income.sum), 0)
   const width = (sum: number) => `${max > 0 ? Math.min(100, (sum / max) * 100) : 0}%`
   return (
@@ -140,8 +149,8 @@ export function FlowList({ slices, look, currency, excluded, onRowClick, showNat
         const l = look(s.key)
         const out = excluded?.has(s.key) ?? false
         const Row = onRowClick ? "button" : "div"
-        const showExpense = !hideEmptySide || s.expense.sum !== 0
-        const showIncome = !hideEmptySide || s.income.sum !== 0
+        const showExpense = sides.expense && (!hideEmptySide || s.expense.sum !== 0)
+        const showIncome = sides.income && (!hideEmptySide || s.income.sum !== 0)
         return (
           <Row
             key={s.key}

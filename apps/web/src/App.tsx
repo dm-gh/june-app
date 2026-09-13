@@ -73,6 +73,7 @@ export function App() {
                   <Route path="transactions/:id" element={<EditTransactionPage />} />
                   <Route path="analysis" element={<AnalysisPage />} />
                   <Route path="analysis/categories" element={<BreakdownPage dimension="categories" />} />
+                  <Route path="analysis/categories/income" element={<BreakdownPage dimension="categories" side="income" />} />
                   <Route path="analysis/wallets" element={<BreakdownPage dimension="wallets" />} />
                   <Route path="analysis/tags" element={<BreakdownPage dimension="tags" />} />
                   <Route path="settings" element={<SettingsPage />} />
