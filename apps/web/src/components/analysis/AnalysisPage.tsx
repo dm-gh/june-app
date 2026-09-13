@@ -154,7 +154,7 @@ export function AnalysisPage() {
     <>
       {heading(dimension, title, slices.length)}
       {slices.length === 0 ? nothing(dimension) : null}
-      <FlowList slices={slices.slice(0, ROWS)} look={look(dimension)} currency={currency} showNative={dimension === "wallets"} />
+      <FlowList slices={slices.slice(0, ROWS)} look={look(dimension)} currency={currency} showNative={dimension === "wallets"} hideEmptySide={dimension === "tags"} />
     </>
   )
 

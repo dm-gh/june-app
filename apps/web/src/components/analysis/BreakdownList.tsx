@@ -113,6 +113,8 @@ export interface FlowListProps {
   excluded?: ReadonlySet<string>
   onRowClick?: (key: string) => void
   showNative?: boolean
+  /** Leave out a side that has nothing, line and bar both; Wallets keep both sides. */
+  hideEmptySide?: boolean
 }
 
 /** "−GEL 119.84 (USD 45.57)" on the spent line, "+…" on the income line, grey when nothing moved. */
@@ -129,7 +131,7 @@ function SideAmount({ side, sign, currency, showNative }: { side: SideSum; sign:
 }
 
 /** Rows with both sides: a coral bar for spending and a green one for income, each scaled to the largest amount on either side. */
-export function FlowList({ slices, look, currency, excluded, onRowClick, showNative = false }: FlowListProps) {
+export function FlowList({ slices, look, currency, excluded, onRowClick, showNative = false, hideEmptySide = false }: FlowListProps) {
   const max = slices.reduce((m, s) => Math.max(m, s.expense.sum, s.income.sum), 0)
   const width = (sum: number) => `${max > 0 ? Math.min(100, (sum / max) * 100) : 0}%`
   return (
@@ -138,6 +140,8 @@ export function FlowList({ slices, look, currency, excluded, onRowClick, showNat
         const l = look(s.key)
         const out = excluded?.has(s.key) ?? false
         const Row = onRowClick ? "button" : "div"
+        const showExpense = !hideEmptySide || s.expense.sum !== 0
+        const showIncome = !hideEmptySide || s.income.sum !== 0
         return (
           <Row
             key={s.key}
@@ -151,16 +155,20 @@ export function FlowList({ slices, look, currency, excluded, onRowClick, showNat
                 <span className="truncate">{l.label}</span>
               </Badge>
               <span className="flex shrink-0 flex-col items-end gap-0.5">
-                <SideAmount side={s.expense} sign={-1} currency={currency} showNative={showNative} />
-                <SideAmount side={s.income} sign={1} currency={currency} showNative={showNative} />
+                {showExpense ? <SideAmount side={s.expense} sign={-1} currency={currency} showNative={showNative} /> : null}
+                {showIncome ? <SideAmount side={s.income} sign={1} currency={currency} showNative={showNative} /> : null}
               </span>
             </div>
-            <div className="mt-1.5 h-2.5 overflow-hidden border-2 border-ink bg-white">
-              <div className="h-full bg-coral" style={{ width: width(s.expense.sum) }} />
-            </div>
-            <div className="mt-1 h-2.5 overflow-hidden border-2 border-ink bg-white">
-              <div className="h-full bg-green" style={{ width: width(s.income.sum) }} />
-            </div>
+            {showExpense ? (
+              <div className="mt-1.5 h-2.5 overflow-hidden border-2 border-ink bg-white">
+                <div className="h-full bg-coral" style={{ width: width(s.expense.sum) }} />
+              </div>
+            ) : null}
+            {showIncome ? (
+              <div className="mt-1 h-2.5 overflow-hidden border-2 border-ink bg-white">
+                <div className="h-full bg-green" style={{ width: width(s.income.sum) }} />
+              </div>
+            ) : null}
           </Row>
         )
       })}

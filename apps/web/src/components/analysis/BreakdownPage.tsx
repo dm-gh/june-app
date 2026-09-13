@@ -94,7 +94,7 @@ export function BreakdownPage({ dimension }: { dimension: Dimension }) {
         </Empty>
       ) : null}
       {twoSided ? (
-        <FlowList slices={flows} look={look} currency={currency} excluded={excluded} onRowClick={toggle} showNative={dimension === "wallets"} />
+        <FlowList slices={flows} look={look} currency={currency} excluded={excluded} onRowClick={toggle} showNative={dimension === "wallets"} hideEmptySide={dimension === "tags"} />
       ) : (
         <BreakdownList slices={slices} look={look} currency={currency} total={total} excluded={excluded} onRowClick={toggle} />
       )}
