@@ -1,6 +1,7 @@
 import type { Category, Transaction, Wallet } from "@june/shared"
+import type { ReactNode } from "react"
 import { UNASSIGNED, UNCATEGORISED } from "../../lib/filter"
-import { hueColor, moneyCode, signedMoney } from "../../lib/format"
+import { balanceMoney, hueColor, moneyCode, signedMoney } from "../../lib/format"
 import { Badge, cn } from "../../ui"
 import type { SideSum, Slice, TwoSidedSlice } from "./analysis"
 
@@ -54,36 +55,25 @@ export interface BreakdownListProps {
   currency: string
   /** Total the shares are measured against; omit to hide shares. */
   total?: number
-  /** Keys drawn at half opacity, after the rest. */
-  excluded?: ReadonlySet<string>
-  onRowClick?: (key: string) => void
   /** Show the amount in the row's own currency, with the Default Currency figure in parentheses. */
   showNative?: boolean
 }
 
-/** Rows of chip, amount, share and a bar scaled to the largest row, excluded rows included. */
-export function BreakdownList({ slices, look, currency, total, excluded, onRowClick, showNative }: BreakdownListProps) {
+/** Rows of chip, amount, share and a bar scaled to the largest row. */
+export function BreakdownList({ slices, look, currency, total, showNative }: BreakdownListProps) {
   const max = slices.reduce((m, s) => Math.max(m, s.sum), 0)
   return (
     <div className="flex flex-col gap-3">
       {slices.map(({ key, sum, native }) => {
         const l = look(key)
-        const out = excluded?.has(key) ?? false
-        const Row = onRowClick ? "button" : "div"
         return (
-          <Row
-            key={key}
-            type={onRowClick ? "button" : undefined}
-            aria-pressed={onRowClick ? !out : undefined}
-            onClick={onRowClick ? () => onRowClick(key) : undefined}
-            className={cn("block w-full text-left transition-opacity", out && "opacity-50", onRowClick && "cursor-pointer")}
-          >
+          <div key={key}>
             <div className="flex items-center justify-between gap-3">
               <Badge accent={l.muted ? "grey" : "paper"} {...(l.prefix ? { prefix: l.prefix } : {})} className="min-w-0" style={l.color ? { background: l.color } : undefined}>
                 <span className="truncate">{l.label}</span>
               </Badge>
               <span className="flex shrink-0 items-baseline gap-2">
-                {total !== undefined && !out ? (
+                {total !== undefined ? (
                   <span className="font-mono text-xs text-grey-ink tabular-nums">{total > 0 ? `${Math.round((sum / total) * 100)}%` : "0%"}</span>
                 ) : null}
                 {showNative && native && native.currency !== currency ? (
@@ -99,7 +89,7 @@ export function BreakdownList({ slices, look, currency, total, excluded, onRowCl
             <div className="mt-1.5 h-3 overflow-hidden border-2 border-ink bg-white">
               <div className="h-full" style={{ width: `${max > 0 ? Math.min(100, (sum / max) * 100) : 0}%`, background: l.color ?? "var(--color-grey)" }} />
             </div>
-          </Row>
+          </div>
         )
       })}
     </div>
@@ -110,9 +100,9 @@ export interface FlowListProps {
   slices: ReadonlyArray<TwoSidedSlice>
   look: (key: string) => RowLook
   currency: string
-  excluded?: ReadonlySet<string>
-  onRowClick?: (key: string) => void
   showNative?: boolean
+  /** A line under the chip: a Wallet's Balance. */
+  detail?: ((key: string) => ReactNode) | undefined
   /** Leave out a side that has nothing, line and bar both; Wallets keep both sides. */
   hideEmptySide?: boolean
   /** Which sides the Type filter leaves on. */
@@ -140,29 +130,25 @@ function SideAmount({ side, sign, currency, showNative }: { side: SideSum; sign:
 }
 
 /** Rows with both sides: a coral bar for spending and a green one for income, each scaled to the largest amount on either side. */
-export function FlowList({ slices, look, currency, excluded, onRowClick, showNative = false, hideEmptySide = false, sides = bothSides }: FlowListProps) {
+export function FlowList({ slices, look, currency, showNative = false, detail, hideEmptySide = false, sides = bothSides }: FlowListProps) {
   const max = slices.reduce((m, s) => Math.max(m, s.expense.sum, s.income.sum), 0)
   const width = (sum: number) => `${max > 0 ? Math.min(100, (sum / max) * 100) : 0}%`
   return (
     <div className="flex flex-col gap-3">
       {slices.map((s) => {
         const l = look(s.key)
-        const out = excluded?.has(s.key) ?? false
-        const Row = onRowClick ? "button" : "div"
         const showExpense = sides.expense && (!hideEmptySide || s.expense.sum !== 0)
         const showIncome = sides.income && (!hideEmptySide || s.income.sum !== 0)
+        const extra = detail?.(s.key)
         return (
-          <Row
-            key={s.key}
-            type={onRowClick ? "button" : undefined}
-            aria-pressed={onRowClick ? !out : undefined}
-            onClick={onRowClick ? () => onRowClick(s.key) : undefined}
-            className={cn("block w-full text-left transition-opacity", out && "opacity-50", onRowClick && "cursor-pointer")}
-          >
+          <div key={s.key}>
             <div className="flex items-start justify-between gap-3">
-              <Badge accent={l.muted ? "grey" : "paper"} {...(l.prefix ? { prefix: l.prefix } : {})} className="min-w-0" style={l.color ? { background: l.color } : undefined}>
-                <span className="truncate">{l.label}</span>
-              </Badge>
+              <div className="flex min-w-0 flex-col items-start gap-1">
+                <Badge accent={l.muted ? "grey" : "paper"} {...(l.prefix ? { prefix: l.prefix } : {})} className="min-w-0 max-w-full" style={l.color ? { background: l.color } : undefined}>
+                  <span className="truncate">{l.label}</span>
+                </Badge>
+                {extra ? <div className="font-mono text-xs text-grey-ink tabular-nums">{extra}</div> : null}
+              </div>
               <span className="flex shrink-0 flex-col items-end gap-0.5">
                 {showExpense ? <SideAmount side={s.expense} sign={-1} currency={currency} showNative={showNative} /> : null}
                 {showIncome ? <SideAmount side={s.income} sign={1} currency={currency} showNative={showNative} /> : null}
@@ -178,9 +164,18 @@ export function FlowList({ slices, look, currency, excluded, onRowClick, showNat
                 <div className="h-full bg-green" style={{ width: width(s.income.sum) }} />
               </div>
             ) : null}
-          </Row>
+          </div>
         )
       })}
     </div>
   )
+}
+
+/** "GEL 2,000.00 (≈ USD 740.00)": a Wallet's Balance for the line under its chip; nothing for Unassigned. */
+export const walletBalance = (walletById: ReadonlyMap<string, Wallet>, currency: string) => (key: string): ReactNode => {
+  const w = walletById.get(key)
+  if (!w) return null
+  const own = balanceMoney(w.balanceMinor, w.currency)
+  const converted = w.currency !== currency && w.balanceDefaultMinor !== null ? ` (≈ ${balanceMoney(w.balanceDefaultMinor, currency)})` : ""
+  return `Balance ${own}${converted}`
 }

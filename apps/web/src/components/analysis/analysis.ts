@@ -147,6 +147,13 @@ export const breakdownBoth = (rows: ReadonlyArray<Transaction>, keysOf: (t: Tran
     .sort((a, b) => b.expense.sum + b.income.sum - (a.expense.sum + a.income.sum))
 }
 
+/** Every Wallet gets a row, even with nothing moved in the period, so its Balance shows. */
+export const withEveryWallet = (slices: ReadonlyArray<TwoSidedSlice>, walletIds: ReadonlyArray<string>): Array<TwoSidedSlice> => {
+  const have = new Set(slices.map((s) => s.key))
+  const none: SideSum = { sum: 0, native: null }
+  return [...slices, ...walletIds.filter((id) => !have.has(id)).map((key) => ({ key, expense: none, income: none }))]
+}
+
 export const spentMinor = (rows: ReadonlyArray<Transaction>): number =>
   counted(rows).reduce((sum, t) => (t.amountMinor < 0 ? sum + value(t) : sum), 0)
 

@@ -8,11 +8,11 @@ import { AppShell } from "../../layout/AppShell"
 import { PeriodHeader } from "../../layout/PeriodHeader"
 import { filterRows, slugLookup, useFilter } from "../../lib/filter"
 import { fromMinor } from "@june/shared"
-import { moneyCode, signedMoney } from "../../lib/format"
+import { balanceMoney, moneyCode, signedMoney } from "../../lib/format"
 import { todayLocal, usePeriod } from "../../lib/period"
 import { Card, cn, Empty, ErrorNotice, Heading, Label, Loading } from "../../ui"
-import { breakdown, breakdownBoth, elapsedBuckets, flowSeries, granularityFor, incomeMinor, type Side, spendSeries, spentMinor } from "./analysis"
-import { BreakdownList, type Dimension, dimensionTitle, FlowList, keysOf, lookOf, type Sides } from "./BreakdownList"
+import { breakdown, breakdownBoth, elapsedBuckets, flowSeries, granularityFor, incomeMinor, type Side, spendSeries, spentMinor, withEveryWallet } from "./analysis"
+import { BreakdownList, type Dimension, dimensionTitle, FlowList, keysOf, lookOf, type Sides, walletBalance } from "./BreakdownList"
 
 const ROWS = 5
 
@@ -152,7 +152,11 @@ export function AnalysisPage() {
     }),
     [rows, categoryById]
   )
-  const walletSlices = useMemo(() => breakdownBoth(rows, keysOf("wallets", categoryById)), [rows, categoryById])
+  const walletSlices = useMemo(
+    () => withEveryWallet(breakdownBoth(rows, keysOf("wallets", categoryById)), (wallets.data?.wallets ?? []).map((w) => w.id)),
+    [rows, categoryById, wallets.data]
+  )
+  const totalBalance = wallets.data?.totalDefaultMinor ?? null
   const tagSlices = useMemo(() => breakdownBoth(rows, keysOf("tags", categoryById)), [rows, categoryById])
   const look = (dimension: Dimension) => (key: string) => lookOf(dimension, key, categoryBySlug, walletById)
 
@@ -183,12 +187,18 @@ export function AnalysisPage() {
   const flowSection = (dimension: "wallets" | "tags", title: string, slices: typeof walletSlices) => (
     <>
       {heading(title, slices.length, `/analysis/${dimension}`)}
+      {dimension === "wallets" && totalBalance !== null ? (
+        <div className="-mt-1 mb-3 font-mono text-sm tabular-nums">
+          <span className="text-grey-ink">Total balance</span> ≈ <span className="font-bold">{balanceMoney(totalBalance, currency)}</span>
+        </div>
+      ) : null}
       {transactions.data && slices.length === 0 ? <Empty>Nothing by {dimensionTitle[dimension].toLowerCase()} in this period.</Empty> : null}
       <FlowList
         slices={slices.slice(0, ROWS)}
         look={look(dimension)}
         currency={currency}
         showNative={dimension === "wallets"}
+        detail={dimension === "wallets" ? walletBalance(walletById, currency) : undefined}
         hideEmptySide={dimension === "tags"}
         sides={sides}
       />
