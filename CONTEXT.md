@@ -85,6 +85,34 @@ _Avoid_: webhook (that names the transport, not the capture method), integration
 A batch of Changes created from a file in June's own template, one row per Transaction. Each row obeys the same rules as a capture: the Wallet comes from Wallet Order and the row's currency, an unknown Category slug means Uncategorised, a currency no Wallet holds means Unassigned. A row June cannot read is skipped and reported by line; the rest still import.
 _Avoid_: upload, sync, bank import
 
+**Recurring**:
+A User's template for a Change that repeats: a required name plus every field a Change has (amount, currency, Wallet, Category, description, Tags), a Schedule, and an Auto flag. A Recurring is not a Transaction and appears in no analysis; only the Changes it produces do. Producing a Change is called firing. With Auto on, June fires it on each due date; with Auto off, the User fires it by hand and the Schedule is optional and serves as a reminder. A Recurring whose Wallet was deleted still fires, Unassigned, and is flagged as needing attention; one whose Category was deleted fires Uncategorised.
+_Avoid_: recurring transaction, subscription, scheduled transaction, template
+
+**Schedule**:
+When a Recurring is due: weekly on one or more weekdays, monthly on one or more days of the month, yearly on a day of a month, or once on a date. The User never sees or types the expression behind it. A monthly Schedule on the 29th, 30th or 31st skips months without that day. A Recurring always knows its next due date; a Recurring that is due and unfired is Overdue.
+_Avoid_: cron (that names the storage), frequency, period (already means the viewed date range)
+
+**Firing**:
+Creating one Change from a Recurring, dated the due date it was fired for, or today when the Recurring has no due date. Firing advances the Schedule to the next due date; a once Schedule is spent. Auto firing catches up every due date that was missed while June was unavailable.
+_Avoid_: apply, run, execute, charge
+
+**Loan**:
+Money a User has lent or borrowed outside their Wallets, tracked so it is not forgotten: a signed amount in a currency and a description naming the other party. Positive is Lent (they owe the User), negative is Borrowed (the User owes them). The amount is stored as the current position and changes only through Settling or a direct edit; a Loan keeps no history and is never linked to a Transaction. A Loan appears in no analysis and affects no Balance.
+_Avoid_: debt, credit, IOU, receivable
+
+**Lent** / **Borrowed**:
+The two directions of a Loan, read from the sign of its amount. Settling past zero flips one into the other.
+_Avoid_: positive loan, negative loan, asset, liability
+
+**Settling**:
+Recording money moving between a Wallet and a Loan: the User enters an ordinary Change, Hidden from analysis unless they say otherwise, and the Loan's amount moves by the opposite of that Change. Returning money settles a Loan toward zero; lending or borrowing more moves it away. Settling more than remains flips the direction.
+_Avoid_: repayment, pay off, adjust
+
+**Archived**:
+The state of a Loan set aside from the live list without being deleted. June archives a Loan when Settling brings it to zero; the User can archive or unarchive one at any time, and delete a Loan in either state.
+_Avoid_: closed, settled (as a state), deleted
+
 **Filter**:
 A User's narrowing of what Transactions and Analysis show inside the selected period, by deselecting Transaction Types (expense, income, exchange; an Init counts as income), Categories, Wallets, or Tags. Everything is selected until deselected. One set applies to both screens at once. A Filter never changes what is stored.
 _Avoid_: search, query, segment
