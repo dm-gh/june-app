@@ -3,7 +3,7 @@ import { type CaptureResult, currencyExponent, fromMinor, JuneApi } from "@june/
 import { Effect, Either, Option } from "effect"
 import { CategoriesRepo } from "../categories/Categories.js"
 import { readChange } from "../transactions/readChange.js"
-import { categoryFits } from "../transactions/Transactions.js"
+import { categoryFits } from "../transactions/rules.js"
 import { TransactionsRepo } from "../transactions/TransactionsRepo.js"
 import { WalletsRepo } from "../wallets/WalletsRepo.js"
 import { CaptureTokens } from "./CaptureTokens.js"

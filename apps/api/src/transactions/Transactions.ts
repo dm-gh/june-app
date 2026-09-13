@@ -7,22 +7,17 @@ import {
   type ExchangeId,
   JuneApi,
   type CreateExchange,
-  RuleViolation,
   type Transaction,
   type WalletId
 } from "@june/shared"
 import { DateTime, Effect, Option } from "effect"
 import { randomUUID } from "node:crypto"
-import { type CategoryRow, CategoriesRepo } from "../categories/Categories.js"
+import { CategoriesRepo } from "../categories/Categories.js"
 import { Rates, type RateTable } from "../rates/Rates.js"
 import { type WalletRow, WalletsRepo } from "../wallets/WalletsRepo.js"
 import { type TransactionRow, TransactionsRepo } from "./TransactionsRepo.js"
 
-const violation = (message: string) => new RuleViolation({ message })
-
-/** A Category fits a Change when its type matches the sign of the amount. */
-export const categoryFits = (category: CategoryRow, amountMinor: number): boolean =>
-  amountMinor < 0 ? category.type === "expense" : category.type === "income"
+import { categoryFits, checkChange as checkChangeRule, requireCategory as requireCategoryRule, requireWallet as requireWalletRule, violation } from "./rules.js"
 
 export const toTransaction = (
   row: TransactionRow,
@@ -67,35 +62,11 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
     const presentOne = (user: CurrentUserShape, row: TransactionRow) => present(user, [row]).pipe(Effect.map((ts) => ts[0]!))
 
     const requireWallet = (user: CurrentUserShape, id: WalletId) =>
-      wallets.find(user.id, id).pipe(
-        Effect.flatMap(Option.match({ onNone: () => violation("Wallet not found"), onSome: Effect.succeed }))
-      )
-
+      requireWalletRule(user, id).pipe(Effect.provideService(WalletsRepo, wallets))
     const requireCategory = (user: CurrentUserShape, id: CategoryId) =>
-      categories.find(user.id, id).pipe(
-        Effect.flatMap(Option.match({ onNone: () => violation("Category not found"), onSome: Effect.succeed }))
-      )
-
-    /** The one rule every Change entered by hand must satisfy. */
-    const checkChange = (
-      user: CurrentUserShape,
-      change: { walletId: WalletId | null; amountMinor: number; currency: string; categoryId: CategoryId | null }
-    ) =>
-      Effect.gen(function* () {
-        if (change.amountMinor === 0) return yield* violation("Amount cannot be zero")
-        if (change.walletId === null) return yield* violation(`No Wallet in ${change.currency}`)
-        const wallet = yield* requireWallet(user, change.walletId)
-        if (wallet.currency !== change.currency) {
-          return yield* violation(`Wallet ${wallet.name} holds ${wallet.currency}, not ${change.currency}`)
-        }
-        if (change.categoryId !== null) {
-          const category = yield* requireCategory(user, change.categoryId)
-          if (!categoryFits(category, change.amountMinor)) {
-            return yield* violation(`${category.name} is an ${category.type} Category`)
-          }
-        }
-        return wallet
-      })
+      requireCategoryRule(user, id).pipe(Effect.provideService(CategoriesRepo, categories))
+    const checkChange = (user: CurrentUserShape, change: Parameters<typeof checkChangeRule>[1]) =>
+      checkChangeRule(user, change).pipe(Effect.provideService(WalletsRepo, wallets), Effect.provideService(CategoriesRepo, categories))
 
     /** The rules both creating and editing an Exchange obey; resolves both Wallets. */
     const checkExchange = (user: CurrentUserShape, payload: Pick<CreateExchange, "sourceWalletId" | "sourceMinor" | "targetWalletId" | "targetMinor">) =>

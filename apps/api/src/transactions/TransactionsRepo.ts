@@ -87,6 +87,8 @@ export interface TransactionsRepoShape {
   /** Balance of every Wallet of the User: sum(amount_minor) per wallet_id. */
   readonly balances: (userId: UserId) => Effect.Effect<ReadonlyMap<WalletId, number>>
   readonly initOf: (userId: UserId, walletId: WalletId) => Effect.Effect<Option.Option<TransactionRow>>
+  /** How many of the User's Transactions are Unassigned, for the attention banner. */
+  readonly countUnassigned: (userId: UserId) => Effect.Effect<number>
 }
 
 export class TransactionsRepo extends Context.Tag("TransactionsRepo")<TransactionsRepo, TransactionsRepoShape>() {}
@@ -264,6 +266,12 @@ export const TransactionsRepoLive = Layer.effect(
         Effect.map((rs) => Option.fromNullable(rs[0]))
       )
 
+    const countUnassigned: TransactionsRepoShape["countUnassigned"] = (userId) =>
+      sql<{ n: number }>`select count(*)::int as n from transaction where user_id = ${userId} and wallet_id is null`.pipe(
+        Effect.map((rs) => rs[0]?.n ?? 0),
+        Effect.orDie
+      )
+
     return {
       listInPeriod,
       find,
@@ -279,7 +287,8 @@ export const TransactionsRepoLive = Layer.effect(
       deleteInitOf,
       collapseExchangesOf,
       balances,
-      initOf
+      initOf,
+      countUnassigned
     }
   })
 )

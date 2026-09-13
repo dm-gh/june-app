@@ -1,6 +1,7 @@
 import { Schema } from "effect"
 import slugifyLib from "slugify"
 import { CurrencyCode } from "./currency.js"
+import { CronExpression } from "./schedule.js"
 
 /** Domain schemas shared by api and web. Terminology follows CONTEXT.md. */
 
@@ -18,6 +19,12 @@ export type TransactionId = typeof TransactionId.Type
 
 export const ExchangeId = Schema.UUID.pipe(Schema.brand("ExchangeId"))
 export type ExchangeId = typeof ExchangeId.Type
+
+export const RecurringId = Schema.UUID.pipe(Schema.brand("RecurringId"))
+export type RecurringId = typeof RecurringId.Type
+
+export const LoanId = Schema.UUID.pipe(Schema.brand("LoanId"))
+export type LoanId = typeof LoanId.Type
 
 /** A calendar date with no time and no zone, as YYYY-MM-DD. */
 export const LocalDate = Schema.String.pipe(
@@ -118,4 +125,39 @@ export class Me extends Schema.Class<Me>("Me")({
   image: Schema.NullOr(Schema.String),
   defaultCurrency: CurrencyCode,
   hasCaptureToken: Schema.Boolean
+}) {}
+
+/**
+ * A Recurring: a named template for a Change with a Schedule and an Auto flag. Not a Transaction,
+ * never in analysis. `cron` is the Schedule for a repeating one; a once Schedule is `nextOn`
+ * alone; neither means no Schedule (only allowed with Auto off). `walletId` is null once the
+ * Wallet was deleted: it still fires, Unassigned, and needs attention.
+ */
+export class Recurring extends Schema.Class<Recurring>("Recurring")({
+  id: RecurringId,
+  name: Schema.String,
+  walletId: Schema.NullOr(WalletId),
+  amountMinor: MinorAmount,
+  currency: CurrencyCode,
+  categoryId: Schema.NullOr(CategoryId),
+  description: Schema.String,
+  tags: Schema.Array(Tag),
+  auto: Schema.Boolean,
+  cron: Schema.NullOr(CronExpression),
+  /** The next due date; null when there is no Schedule or a once Schedule was spent. */
+  nextOn: Schema.NullOr(LocalDate),
+  lastFiredOn: Schema.NullOr(LocalDate),
+  createdAt: Schema.DateTimeUtc,
+  updatedAt: Schema.DateTimeUtc
+}) {}
+
+/** A Loan: positive is Lent (they owe the User), negative is Borrowed. The amount is the current position. */
+export class Loan extends Schema.Class<Loan>("Loan")({
+  id: LoanId,
+  amountMinor: MinorAmount,
+  currency: CurrencyCode,
+  description: Schema.String,
+  archived: Schema.Boolean,
+  createdAt: Schema.DateTimeUtc,
+  updatedAt: Schema.DateTimeUtc
 }) {}

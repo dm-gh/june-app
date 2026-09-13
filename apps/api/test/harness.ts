@@ -12,6 +12,9 @@ import { CategoriesRepoLive } from "../src/categories/Categories.js"
 import { AppConfig } from "../src/config.js"
 import { PgLiveForUrl } from "../src/db/PgLive.js"
 import { HandlersLive } from "../src/http/Api.js"
+import { LoansRepoLive } from "../src/loans/LoansRepo.js"
+import { RecurringFiringLive } from "../src/recurrings/Firing.js"
+import { RecurringsRepoLive } from "../src/recurrings/RecurringsRepo.js"
 import { RateProvider, type RateProviderShape } from "../src/rates/RateProvider.js"
 import { RatesLive } from "../src/rates/Rates.js"
 import { TransactionsRepoLive } from "../src/transactions/TransactionsRepo.js"
@@ -93,7 +96,8 @@ export const makeHarness = (options?: {
     const db = yield* testDatabase
     const PgTest = PgLiveForUrl(db.url)
 
-    const services = Layer.mergeAll(RatesLive, CaptureTokensLive, WalletsRepoLive, CategoriesRepoLive, TransactionsRepoLive).pipe(
+    const services = Layer.mergeAll(RatesLive, CaptureTokensLive, RecurringFiringLive).pipe(
+      Layer.provideMerge(Layer.mergeAll(WalletsRepoLive, CategoriesRepoLive, TransactionsRepoLive, RecurringsRepoLive, LoansRepoLive)),
       Layer.provideMerge(
         Layer.mergeAll(
           CaptureTokensLive,
@@ -132,7 +136,7 @@ export const makeHarness = (options?: {
       Effect.provide(FetchHttpClient.layer.pipe(Layer.provide(Layer.succeed(FetchHttpClient.Fetch, fetchViaHandler))))
     )
 
-    return { client, sql, captureToken: token, handler, userId: user.id, dbUrl: db.url }
+    return { client, sql, captureToken: token, handler, userId: user.id, dbUrl: db.url, context }
   })
 
 /** Raw fetch against the in-process handler, for endpoints the typed client cannot express (e.g. bad bodies). */

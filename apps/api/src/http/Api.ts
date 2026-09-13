@@ -5,6 +5,8 @@ import { AuthenticationLive } from "../auth/AuthenticationLive.js"
 import { CaptureHandlersLive } from "../capture/Capture.js"
 import { CategoriesHandlersLive } from "../categories/Categories.js"
 import { ImportHandlersLive } from "../import/Import.js"
+import { LoansHandlersLive } from "../loans/Loans.js"
+import { RecurringsHandlersLive } from "../recurrings/Recurrings.js"
 import { SettingsHandlersLive } from "../settings/Settings.js"
 import { TagsHandlersLive } from "../tags/Tags.js"
 import { TransactionsHandlersLive } from "../transactions/Transactions.js"
@@ -14,7 +16,7 @@ const HealthHandlersLive = HttpApiBuilder.group(JuneApi, "health", (handlers) =>
   handlers.handle("status", () => Effect.succeed({ ok: true as const }))
 )
 
-/** Every group of the contract, implemented. Needs the repos, Rates, CaptureTokens, AppConfig and an Authentication. */
+/** Every group of the contract, implemented. Needs the repos, Rates, CaptureTokens, RecurringFiring, AppConfig and an Authentication. */
 export const HandlersLive = Layer.mergeAll(
   HealthHandlersLive,
   WalletsHandlersLive,
@@ -23,7 +25,9 @@ export const HandlersLive = Layer.mergeAll(
   TransactionsHandlersLive,
   SettingsHandlersLive,
   CaptureHandlersLive,
-  ImportHandlersLive
+  ImportHandlersLive,
+  RecurringsHandlersLive,
+  LoansHandlersLive
 )
 
 export const ApiLive = HttpApiBuilder.api(JuneApi).pipe(Layer.provide(HandlersLive), Layer.provide(AuthenticationLive))

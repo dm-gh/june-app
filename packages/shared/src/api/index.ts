@@ -3,6 +3,8 @@ import { CaptureGroup } from "./capture.js"
 import { CategoriesGroup } from "./categories.js"
 import { HealthGroup } from "./health.js"
 import { ImportGroup } from "./import.js"
+import { LoansGroup } from "./loans.js"
+import { RecurringsGroup } from "./recurrings.js"
 import { SettingsGroup } from "./settings.js"
 import { TagsGroup } from "./tags.js"
 import { TransactionsGroup } from "./transactions.js"
@@ -22,6 +24,8 @@ export class JuneApi extends HttpApi.make("june")
   .add(SettingsGroup)
   .add(CaptureGroup)
   .add(ImportGroup)
+  .add(RecurringsGroup)
+  .add(LoansGroup)
   .prefix("/api") {}
 
 export * from "./auth.js"
@@ -30,6 +34,8 @@ export * from "./categories.js"
 export * from "./errors.js"
 export * from "./health.js"
 export * from "./import.js"
+export * from "./loans.js"
+export * from "./recurrings.js"
 export * from "./settings.js"
 export * from "./tags.js"
 export * from "./transactions.js"

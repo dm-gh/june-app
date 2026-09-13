@@ -4,12 +4,16 @@ import { CurrentUser, type CurrentUserShape, JuneApi, type Me } from "@june/shar
 import { Effect } from "effect"
 import { CaptureTokens } from "../capture/CaptureTokens.js"
 import { AppConfig } from "../config.js"
+import { RecurringsRepo } from "../recurrings/RecurringsRepo.js"
+import { TransactionsRepo } from "../transactions/TransactionsRepo.js"
 
 export const SettingsHandlersLive = HttpApiBuilder.group(JuneApi, "settings", (handlers) =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient
     const tokens = yield* CaptureTokens
     const config = yield* AppConfig
+    const recurrings = yield* RecurringsRepo
+    const transactions = yield* TransactionsRepo
 
     const me = (user: CurrentUserShape) =>
       tokens.exists(user.id).pipe(Effect.map((hasCaptureToken): Me => ({ ...user, hasCaptureToken }) as Me))
@@ -30,6 +34,16 @@ export const SettingsHandlersLive = HttpApiBuilder.group(JuneApi, "settings", (h
           const user = yield* CurrentUser
           const { token } = yield* tokens.regenerate(user.id)
           return { token, captureUrl: `${config.baseUrl}/api/capture/${token}` }
+        })
+      )
+      .handle("attention", () =>
+        Effect.gen(function* () {
+          const user = yield* CurrentUser
+          const [recurringsWithoutWallet, unassignedTransactions] = yield* Effect.all([
+            recurrings.countWithoutWallet(user.id),
+            transactions.countUnassigned(user.id)
+          ])
+          return { recurringsWithoutWallet, unassignedTransactions }
         })
       )
   })
