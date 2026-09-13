@@ -4,7 +4,7 @@ import { NavLink, useMatch, useNavigate } from "react-router"
 import { signOut } from "../api/auth"
 import { useMe } from "../api/queries"
 import { FilterContext, filterSearch } from "../lib/filter"
-import { Button, cn, Display } from "../ui"
+import { cn, Display } from "../ui"
 
 const tabs = [
   { to: "/analysis", label: "Analysis", filtered: true },
@@ -70,37 +70,55 @@ function TabBar() {
   )
 }
 
-/** Desktop: the 240px left rail. */
+/** Desktop: the 240px left rail. The plus button sits on the rail's edge beside Transactions while that tab is active. */
 function Sidebar() {
   const me = useMe()
   const navigate = useNavigate()
   const tabs = useTabLinks()
+  const onTransactions = useMatch({ path: "/transactions", end: false }) !== null
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r-3 border-ink bg-paper p-6 md:flex">
       <Display size="sm" as="div">
         June
       </Display>
       <nav aria-label="Main" className="mt-8 flex flex-col gap-2">
-        {tabs.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.link}
-            className={({ isActive }) =>
-              cn(
-                "border-3 px-3 py-2 font-heading font-bold",
-                isActive ? "border-ink bg-accent shadow-hard-sm" : "border-transparent text-grey-ink hover:text-ink"
-              )
-            }
-          >
-            {tab.label}
-          </NavLink>
-        ))}
+        {tabs.map((tab) => {
+          const withPlus = tab.to === "/transactions"
+          return (
+            <div key={tab.to} className="relative">
+              <NavLink
+                to={tab.link}
+                className={({ isActive }) =>
+                  cn(
+                    "block border-3 px-3 py-2 font-heading font-bold",
+                    isActive ? "border-ink bg-accent shadow-hard-sm" : "border-transparent text-grey-ink hover:text-ink"
+                  )
+                }
+              >
+                {tab.label}
+              </NavLink>
+              {withPlus ? (
+                <button
+                  type="button"
+                  aria-label="Add transaction"
+                  aria-hidden={!onTransactions}
+                  tabIndex={onTransactions ? 0 : -1}
+                  onClick={() => navigate("/transactions/new")}
+                  className={cn(
+                    // Straddles the rail's right border: the nav sits 24px inside the rail.
+                    "absolute top-1/2 -right-6 z-10 flex size-11 -translate-y-1/2 translate-x-1/2 items-center justify-center border-3 border-ink bg-accent shadow-hard-sm lift",
+                    "transition-[translate,opacity] duration-200 ease-out",
+                    onTransactions ? "opacity-100" : "pointer-events-none -translate-x-1/2 opacity-0"
+                  )}
+                >
+                  <Plus size={24} weight="bold" />
+                </button>
+              ) : null}
+            </div>
+          )
+        })}
       </nav>
       <div className="mt-auto flex flex-col gap-4">
-        <Button onClick={() => navigate("/transactions/new")}>
-          <Plus size={20} weight="bold" />
-          Add transaction
-        </Button>
         <div className="font-mono text-xs text-grey-ink">{me.data?.email ?? ""}</div>
         <button
           type="button"
