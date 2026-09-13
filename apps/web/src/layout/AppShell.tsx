@@ -91,7 +91,9 @@ function Sidebar() {
                 className={({ isActive }) =>
                   cn(
                     "block border-3 px-3 py-2 font-heading font-bold",
-                    isActive ? "border-ink bg-accent shadow-hard-sm" : "border-transparent text-grey-ink hover:text-ink"
+                    isActive ? "border-ink bg-accent shadow-hard-sm" : "border-transparent text-grey-ink hover:text-ink",
+                    // The active Transactions item gives way to the plus, as the phone tab shrinks for it.
+                    isActive && withPlus && "mr-6"
                   )
                 }
               >
