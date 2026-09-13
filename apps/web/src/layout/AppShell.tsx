@@ -1,16 +1,18 @@
-import { Plus } from "@phosphor-icons/react"
+import { ChartBar, GearSix, type Icon, Plus, Receipt, SquaresFour } from "@phosphor-icons/react"
 import { type ReactNode, useContext } from "react"
 import { NavLink, useMatch, useNavigate } from "react-router"
 import { signOut } from "../api/auth"
 import { useMe } from "../api/queries"
 import { FilterContext, filterSearch } from "../lib/filter"
 import { cn, Display } from "../ui"
+import { AttentionBanner, useAttentionNeeded } from "./AttentionBanner"
 
-const tabs = [
-  { to: "/analysis", label: "Analysis", filtered: true },
-  { to: "/transactions", label: "Transactions", filtered: true },
-  { to: "/settings", label: "Settings", filtered: false }
-] as const
+const tabs: ReadonlyArray<{ to: string; label: string; icon: Icon; filtered: boolean }> = [
+  { to: "/analysis", label: "Analysis", icon: ChartBar, filtered: true },
+  { to: "/transactions", label: "Transactions", icon: Receipt, filtered: true },
+  { to: "/more", label: "More", icon: SquaresFour, filtered: false },
+  { to: "/settings", label: "Settings", icon: GearSix, filtered: false }
+]
 
 /** Transactions and Analysis share the Filter, so their tab links carry it. */
 const useTabLinks = () => {
@@ -19,7 +21,7 @@ const useTabLinks = () => {
   return tabs.map((tab) => ({ ...tab, link: { pathname: tab.to, search: tab.filtered ? search : "" } }))
 }
 
-/** Phone: the bottom tab bar. The plus button slides out from behind the Transactions tab when it is active. */
+/** Phone: the bottom tab bar, icons only; the active tab also shows its label. The plus slides up over Transactions when it is active. */
 function TabBar() {
   const navigate = useNavigate()
   const tabs = useTabLinks()
@@ -29,9 +31,10 @@ function TabBar() {
       aria-label="Main"
       className="fixed inset-x-0 bottom-0 z-10 h-[calc(80px+env(safe-area-inset-bottom))] border-t-3 border-ink bg-paper pb-[env(safe-area-inset-bottom)] md:hidden"
     >
-      <ul className="grid h-20 grid-cols-3 items-center">
+      <ul className="grid h-20 grid-cols-4 items-center">
         {tabs.map((tab) => {
           const withPlus = tab.to === "/transactions"
+          const Glyph = tab.icon
           return (
             <li key={tab.to} className="relative flex justify-center">
               {withPlus ? (
@@ -52,15 +55,20 @@ function TabBar() {
               ) : null}
               <NavLink
                 to={tab.link}
+                aria-label={tab.label}
                 className={({ isActive }) =>
                   cn(
-                    "relative z-10 inline-flex items-center justify-center border-3 px-3 font-heading text-sm font-bold",
-                    isActive ? "border-ink bg-accent shadow-hard-sm" : "border-transparent text-grey-ink",
-                    isActive && withPlus ? "h-7 text-xs" : "h-11"
+                    "relative z-10 inline-flex h-11 min-w-[72px] flex-col items-center justify-center gap-0.5 border-3 px-2",
+                    isActive ? "border-ink bg-accent text-ink shadow-hard-sm" : "border-transparent text-grey-ink"
                   )
                 }
               >
-                {tab.label}
+                {({ isActive }) => (
+                  <>
+                    <Glyph size={isActive ? 20 : 24} weight="bold" />
+                    {isActive ? <span className="font-heading text-[10px] leading-none font-bold uppercase tracking-wide">{tab.label}</span> : null}
+                  </>
+                )}
               </NavLink>
             </li>
           )
@@ -70,7 +78,7 @@ function TabBar() {
   )
 }
 
-/** Desktop: the 240px left rail. The plus button sits on the rail's edge beside Transactions while that tab is active. */
+/** Desktop: the 240px left rail, icon and label per tab. The plus sits on the rail's edge beside Transactions while that tab is active. */
 function Sidebar() {
   const me = useMe()
   const navigate = useNavigate()
@@ -84,19 +92,21 @@ function Sidebar() {
       <nav aria-label="Main" className="mt-8 flex flex-col gap-2">
         {tabs.map((tab) => {
           const withPlus = tab.to === "/transactions"
+          const Glyph = tab.icon
           return (
             <div key={tab.to} className="relative">
               <NavLink
                 to={tab.link}
                 className={({ isActive }) =>
                   cn(
-                    "block border-3 px-3 py-2 font-heading font-bold",
+                    "flex items-center gap-3 border-3 px-3 py-2 font-heading font-bold",
                     isActive ? "border-ink bg-accent shadow-hard-sm" : "border-transparent text-grey-ink hover:text-ink",
-                    // The active Transactions item gives way to the plus, as the phone tab shrinks for it.
+                    // The active Transactions item gives way to the plus on the rail's edge.
                     isActive && withPlus && "mr-6"
                   )
                 }
               >
+                <Glyph size={22} weight="bold" />
                 {tab.label}
               </NavLink>
               {withPlus ? (
@@ -143,6 +153,8 @@ export interface AppShellProps {
 }
 
 export function AppShell({ fullscreen = false, width = "list", children }: AppShellProps) {
+  // The banner shows on every tabbed screen; a page's sticky header swallows the column's top padding, so it gets its own.
+  const attention = useAttentionNeeded() && !fullscreen
   return (
     <div className="min-h-dvh md:flex">
       <Sidebar />
@@ -153,7 +165,14 @@ export function AppShell({ fullscreen = false, width = "list", children }: AppSh
             width === "form" ? "max-w-[calc(560px+4rem)]" : "max-w-[calc(720px+4rem)]"
           )}
         >
-          {children}
+          {attention ? (
+            <>
+              <AttentionBanner />
+              <div className="flex flex-1 flex-col pt-4 md:pt-8">{children}</div>
+            </>
+          ) : (
+            children
+          )}
         </div>
       </main>
       {fullscreen ? null : <TabBar />}

@@ -18,6 +18,8 @@
 - **Analysis that answers questions.** Spent and income for any period, per day with a running total, by category, by wallet, by tag, income against expense. Days for a month, months for longer.
 - **Filters that travel.** One filter, shared by the list and the analysis, kept in the URL so a link carries it. Tap a category on an analysis page to leave it out.
 - **CSV import.** A six-column template, a preview of what every row becomes, unreadable rows reported by line, duplicates skipped.
+- **Recurrings.** Rent, salary, subscriptions: a named template with a weekly, monthly, yearly or one-off schedule. Fire it yourself, or let June fire it on the day and catch up anything missed while it was down.
+- **Loans.** What you lent and what you borrowed, in one list, so it is not forgotten. Settle part or all of it as an ordinary transaction, hidden from analysis, and the loan moves with it.
 - **Installable.** A PWA with a neubrutalist face: hard shadows, thick borders, one acid-green accent.
 
 ## How it is built
@@ -25,7 +27,7 @@
 | Layer | Choice |
 | --- | --- |
 | Language | TypeScript end to end, one contract shared by server and client |
-| Server | [Effect](https://effect.website) with `@effect/platform` HTTP API and `@effect/sql-pg` |
+| Server | [Effect](https://effect.website) with `@effect/platform` HTTP API, `@effect/sql-pg`, and an in-process hourly tick for recurrings |
 | Database | Postgres 17, plain SQL migrations |
 | Auth | Better Auth, Google sign-in only |
 | Web | React 19, Vite, Tailwind 4, Recharts, TanStack Query, react-router |

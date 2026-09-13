@@ -3,6 +3,12 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { AnalysisPage } from "./components/analysis/AnalysisPage"
 import { BreakdownPage } from "./components/analysis/BreakdownPage"
 import { RequireAuth, SignInPage } from "./components/auth/SignInPage"
+import { AddLoanPage, EditLoanPage } from "./components/more/LoanFormPage"
+import { LoanPage } from "./components/more/LoanPage"
+import { LoansArchivePage } from "./components/more/LoansArchivePage"
+import { MorePage } from "./components/more/MorePage"
+import { AddRecurringPage, EditRecurringPage } from "./components/more/RecurringFormPage"
+import { RecurringPage } from "./components/more/RecurringPage"
 import { AddCategoryPage, EditCategoryPage } from "./components/settings/CategoryFormPage"
 import { ImportPage } from "./components/settings/ImportPage"
 import { SettingsPage } from "./components/settings/SettingsPage"
@@ -74,6 +80,14 @@ export function App() {
                   <Route path="analysis/categories/income" element={<BreakdownPage dimension="categories" side="income" />} />
                   <Route path="analysis/wallets" element={<BreakdownPage dimension="wallets" />} />
                   <Route path="analysis/tags" element={<BreakdownPage dimension="tags" />} />
+                  <Route path="more" element={<MorePage />} />
+                  <Route path="more/recurrings/new" element={<AddRecurringPage />} />
+                  <Route path="more/recurrings/:id" element={<RecurringPage />} />
+                  <Route path="more/recurrings/:id/edit" element={<EditRecurringPage />} />
+                  <Route path="more/loans/new" element={<AddLoanPage />} />
+                  <Route path="more/loans/archive" element={<LoansArchivePage />} />
+                  <Route path="more/loans/:id" element={<LoanPage />} />
+                  <Route path="more/loans/:id/edit" element={<EditLoanPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="settings/shortcut" element={<ShortcutPage />} />
                   <Route path="settings/import" element={<ImportPage />} />

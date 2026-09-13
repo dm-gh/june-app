@@ -78,8 +78,9 @@ export const RecurringsRepoLive = Layer.effect(
       effect.pipe(Effect.map((rs) => rs.map(normalise)), Effect.orDie)
     const first = (effect: Effect.Effect<ReadonlyArray<RecurringRow>, unknown>) => rows(effect).pipe(Effect.map((rs) => Option.fromNullable(rs[0])))
 
+    // Soonest due first, overdue at the very top; the ones with no date come last, by name.
     const list: RecurringsRepoShape["list"] = (userId) =>
-      rows(sql<RecurringRow>`select ${cols} from recurring where user_id = ${userId} order by name, created_at`)
+      rows(sql<RecurringRow>`select ${cols} from recurring where user_id = ${userId} order by next_on asc nulls last, name, created_at`)
 
     const find: RecurringsRepoShape["find"] = (userId, id) =>
       first(sql<RecurringRow>`select ${cols} from recurring where user_id = ${userId} and id = ${id}`)

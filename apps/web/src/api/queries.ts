@@ -4,13 +4,21 @@ import type {
   CreateCategory,
   CreateChange,
   CreateExchange,
+  CreateLoan,
+  CreateRecurring,
   CreateWallet,
   CurrencyCode,
   ExchangeId,
+  FireRecurring,
   ImportRequest,
+  LoanId,
+  RecurringId,
+  SettleLoan,
   TransactionId,
   UpdateCategory,
   UpdateExchange,
+  UpdateLoan,
+  UpdateRecurring,
   UpdateTransaction,
   UpdateWallet,
   WalletId
@@ -26,7 +34,12 @@ export const keys = {
   tags: ["tags"] as const,
   transactions: (p: Period) => ["transactions", p.from, p.to] as const,
   transaction: (id: TransactionId) => ["transaction", id] as const,
-  exchange: (id: ExchangeId) => ["exchange", id] as const
+  exchange: (id: ExchangeId) => ["exchange", id] as const,
+  recurrings: ["recurrings"] as const,
+  recurring: (id: RecurringId) => ["recurring", id] as const,
+  loans: ["loans"] as const,
+  loan: (id: LoanId) => ["loan", id] as const,
+  attention: ["attention"] as const
 }
 
 export const useMe = () => useQuery({ queryKey: keys.me, queryFn: () => run(api.settings.me()) })
@@ -67,7 +80,8 @@ const useInvalidating = <Input, Output>(fn: (input: Input) => Promise<Output>, r
   })
 }
 
-const money = ["transactions", "transaction", "exchange", "wallets", "tags"]
+// Deleting a Wallet also orphans Recurrings and feeds the attention banner, so those roots ride along.
+const money = ["transactions", "transaction", "exchange", "wallets", "tags", "recurrings", "recurring", "attention"]
 
 export const useCreateChange = () =>
   useInvalidating((payload: Payload<typeof CreateChange>) => run(api.transactions.createChange({ payload })), money)
@@ -143,3 +157,50 @@ export const useImportPreview = () =>
 export const useImportRun = () => useInvalidating((payload: Payload<typeof ImportRequest>) => run(api.import.run({ payload })), money)
 
 export const useRegenerateCaptureToken = () => useInvalidating(() => run(api.settings.regenerateCaptureToken()), ["me"])
+
+export const useAttention = () => useQuery({ queryKey: keys.attention, queryFn: () => run(api.settings.attention()), staleTime: 30_000 })
+
+export const useRecurrings = () => useQuery({ queryKey: keys.recurrings, queryFn: () => run(api.recurrings.list()), staleTime: 30_000 })
+
+export const useRecurring = (id: RecurringId) =>
+  useQuery({ queryKey: keys.recurring(id), queryFn: () => run(api.recurrings.get({ path: { id } })) })
+
+const recurringRoots = ["recurrings", "recurring", "attention"]
+
+export const useCreateRecurring = () =>
+  useInvalidating((payload: Payload<typeof CreateRecurring>) => run(api.recurrings.create({ payload })), recurringRoots)
+
+export const useUpdateRecurring = () =>
+  useInvalidating(
+    ({ id, payload }: { id: RecurringId; payload: Payload<typeof UpdateRecurring> }) => run(api.recurrings.update({ path: { id }, payload })),
+    recurringRoots
+  )
+
+export const useDeleteRecurring = () => useInvalidating((id: RecurringId) => run(api.recurrings.delete({ path: { id } })), recurringRoots)
+
+/** Firing records a Change, so the money roots refresh too. */
+export const useFireRecurring = () =>
+  useInvalidating(
+    ({ id, payload }: { id: RecurringId; payload: Payload<typeof FireRecurring> }) => run(api.recurrings.fire({ path: { id }, payload })),
+    [...money, ...recurringRoots]
+  )
+
+export const useLoans = () => useQuery({ queryKey: keys.loans, queryFn: () => run(api.loans.list()), staleTime: 30_000 })
+
+export const useLoan = (id: LoanId) => useQuery({ queryKey: keys.loan(id), queryFn: () => run(api.loans.get({ path: { id } })) })
+
+const loanRoots = ["loans", "loan"]
+
+export const useCreateLoan = () => useInvalidating((payload: Payload<typeof CreateLoan>) => run(api.loans.create({ payload })), loanRoots)
+
+export const useUpdateLoan = () =>
+  useInvalidating(({ id, payload }: { id: LoanId; payload: Payload<typeof UpdateLoan> }) => run(api.loans.update({ path: { id }, payload })), loanRoots)
+
+export const useDeleteLoan = () => useInvalidating((id: LoanId) => run(api.loans.delete({ path: { id } })), loanRoots)
+
+/** Settling records a Change and moves the Loan. */
+export const useSettleLoan = () =>
+  useInvalidating(
+    ({ id, payload }: { id: LoanId; payload: Payload<typeof SettleLoan> }) => run(api.loans.settle({ path: { id }, payload })),
+    [...money, ...loanRoots]
+  )
