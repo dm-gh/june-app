@@ -6,8 +6,10 @@ import { useCategories, useCreateChange, useCreateExchange, useFireRecurring, us
 import { FormPage } from "../../layout/FormPage"
 import { todayLocal } from "../../lib/period"
 import { Field, Loading, Notice, Segmented, Text } from "../../ui"
-import { type ExchangeDraft, ExchangeFields, exchangePayload } from "./ExchangeForm"
-import { type ChangeDraft, TransactionForm } from "./TransactionForm"
+import type { ChangeDraft } from "./changeDraft"
+import { type ExchangeDraft, exchangePayload } from "./exchangeDraft"
+import { ExchangeFields } from "./ExchangeForm"
+import { TransactionForm } from "./TransactionForm"
 
 type Kind = "change" | "exchange"
 

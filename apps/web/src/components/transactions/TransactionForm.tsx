@@ -1,31 +1,8 @@
-import { type Category, type CategoryId, currencyExponent, type LocalDate, type Transaction, type Wallet, type WalletId } from "@june/shared"
+import type { Category, CategoryId, Transaction, Wallet, WalletId } from "@june/shared"
 import { useMemo } from "react"
 import { Checkbox, DateInput, Field, Input, Select, TagInput } from "../../ui"
 import { AmountInput } from "../../ui/AmountInput"
-
-export interface ChangeDraft {
-  sign: "-" | "+"
-  amount: string
-  currency: string
-  walletId: WalletId | ""
-  categoryId: CategoryId | ""
-  date: LocalDate
-  description: string
-  tags: ReadonlyArray<string>
-  hidden: boolean
-}
-
-export const draftFromTransaction = (t: Transaction): ChangeDraft => ({
-  sign: t.amountMinor < 0 ? "-" : "+",
-  amount: (Math.abs(t.amountMinor) / 10 ** currencyExponent(t.currency)).toFixed(currencyExponent(t.currency)),
-  currency: t.currency,
-  walletId: t.walletId ?? "",
-  categoryId: t.categoryId ?? "",
-  date: t.occurredOn,
-  description: t.description,
-  tags: t.tags,
-  hidden: t.hiddenFromAnalysis
-})
+import type { ChangeDraft } from "./changeDraft"
 
 export interface TransactionFormProps {
   draft: ChangeDraft

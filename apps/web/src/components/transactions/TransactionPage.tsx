@@ -6,8 +6,10 @@ import { useNavigate, useParams } from "react-router"
 import { useCategories, useDeleteTransactions, useExchange, useTags, useTransaction, useUpdateExchange, useUpdateTransaction, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { Dialog, ErrorNotice, Loading } from "../../ui"
-import { draftFromLegs, type ExchangeDraft, ExchangeFields, exchangePayload } from "./ExchangeForm"
-import { type ChangeDraft, draftFromTransaction, TransactionForm } from "./TransactionForm"
+import { type ChangeDraft, draftFromTransaction } from "./changeDraft"
+import { draftFromLegs, type ExchangeDraft, exchangePayload } from "./exchangeDraft"
+import { ExchangeFields } from "./ExchangeForm"
+import { TransactionForm } from "./TransactionForm"
 
 const titles = { change: "Edit transaction", init: "Edit opening balance", exchange: "Edit exchange" } as const
 
