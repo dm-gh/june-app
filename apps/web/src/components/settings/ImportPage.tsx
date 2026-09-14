@@ -265,11 +265,7 @@ export function ImportPage() {
                       item={{ kind: "single", transaction: t }}
                       category={r.categoryId ? categoryById.get(r.categoryId as CategoryId) : undefined}
                       walletName={walletName}
-                      selecting={false}
-                      selected={false}
                       onOpen={() => undefined}
-                      onToggle={() => undefined}
-                      onLongPress={() => undefined}
                     />
                   )
                 })}

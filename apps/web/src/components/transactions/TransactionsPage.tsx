@@ -102,13 +102,15 @@ export function TransactionsPage() {
                     item={item}
                     category={t.categoryId ? categoryById.get(t.categoryId) : undefined}
                     walletName={walletName}
-                    selecting={selecting}
-                    selected={ids.every((id) => selected.has(id))}
                     onOpen={() => navigate(`/transactions/${t.id}`)}
-                    onToggle={() => toggle(ids)}
-                    onLongPress={() => {
-                      setSelecting(true)
-                      setSelected((s) => new Set([...s, ...ids]))
+                    selectable={{
+                      selecting,
+                      selected: ids.every((id) => selected.has(id)),
+                      onToggle: () => toggle(ids),
+                      onLongPress: () => {
+                        setSelecting(true)
+                        setSelected((s) => new Set([...s, ...ids]))
+                      }
                     }}
                   />
                 )

@@ -1,7 +1,6 @@
 import type { Category, Recurring } from "@june/shared"
 import { useNavigate } from "react-router"
-import { hueColor, signedMoney } from "../../lib/format"
-import { Badge, Button, cn } from "../../ui"
+import { Badge, Button, categoryCorner, ListAmount, ListCard } from "../../ui"
 import { dueState, scheduleWords } from "./recurring"
 
 export interface RecurringCardProps {
@@ -25,26 +24,28 @@ export function RecurringCard({ recurring: r, category, walletName, onSubmit, in
   const navigate = useNavigate()
   const due = dueState(r)
   return (
-    <article
-      onClick={interactive ? () => navigate(`/more/recurrings/${r.id}`) : undefined}
-      className={cn("relative select-none border-3 border-ink bg-white p-3 shadow-hard", interactive && "cursor-pointer lift")}
-    >
-      {/* Reverse row that wraps: the tag sits in the corner and the name drops under it when they cannot share the line. */}
-      <div className="flex flex-row-reverse flex-wrap justify-end gap-x-2">
-        {category ? (
-          <Badge className="-mt-3 -mr-3 ml-auto h-5 max-w-full border-t-0 border-r-0 px-1.5 text-[10px]" style={{ background: hueColor(category.hue) }}>
-            <span className="truncate">
-              {category.emoji ? `${category.emoji} ` : ""}
-              {category.name}
-            </span>
-          </Badge>
-        ) : null}
-        <div className="pt-1 font-heading font-bold">{r.name}</div>
-      </div>
-      <div className="mt-1 flex items-center justify-between gap-3">
-        <div className={cn("font-mono text-2xl font-bold tabular-nums whitespace-nowrap", r.amountMinor < 0 ? "text-coral-ink" : "text-green-ink")}>
-          {signedMoney(r.amountMinor, r.currency)}
+    <ListCard
+      corner={category ? categoryCorner(category) : null}
+      title={r.name}
+      description={r.description}
+      tags={r.tags}
+      trailing={{ label: walletName ?? "Needs a wallet", tone: walletName ? "ink" : "coral" }}
+      onOpen={interactive ? () => navigate(`/more/recurrings/${r.id}`) : undefined}
+      footer={
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-grey-ink">
+          {r.auto ? (
+            <Badge accent="green" className="h-5 px-1.5 text-[10px]">
+              Auto
+            </Badge>
+          ) : null}
+          <span>{scheduleWords(r)}</span>
+          {due.label ? <span>· {due.label}</span> : null}
+          {due.overdue ? <span className="text-coral-ink">{due.overdue}</span> : null}
         </div>
+      }
+    >
+      <div className="mt-1 flex items-center justify-between gap-3">
+        <ListAmount minor={r.amountMinor} currency={r.currency} />
         {onSubmit ? (
           <Button
             variant="secondary"
@@ -58,29 +59,6 @@ export function RecurringCard({ recurring: r, category, walletName, onSubmit, in
           </Button>
         ) : null}
       </div>
-      {r.description ? <div className="mt-0.5 font-sans text-base">{r.description}</div> : null}
-      <div className="mt-2 flex items-end justify-between gap-3">
-        <div className="flex flex-wrap gap-1.5">
-          {r.tags.map((tag) => (
-            <Badge key={tag} prefix="#" className="h-5 px-1.5 text-[10px]">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-        <span className={cn("shrink-0 font-heading text-xs font-bold uppercase tracking-wide", walletName ? "text-ink" : "text-coral-ink")}>
-          {walletName ?? "Needs a wallet"}
-        </span>
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-grey-ink">
-        {r.auto ? (
-          <Badge accent="green" className="h-5 px-1.5 text-[10px]">
-            Auto
-          </Badge>
-        ) : null}
-        <span>{scheduleWords(r)}</span>
-        {due.label ? <span>· {due.label}</span> : null}
-        {due.overdue ? <span className="text-coral-ink">{due.overdue}</span> : null}
-      </div>
-    </article>
+    </ListCard>
   )
 }
