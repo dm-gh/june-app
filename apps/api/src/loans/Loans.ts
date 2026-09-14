@@ -2,10 +2,7 @@ import { HttpApiBuilder, HttpApiError } from "@effect/platform"
 import { SqlClient } from "@effect/sql"
 import { CurrentUser, type CurrentUserShape, JuneApi, type Loan, type LoanId } from "@june/shared"
 import { DateTime, Effect, Option } from "effect"
-import { CategoriesRepo } from "../categories/Categories.js"
-import { checkChange, violation } from "../transactions/rules.js"
-import { TransactionsRepo } from "../transactions/TransactionsRepo.js"
-import { WalletsRepo } from "../wallets/WalletsRepo.js"
+import { RecordChange } from "../transactions/RecordChange.js"
 import { type LoanRow, LoansRepo } from "./LoansRepo.js"
 
 export const toLoan = (row: LoanRow): Loan =>
@@ -28,9 +25,7 @@ export const LoansHandlersLive = HttpApiBuilder.group(JuneApi, "loans", (handler
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient
     const repo = yield* LoansRepo
-    const wallets = yield* WalletsRepo
-    const categories = yield* CategoriesRepo
-    const transactions = yield* TransactionsRepo
+    const recordChange = yield* RecordChange
 
     const findOrNotFound = (user: CurrentUserShape, id: LoanId) =>
       repo.find(user.id, id).pipe(Effect.flatMap(Option.match({ onNone: () => new HttpApiError.NotFound(), onSome: Effect.succeed })))
@@ -70,29 +65,25 @@ export const LoansHandlersLive = HttpApiBuilder.group(JuneApi, "loans", (handler
           const user = yield* CurrentUser
           const loan = yield* findOrNotFound(user, path.id)
           const change = payload.change
-          const wallet = yield* checkChange(user, {
-            walletId: change.walletId,
-            amountMinor: change.amountMinor,
-            currency: loan.currency,
-            categoryId: change.categoryId ?? null
-          }).pipe(Effect.provideService(WalletsRepo, wallets), Effect.provideService(CategoriesRepo, categories))
-          if (wallet.currency !== loan.currency) return yield* violation(`Settle in ${loan.currency}: ${wallet.name} holds ${wallet.currency}`)
           const moved = yield* Effect.gen(function* () {
-            yield* transactions.insert(user.id, {
-              walletId: wallet.id,
-              type: "change",
-              amountMinor: change.amountMinor,
-              currency: wallet.currency,
-              occurredOn: change.occurredOn,
-              description: change.description ?? "",
-              tags: change.tags ?? [],
-              hiddenFromAnalysis: change.hiddenFromAnalysis ?? true,
-              categoryId: change.categoryId ?? null,
-              exchangeId: null
-            })
+            // A settlement is entered by hand in the Loan's currency and Hidden from analysis unless the User says otherwise.
+            yield* recordChange.strict(
+              user.id,
+              {
+                walletId: change.walletId,
+                amountMinor: change.amountMinor,
+                currency: loan.currency,
+                occurredOn: change.occurredOn,
+                categoryId: change.categoryId,
+                description: change.description,
+                tags: change.tags,
+                hiddenFromAnalysis: change.hiddenFromAnalysis
+              },
+              { hiddenFromAnalysis: true }
+            )
             // Money arriving in the Wallet shrinks what they owe; money leaving grows it.
             return yield* repo.move(user.id, loan.id, -change.amountMinor)
-          }).pipe(sql.withTransaction, Effect.orDie)
+          }).pipe(sql.withTransaction, Effect.catchTag("SqlError", (e) => Effect.die(e)))
           if (Option.isNone(moved)) return yield* new HttpApiError.NotFound()
           return toLoan(moved.value)
         })

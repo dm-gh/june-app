@@ -84,3 +84,27 @@ it.scoped("import marks rows identical to an existing Change and skips them only
     expect(changes.filter((t) => t.currency === gel)).toHaveLength(0)
   })
 )
+
+it.scoped("import takes the first Wallet in Wallet Order holding the currency, even after a reorder, and stores an unknown slug Uncategorised", () =>
+  Effect.gen(function* () {
+    const h = yield* makeHarness()
+    const card = yield* h.client.wallets.create({ payload: { name: "Card", currency: usd, initMinor: minor(0) } })
+    const cash = yield* h.client.wallets.create({ payload: { name: "Cash", currency: usd, initMinor: minor(0) } })
+    const lari = yield* h.client.wallets.create({ payload: { name: "Lari", currency: gel, initMinor: minor(0) } })
+    // Cash now comes before Card: it is the Wallet a USD row lands in.
+    yield* h.client.wallets.reorder({ payload: { ids: [lari.id, cash.id, card.id] } })
+
+    const rows = [row(2, ["2026-09-01", "-4.5", "USD", "nope", "  Coffee ", "morning"]), row(3, ["2026-09-01", "-12", "GEL", "", "Khachapuri", ""])]
+    const done = yield* h.client.import.run({ payload: { rows, preview: false, skipDuplicates: false } })
+    expect(done.imported).toBe(2)
+    expect(done.rows.map((r) => [r.walletId, r.categoryId, r.description])).toEqual([
+      [cash.id, null, "Coffee"],
+      [lari.id, null, "Khachapuri"]
+    ])
+    const changes = (yield* h.client.transactions.list({ urlParams: period })).filter((t) => t.type === "change")
+    expect(changes.map((t) => [t.walletId, t.categoryId, t.description, t.tags]).sort()).toEqual([
+      [cash.id, null, "Coffee", ["morning"]],
+      [lari.id, null, "Khachapuri", []]
+    ].sort())
+  })
+)

@@ -15,6 +15,7 @@ import { randomUUID } from "node:crypto"
 import { CategoriesRepo } from "../categories/Categories.js"
 import { Rates, type RateTable } from "../rates/Rates.js"
 import { type WalletRow, WalletsRepo } from "../wallets/WalletsRepo.js"
+import { RecordChange } from "./RecordChange.js"
 import { type TransactionRow, TransactionsRepo } from "./TransactionsRepo.js"
 
 import { categoryFits, checkChange as checkChangeRule, requireCategory as requireCategoryRule, requireWallet as requireWalletRule, violation } from "./rules.js"
@@ -49,6 +50,7 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
     const wallets = yield* WalletsRepo
     const categories = yield* CategoriesRepo
     const rates = yield* Rates
+    const recordChange = yield* RecordChange
 
     /** Rows to API Transactions, converted into Default Currency. */
     const present = (user: CurrentUserShape, rows: ReadonlyArray<TransactionRow>) =>
@@ -62,11 +64,11 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
     const presentOne = (user: CurrentUserShape, row: TransactionRow) => present(user, [row]).pipe(Effect.map((ts) => ts[0]!))
 
     const requireWallet = (user: CurrentUserShape, id: WalletId) =>
-      requireWalletRule(user, id).pipe(Effect.provideService(WalletsRepo, wallets))
+      requireWalletRule(user.id, id).pipe(Effect.provideService(WalletsRepo, wallets))
     const requireCategory = (user: CurrentUserShape, id: CategoryId) =>
-      requireCategoryRule(user, id).pipe(Effect.provideService(CategoriesRepo, categories))
+      requireCategoryRule(user.id, id).pipe(Effect.provideService(CategoriesRepo, categories))
     const checkChange = (user: CurrentUserShape, change: Parameters<typeof checkChangeRule>[1]) =>
-      checkChangeRule(user, change).pipe(Effect.provideService(WalletsRepo, wallets), Effect.provideService(CategoriesRepo, categories))
+      checkChangeRule(user.id, change).pipe(Effect.provideService(WalletsRepo, wallets), Effect.provideService(CategoriesRepo, categories))
 
     /** The rules both creating and editing an Exchange obey; resolves both Wallets. */
     const checkExchange = (user: CurrentUserShape, payload: Pick<CreateExchange, "sourceWalletId" | "sourceMinor" | "targetWalletId" | "targetMinor">) =>
@@ -109,20 +111,14 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
       .handle("createChange", ({ payload }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
-          const wallet = yield* requireWallet(user, payload.walletId)
-          const categoryId = payload.categoryId ?? null
-          yield* checkChange(user, { walletId: wallet.id, amountMinor: payload.amountMinor, currency: wallet.currency, categoryId })
-          const row = yield* repo.insert(user.id, {
-            walletId: wallet.id,
-            type: "change",
+          const row = yield* recordChange.strict(user.id, {
+            walletId: payload.walletId,
             amountMinor: payload.amountMinor,
-            currency: wallet.currency,
             occurredOn: payload.occurredOn,
-            description: payload.description ?? "",
-            tags: payload.tags ?? [],
-            hiddenFromAnalysis: payload.hiddenFromAnalysis ?? false,
-            categoryId,
-            exchangeId: null
+            categoryId: payload.categoryId,
+            description: payload.description,
+            tags: payload.tags,
+            hiddenFromAnalysis: payload.hiddenFromAnalysis
           })
           return yield* presentOne(user, row)
         })

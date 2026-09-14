@@ -1,7 +1,8 @@
 import { SqlClient } from "@effect/sql"
 import { type CreateChange, type LocalDate, nextAfter, parseCron, RuleViolation, todayUtc } from "@june/shared"
 import { Context, Effect, Either, Layer, Option } from "effect"
-import { type TransactionRow, TransactionsRepo } from "../transactions/TransactionsRepo.js"
+import { RecordChange } from "../transactions/RecordChange.js"
+import type { TransactionRow } from "../transactions/TransactionsRepo.js"
 import { type RecurringRow, RecurringsRepo } from "./RecurringsRepo.js"
 
 /**
@@ -11,8 +12,9 @@ import { type RecurringRow, RecurringsRepo } from "./RecurringsRepo.js"
  */
 export interface RecurringFiringShape {
   /**
-   * Fire one Recurring by hand, inside the caller's transaction. `change` replaces the Recurring's
-   * own fields (Edit & submit); otherwise the Change is the Recurring as is, dated `nextOn` or today.
+   * Fire one Recurring, inside the caller's transaction. `change` replaces the Recurring's own
+   * fields (Edit & submit) and, being entered by hand, must pass the hand rules; otherwise the
+   * Change is the Recurring as is, dated `nextOn` or today.
    */
   readonly fireOne: (row: RecurringRow, change?: CreateChange) => Effect.Effect<TransactionRow, RuleViolation>
   /** The hourly tick: every auto Recurring due on or before `today`, each in its own transaction. Returns how many Changes were recorded. */
@@ -33,23 +35,43 @@ export const RecurringFiringLive = Layer.effect(
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient
     const recurrings = yield* RecurringsRepo
-    const transactions = yield* TransactionsRepo
+    const recordChange = yield* RecordChange
 
     const fireOne: RecurringFiringShape["fireOne"] = (row, change) =>
       Effect.gen(function* () {
         const firedOn = change?.occurredOn ?? row.nextOn ?? todayUtc()
-        const recorded = yield* transactions.insert(row.userId, {
-          walletId: change?.walletId ?? row.walletId,
-          type: "change",
-          amountMinor: change?.amountMinor ?? row.amountMinor,
-          currency: row.currency,
-          occurredOn: firedOn,
-          description: change?.description ?? row.description,
-          tags: change?.tags ?? row.tags,
-          hiddenFromAnalysis: change?.hiddenFromAnalysis ?? false,
-          categoryId: change === undefined ? row.categoryId : (change.categoryId ?? null),
-          exchangeId: null
-        })
+        const recorded =
+          change === undefined
+            ? // The Recurring as is: its fields were checked when it was saved; a Wallet or Category
+              // deleted since means Unassigned or Uncategorised, never a refusal.
+              (yield* recordChange.record(row.userId, [
+                {
+                  walletId: row.walletId,
+                  categoryId: row.categoryId,
+                  amountMinor: row.amountMinor,
+                  currency: row.currency,
+                  occurredOn: firedOn,
+                  description: row.description,
+                  tags: row.tags,
+                  hiddenFromAnalysis: false
+                }
+              ]))[0]!
+            : // Edit & submit: entered by hand in the Recurring's currency; a description or Tags
+              // left out fall back to the Recurring's, a Category left out means Uncategorised.
+              yield* recordChange.strict(
+                row.userId,
+                {
+                  walletId: change.walletId,
+                  amountMinor: change.amountMinor,
+                  currency: row.currency,
+                  occurredOn: firedOn,
+                  categoryId: change.categoryId,
+                  description: change.description,
+                  tags: change.tags,
+                  hiddenFromAnalysis: change.hiddenFromAnalysis
+                },
+                { description: row.description, tags: row.tags }
+              )
         // The Schedule moves on from the due date it was fired for, not from the date the User chose.
         const dueFor = row.nextOn ?? firedOn
         yield* recurrings.fired(row.id, firedOn, advance(row, dueFor))

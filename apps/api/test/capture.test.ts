@@ -118,3 +118,26 @@ it.scoped("capture answers a bad currency, amount or date with a message the Sho
     expect(issued.captureUrl).toBe(`http://june.test/api/capture/${issued.token}`)
   })
 )
+
+it.scoped("a captured Change carries the trimmed description, no Tags and is not hidden", () =>
+  Effect.gen(function* () {
+    const h = yield* makeHarness()
+    const card = yield* h.client.wallets.create({ payload: { name: "USD card", currency: usd, initMinor: minor(0) } })
+
+    const captured = yield* h.client.capture.capture({
+      path: { token: h.captureToken },
+      payload: { amount: 12, currency: usd, category: "  Salary ", description: "  bonus  " }
+    })
+    if (!captured.ok) throw new Error(captured.message)
+    expect(captured.message).toBe("✅ Saved +12 USD | Uncategorised")
+    const tx = yield* h.client.transactions.get({ path: { id: captured.id } })
+    expect(tx).toMatchObject({ type: "change", walletId: card.id, amountMinor: 1200, description: "bonus", tags: [], hiddenFromAnalysis: false, categoryId: null, exchangeId: null })
+
+    // The slug is matched after trimming and lower-casing.
+    const salary = yield* h.client.categories.create({ payload: { type: "income" as CategoryType, name: "Salary", hue: 100 as Hue } })
+    const matched = yield* h.client.capture.capture({ path: { token: h.captureToken }, payload: { amount: 12, currency: usd, category: "  Salary " } })
+    if (!matched.ok) throw new Error(matched.message)
+    expect(matched.uncategorised).toBe(false)
+    expect((yield* h.client.transactions.get({ path: { id: matched.id } })).categoryId).toBe(salary.id)
+  })
+)

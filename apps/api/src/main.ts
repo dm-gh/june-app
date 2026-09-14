@@ -16,11 +16,13 @@ import { RecurringsRepoLive } from "./recurrings/RecurringsRepo.js"
 import { RecurringTickerLive } from "./recurrings/Ticker.js"
 import { OpenExchangeRatesLive } from "./rates/RateProvider.js"
 import { RatesLive } from "./rates/Rates.js"
+import { RecordChangeLive } from "./transactions/RecordChange.js"
 import { TransactionsRepoLive } from "./transactions/TransactionsRepo.js"
 import { WalletsRepoLive } from "./wallets/WalletsRepo.js"
 
 /** Every service the handlers need, wired from configuration and the database. */
 export const ServicesLive = Layer.mergeAll(AuthLive, RatesLive, CaptureTokensLive, RecurringFiringLive).pipe(
+  Layer.provideMerge(RecordChangeLive),
   Layer.provideMerge(Layer.mergeAll(WalletsRepoLive, CategoriesRepoLive, TransactionsRepoLive, RecurringsRepoLive, LoansRepoLive)),
   Layer.provideMerge(Layer.mergeAll(CaptureTokensLive, OpenExchangeRatesLive)),
   Layer.provideMerge(Layer.mergeAll(AppConfigLive, PgLive, NodeHttpClient.layerUndici))

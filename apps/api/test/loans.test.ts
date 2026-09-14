@@ -1,5 +1,5 @@
 import { it } from "@effect/vitest"
-import type { CurrencyCode, LocalDate, MinorAmount } from "@june/shared"
+import type { CategoryType, CurrencyCode, Hue, LocalDate, MinorAmount } from "@june/shared"
 import { Effect } from "effect"
 import { expect } from "vitest"
 import { makeHarness } from "./harness.js"
@@ -58,5 +58,29 @@ it.scoped("settling records a change and moves the loan by the opposite amount, 
     expect(yield* h.client.loans.list()).toHaveLength(0)
     const gone = yield* h.client.loans.delete({ path: { id: sister.id } }).pipe(Effect.flip)
     expect(gone._tag).toBe("NotFound")
+  })
+)
+
+it.scoped("a settlement Change defaults to no description and no Tags, and a Category of the wrong type is refused with the Loan unchanged", () =>
+  Effect.gen(function* () {
+    const h = yield* makeHarness()
+    const card = yield* h.client.wallets.create({ payload: { name: "Card", currency: usd, initMinor: minor(0) } })
+    const salary = yield* h.client.categories.create({ payload: { type: "income" as CategoryType, name: "Salary", hue: 100 as Hue } })
+    const gifts = yield* h.client.categories.create({ payload: { type: "expense" as CategoryType, name: "Gifts", hue: 10 as Hue } })
+    const friend = yield* h.client.loans.create({ payload: { amountMinor: minor(-5000), currency: usd, description: "Friend" } })
+
+    // Lending 20 to someone I borrowed 50 from: an expense Category fits a negative Change.
+    const lent = yield* h.client.loans.settle({ path: { id: friend.id }, payload: { change: { walletId: card.id, amountMinor: minor(-2000), occurredOn: on, categoryId: gifts.id } } })
+    expect(lent.amountMinor).toBe(-3000)
+    const [change] = (yield* h.client.transactions.list({ urlParams: period })).filter((t) => t.type === "change")
+    expect(change).toMatchObject({ walletId: card.id, amountMinor: -2000, currency: "USD", description: "", tags: [], hiddenFromAnalysis: true, categoryId: gifts.id })
+
+    // An Income Category cannot sit on a negative Change; the Loan and the ledger stay as they were.
+    const wrongType = yield* h.client.loans
+      .settle({ path: { id: friend.id }, payload: { change: { walletId: card.id, amountMinor: minor(-1000), occurredOn: on, categoryId: salary.id } } })
+      .pipe(Effect.flip)
+    expect(wrongType._tag).toBe("RuleViolation")
+    expect((yield* h.client.loans.get({ path: { id: friend.id } })).amountMinor).toBe(-3000)
+    expect((yield* h.client.transactions.list({ urlParams: period })).filter((t) => t.type === "change")).toHaveLength(1)
   })
 )

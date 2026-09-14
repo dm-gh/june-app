@@ -197,3 +197,19 @@ it.scoped("an Exchange is edited as a whole, never leg by leg", () =>
     expect(same._tag).toBe("RuleViolation")
   })
 )
+
+it.scoped("a Change entered by hand defaults to no description, no Tags and not hidden, and an unknown Wallet is refused", () =>
+  Effect.gen(function* () {
+    const h = yield* makeHarness()
+    const card = yield* h.client.wallets.create({ payload: { name: "Card", currency: usd, initMinor: minor(0) } })
+
+    const bare = yield* h.client.transactions.createChange({ payload: { walletId: card.id, amountMinor: minor(-100), occurredOn: day("2026-09-01") } })
+    expect(bare).toMatchObject({ type: "change", walletId: card.id, currency: "USD", description: "", tags: [], hiddenFromAnalysis: false, categoryId: null, exchangeId: null })
+
+    const unknownWallet = yield* h.client.transactions
+      .createChange({ payload: { walletId: "00000000-0000-4000-8000-00000000dead" as typeof card.id, amountMinor: minor(-100), occurredOn: day("2026-09-01") } })
+      .pipe(Effect.flip)
+    expect(unknownWallet._tag).toBe("RuleViolation")
+    expect((yield* h.client.transactions.list({ urlParams: period })).filter((t) => t.type === "change")).toHaveLength(1)
+  })
+)

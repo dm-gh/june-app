@@ -125,3 +125,55 @@ it.scoped("the tick fires every due auto recurring, catches up missed dates, and
     expect((yield* h.client.transactions.list({ urlParams: period })).filter((t) => t.type === "change")).toHaveLength(4)
   })
 )
+
+it.scoped("firing by hand with an edited Change refuses a Wallet in another currency or a Category of the wrong type, and the Schedule stays put", () =>
+  Effect.gen(function* () {
+    const h = yield* makeHarness()
+    const today = todayUtc()
+    const card = yield* h.client.wallets.create({ payload: { name: "Card", currency: usd, initMinor: minor(0) } })
+    const lari = yield* h.client.wallets.create({ payload: { name: "Lari", currency: "GEL" as CurrencyCode, initMinor: minor(0) } })
+    const salary = yield* h.client.categories.create({ payload: { type: "income" as CategoryType, name: "Salary", hue: 100 as Hue } })
+    const rent = yield* h.client.recurrings.create({ payload: { name: "Rent", walletId: card.id, amountMinor: minor(-120000), auto: false, nextOn: today } })
+
+    const otherCurrency = yield* h.client.recurrings
+      .fire({ path: { id: rent.id }, payload: { change: { walletId: lari.id, amountMinor: minor(-120000), occurredOn: today } } })
+      .pipe(Effect.flip)
+    expect(otherCurrency._tag).toBe("RuleViolation")
+
+    const wrongType = yield* h.client.recurrings
+      .fire({ path: { id: rent.id }, payload: { change: { walletId: card.id, amountMinor: minor(-120000), occurredOn: today, categoryId: salary.id } } })
+      .pipe(Effect.flip)
+    expect(wrongType._tag).toBe("RuleViolation")
+
+    const zero = yield* h.client.recurrings
+      .fire({ path: { id: rent.id }, payload: { change: { walletId: card.id, amountMinor: minor(0), occurredOn: today } } })
+      .pipe(Effect.flip)
+    expect(zero._tag).toBe("RuleViolation")
+
+    expect(yield* h.client.recurrings.get({ path: { id: rent.id } })).toMatchObject({ nextOn: today, lastFiredOn: null })
+    expect((yield* h.client.transactions.list({ urlParams: period })).filter((t) => t.type === "change")).toHaveLength(0)
+  })
+)
+
+it.scoped("a Recurring whose Category was deleted fires Uncategorised, and one whose Wallet was deleted fires Unassigned by hand too", () =>
+  Effect.gen(function* () {
+    const h = yield* makeHarness()
+    const today = todayUtc()
+    const card = yield* h.client.wallets.create({ payload: { name: "Card", currency: usd, initMinor: minor(0) } })
+    const cash = yield* h.client.wallets.create({ payload: { name: "Cash", currency: usd, initMinor: minor(0) } })
+    const housing = yield* h.client.categories.create({ payload: { type: "expense" as CategoryType, name: "Housing", hue: 200 as Hue } })
+    const rent = yield* h.client.recurrings.create({
+      payload: { name: "Rent", walletId: card.id, amountMinor: minor(-120000), categoryId: housing.id, description: "Flat", tags: ["home"] as never, auto: false, nextOn: today }
+    })
+    const gym = yield* h.client.recurrings.create({ payload: { name: "Gym", walletId: cash.id, amountMinor: minor(-5000), auto: false, nextOn: today } })
+
+    yield* h.client.categories.delete({ path: { id: housing.id } })
+    const uncategorised = yield* h.client.recurrings.fire({ path: { id: rent.id }, payload: {} })
+    expect(uncategorised).toMatchObject({ walletId: card.id, amountMinor: -120000, categoryId: null, description: "Flat", tags: ["home"], occurredOn: today })
+
+    yield* h.client.wallets.delete({ path: { id: cash.id } })
+    const unassigned = yield* h.client.recurrings.fire({ path: { id: gym.id }, payload: {} })
+    expect(unassigned).toMatchObject({ walletId: null, amountMinor: -5000, currency: "USD", occurredOn: today })
+    expect((yield* h.client.recurrings.get({ path: { id: gym.id } })).lastFiredOn).toBe(today)
+  })
+)

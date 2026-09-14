@@ -16,7 +16,7 @@ import {
 import { DateTime, Effect, Either, Option } from "effect"
 import { CategoriesRepo } from "../categories/Categories.js"
 import { Rates } from "../rates/Rates.js"
-import { checkChange, requireCategory, requireWallet, violation } from "../transactions/rules.js"
+import { requireCategory, requireWallet, violation } from "../transactions/rules.js"
 import { toTransaction } from "../transactions/Transactions.js"
 import { WalletsRepo } from "../wallets/WalletsRepo.js"
 import { RecurringFiring } from "./Firing.js"
@@ -74,9 +74,9 @@ export const RecurringsHandlersLive = HttpApiBuilder.group(JuneApi, "recurrings"
     /** The template's own rule: a Wallet in its currency and a Category of the right type. Unassigned only happens by deletion. */
     const checkTemplate = (user: CurrentUserShape, t: { walletId: WalletId; amountMinor: number; categoryId: CategoryId | null | undefined }) =>
       Effect.gen(function* () {
-        const wallet = yield* requireWallet(user, t.walletId)
+        const wallet = yield* requireWallet(user.id, t.walletId)
         if (t.categoryId) {
-          const category = yield* requireCategory(user, t.categoryId)
+          const category = yield* requireCategory(user.id, t.categoryId)
           if ((t.amountMinor < 0) !== (category.type === "expense")) return yield* violation(`${category.name} is an ${category.type} Category`)
         }
         return wallet
@@ -152,15 +152,6 @@ export const RecurringsHandlersLive = HttpApiBuilder.group(JuneApi, "recurrings"
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const row = yield* findOrNotFound(user, path.id)
-          if (payload.change) {
-            const wallet = yield* checkChange(user, {
-              walletId: payload.change.walletId,
-              amountMinor: payload.change.amountMinor,
-              currency: row.currency,
-              categoryId: payload.change.categoryId ?? null
-            }).pipe(provideRepos)
-            if (wallet.currency !== row.currency) return yield* violation(`Wallet ${wallet.name} holds ${wallet.currency}, not ${row.currency}`)
-          }
           const recorded = yield* firing.fireOne(row, payload.change).pipe(sql.withTransaction, Effect.catchTag("SqlError", (e) => Effect.die(e)))
           yield* rates.ensure([recorded.occurredOn])
           const table = yield* rates.table([recorded.occurredOn])

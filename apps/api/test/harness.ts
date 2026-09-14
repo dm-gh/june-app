@@ -17,6 +17,7 @@ import { RecurringFiringLive } from "../src/recurrings/Firing.js"
 import { RecurringsRepoLive } from "../src/recurrings/RecurringsRepo.js"
 import { RateProvider, type RateProviderShape } from "../src/rates/RateProvider.js"
 import { RatesLive } from "../src/rates/Rates.js"
+import { RecordChangeLive } from "../src/transactions/RecordChange.js"
 import { TransactionsRepoLive } from "../src/transactions/TransactionsRepo.js"
 import { WalletsRepoLive } from "../src/wallets/WalletsRepo.js"
 
@@ -97,6 +98,7 @@ export const makeHarness = (options?: {
     const PgTest = PgLiveForUrl(db.url)
 
     const services = Layer.mergeAll(RatesLive, CaptureTokensLive, RecurringFiringLive).pipe(
+      Layer.provideMerge(RecordChangeLive),
       Layer.provideMerge(Layer.mergeAll(WalletsRepoLive, CategoriesRepoLive, TransactionsRepoLive, RecurringsRepoLive, LoansRepoLive)),
       Layer.provideMerge(
         Layer.mergeAll(

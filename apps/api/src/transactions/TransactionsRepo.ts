@@ -33,15 +33,16 @@ export interface NewTransaction {
   readonly exchangeId: ExchangeId | null
 }
 
-/** A Change to record in bulk: never Hidden, never part of an Exchange. */
+/** A Change with its Wallet and Category settled, ready to write; never part of an Exchange. */
 export interface NewChange {
   readonly walletId: WalletId | null
+  readonly categoryId: CategoryId | null
   readonly amountMinor: number
   readonly currency: string
   readonly occurredOn: LocalDate
   readonly description: string
   readonly tags: ReadonlyArray<string>
-  readonly categoryId: CategoryId | null
+  readonly hiddenFromAnalysis: boolean
 }
 
 export interface TransactionPatch {
@@ -61,8 +62,8 @@ export interface TransactionsRepoShape {
   readonly findMany: (userId: UserId, ids: ReadonlyArray<TransactionId>) => Effect.Effect<ReadonlyArray<TransactionRow>>
   readonly findByExchange: (userId: UserId, exchangeId: ExchangeId) => Effect.Effect<ReadonlyArray<TransactionRow>>
   readonly insert: (userId: UserId, row: NewTransaction) => Effect.Effect<TransactionRow>
-  /** Many Changes in one statement, for CSV Import; returns how many were recorded. */
-  readonly insertChanges: (userId: UserId, rows: ReadonlyArray<NewChange>) => Effect.Effect<number>
+  /** Changes, one or many, in one statement; RecordChange is the only caller. Returns the rows in the order given. */
+  readonly insertChanges: (userId: UserId, rows: ReadonlyArray<NewChange>) => Effect.Effect<ReadonlyArray<TransactionRow>>
   readonly update: (userId: UserId, id: TransactionId, patch: TransactionPatch) => Effect.Effect<Option.Option<TransactionRow>>
   /** Same patch on every row of an Exchange: date, description, tags. */
   readonly updateExchange: (
@@ -133,30 +134,29 @@ export const TransactionsRepoLive = Layer.effect(
                 ${row.exchangeId})
         returning ${cols}`).pipe(Effect.map((rs) => rs[0]!))
 
-    // One statement for the whole file: the rows travel as one JSON parameter and unpack in SQL.
-    const insertChanges: TransactionsRepoShape["insertChanges"] = (userId, rows) =>
-      rows.length === 0
-        ? Effect.succeed(0)
-        : sql<{ id: string }>`
+    // One statement however many rows: they travel as one JSON parameter and unpack in SQL.
+    const insertChanges: TransactionsRepoShape["insertChanges"] = (userId, changes) =>
+      changes.length === 0
+        ? Effect.succeed([])
+        : rows(sql<TransactionRow>`
             insert into transaction (user_id, wallet_id, type, amount_minor, currency, occurred_on, description, tags,
                                      hidden_from_analysis, category_id, exchange_id)
             select ${userId}, r.wallet_id, 'change', r.amount_minor, r.currency, r.occurred_on, r.description,
-                   array(select jsonb_array_elements_text(r.tags)), false, r.category_id, null
+                   array(select jsonb_array_elements_text(r.tags)), r.hidden, r.category_id, null
             from jsonb_to_recordset(${JSON.stringify(
-              rows.map((r) => ({
+              changes.map((r) => ({
                 wallet_id: r.walletId,
                 amount_minor: r.amountMinor,
                 currency: r.currency,
                 occurred_on: r.occurredOn,
                 description: r.description,
                 tags: r.tags,
+                hidden: r.hiddenFromAnalysis,
                 category_id: r.categoryId
               }))
-            )}::jsonb) as r(wallet_id uuid, amount_minor bigint, currency text, occurred_on date, description text, tags jsonb, category_id uuid)
-            returning id`.pipe(
-            Effect.map((rs) => rs.length),
-            Effect.orDie
-          )
+            )}::jsonb) as r(wallet_id uuid, amount_minor bigint, currency text, occurred_on date, description text, tags jsonb,
+                            hidden boolean, category_id uuid)
+            returning ${cols}`)
 
     const update: TransactionsRepoShape["update"] = (userId, id, patch) => {
       const sets: Array<Fragment> = []
