@@ -1,4 +1,4 @@
-import type { CategoryId, TransactionId, WalletId } from "@june/shared"
+import { type CategoryId, categoryTypeForSign, type TransactionId, type WalletId } from "@june/shared"
 import { useMemo, useState } from "react"
 import { Navigate, useLocation, useNavigate } from "react-router"
 import { useBulkUpdate, useCategories, useTags, useTransactions, useWallets } from "../../api/queries"
@@ -26,7 +26,7 @@ export function BulkEditPage() {
 
   const rows = useMemo(() => (transactions.data ?? []).filter((t) => ids.includes(t.id)), [transactions.data, ids])
   const currencies = new Set(rows.map((r) => r.currency))
-  const signs = new Set(rows.map((r) => (r.amountMinor < 0 ? "expense" : "income")))
+  const signs = new Set(rows.map((r) => categoryTypeForSign(r.amountMinor)))
   const allChanges = rows.every((r) => r.type === "change")
   const shared = useMemo(
     () => (rows.length === 0 ? [] : rows[0]!.tags.filter((tag) => rows.every((r) => r.tags.includes(tag)))),
