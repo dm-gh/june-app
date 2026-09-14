@@ -1,5 +1,6 @@
 import type { Category, Recurring } from "@june/shared"
 import { useNavigate } from "react-router"
+import { routes } from "../../routes"
 import { Badge, Button, categoryCorner, ListAmount, ListCard } from "../../ui"
 import { dueState, scheduleWords } from "./recurring"
 
@@ -30,7 +31,7 @@ export function RecurringCard({ recurring: r, category, walletName, onSubmit, in
       description={r.description}
       tags={r.tags}
       trailing={{ label: walletName ?? "Needs a wallet", tone: walletName ? "ink" : "coral" }}
-      onOpen={interactive ? () => navigate(`/more/recurrings/${r.id}`) : undefined}
+      onOpen={interactive ? () => navigate(routes.recurring(r.id)) : undefined}
       footer={
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-grey-ink">
           {r.auto ? (

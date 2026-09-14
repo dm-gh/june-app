@@ -25,7 +25,7 @@ export function SubmitDialog({ recurring: r, onClose }: SubmitDialogProps) {
     if (el && !el.open) el.showModal()
   }, [])
   const on = r.nextOn ?? todayLocal()
-  const submit = () => fire.mutate({ id: r.id, payload: {} }, { onSuccess: () => navigate("/transactions") })
+  const submit = () => fire.mutate({ id: r.id, payload: {} }, { onSuccess: () => navigate(routes.transactions) })
   return (
     <dialog
       ref={ref}

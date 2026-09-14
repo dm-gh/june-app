@@ -1,5 +1,6 @@
 import type { Loan } from "@june/shared"
 import { useNavigate } from "react-router"
+import { routes } from "../../routes"
 import { ListAmount, ListCard } from "../../ui"
 
 /** Lent or Borrowed, read from the sign. */
@@ -24,7 +25,7 @@ export function LoanCard({ loan, interactive = true, detail }: LoanCardProps) {
       corner={{ label: direction(loan), accent: loan.amountMinor < 0 ? "coral" : "green" }}
       title={loan.description || "Loan"}
       muted={loan.archived}
-      onOpen={interactive ? () => navigate(`/more/loans/${loan.id}`) : undefined}
+      onOpen={interactive ? () => navigate(routes.loan(loan.id)) : undefined}
     >
       <ListAmount minor={loan.amountMinor} currency={loan.currency} signed={false} className="mt-1" />
       {detail ? <div className="mt-1 font-mono text-xs text-grey-ink">{detail}</div> : null}

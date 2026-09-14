@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router"
 import { useCategories, useCreateRecurring, useDeleteRecurring, useRecurring, useTags, useUpdateRecurring, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
+import { routes } from "../../routes"
 import { Checkbox, Field, Input, Notice, QueryState, TagsField, Text, useDraft } from "../../ui"
 import { type ChangeErrors, type ChangeFieldsDraft, readChangeDraft } from "../transactions/changeDraft"
 import { ChangeFields } from "../transactions/ChangeFields"
@@ -84,14 +85,14 @@ export function AddRecurringPage() {
 
   if (wallets.isPending || categories.isPending) {
     return (
-      <FormPage title="Add recurring" backTo="/more">
+      <FormPage title="Add recurring" backTo={routes.more}>
         <QueryState of={[wallets, categories]} />
       </FormPage>
     )
   }
   if ((wallets.data?.wallets ?? []).length === 0 || draft === null) {
     return (
-      <FormPage title="Add recurring" backTo="/more">
+      <FormPage title="Add recurring" backTo={routes.more}>
         <Notice accent="lavender" label="No wallets yet">
           <Text>A Recurring needs a Wallet to fire into. Create your first one in Settings.</Text>
         </Notice>
@@ -102,10 +103,10 @@ export function AddRecurringPage() {
     const read = readRecurringDraft(draft)
     if (Either.isLeft(read)) return setErrors(read.left)
     setErrors({})
-    create.mutate(read.right, { onSuccess: () => navigate("/more") })
+    create.mutate(read.right, { onSuccess: () => navigate(routes.more) })
   }
   return (
-    <FormPage title="Add recurring" backTo="/more" submitLabel="Save recurring" onSubmit={submit} busy={create.isPending} error={create.error?.message ?? null}>
+    <FormPage title="Add recurring" backTo={routes.more} submitLabel="Save recurring" onSubmit={submit} busy={create.isPending} error={create.error?.message ?? null}>
       <RecurringFields draft={draft} onChange={setDraft} wallets={wallets.data?.wallets ?? []} categories={categories.data ?? []} tagSuggestions={tags.data ?? []} errors={errors} />
     </FormPage>
   )
@@ -127,12 +128,12 @@ export function EditRecurringPage() {
     id: recurring.data?.id,
     title: `Delete ${recurring.data?.name ?? "this recurring"}?`,
     body: "The transactions it already recorded stay.",
-    after: () => navigate("/more")
+    after: () => navigate(routes.more)
   })
 
   if (recurring.isPending || wallets.isPending || categories.isPending || draft === null) {
     return (
-      <FormPage title="Edit recurring" backTo="/more">
+      <FormPage title="Edit recurring" backTo={routes.more}>
         <QueryState of={[recurring, wallets, categories]} />
       </FormPage>
     )
@@ -158,13 +159,13 @@ export function EditRecurringPage() {
           ...(scheduleChanged ? { auto: p.auto, cron: p.cron, nextOn: p.nextOn } : {})
         }
       },
-      { onSuccess: () => navigate(`/more/recurrings/${r.id}`) }
+      { onSuccess: () => navigate(routes.recurring(r.id)) }
     )
   }
   return (
     <FormPage
       title="Edit recurring"
-      backTo={`/more/recurrings/${r.id}`}
+      backTo={routes.recurring(r.id)}
       submitLabel="Save recurring"
       onSubmit={submit}
       busy={update.isPending}

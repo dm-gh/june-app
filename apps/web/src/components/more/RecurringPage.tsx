@@ -6,6 +6,7 @@ import { useCategoryIndex, useDeleteRecurring, useRecurring, useWalletIndex } fr
 import { Page } from "../../layout/Page"
 import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
 import { formatLongDate } from "../../lib/period"
+import { routes } from "../../routes"
 import { Badge, Button, Card, Label, QueryState } from "../../ui"
 import { dueState, scheduleWords } from "./recurring"
 import { RecurringCard } from "./RecurringCard"
@@ -27,7 +28,7 @@ export function RecurringPage() {
     id: r?.id,
     title: `Delete ${r?.name ?? "this recurring"}?`,
     body: "The transactions it already recorded stay.",
-    after: () => navigate("/more")
+    after: () => navigate(routes.more)
   })
   const category = categories.get(r?.categoryId)
   const wallet = r?.walletId ? wallets.byId.get(r.walletId) : undefined
@@ -36,11 +37,11 @@ export function RecurringPage() {
   return (
     <Page
       title={r?.name ?? "Recurring"}
-      backTo="/more"
+      backTo={routes.more}
       menu={
         r
           ? [
-              { label: "Edit", icon: PencilSimple, onSelect: () => navigate(`/more/recurrings/${r.id}/edit`) },
+              { label: "Edit", icon: PencilSimple, onSelect: () => navigate(routes.editRecurring(r.id)) },
               confirmDelete.menuItem
             ]
           : undefined

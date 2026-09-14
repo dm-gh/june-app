@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router"
 import { useCreateLoan, useDeleteLoan, useLoan, useMe, useUpdateLoan } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
+import { routes } from "../../routes"
 import { CurrencySelect, Field, Input, QueryState, Segmented, useDraft } from "../../ui"
 import { AmountInput } from "../../ui/AmountInput"
 import { readAmount } from "../transactions/changeDraft"
@@ -76,10 +77,10 @@ export function AddLoanPage() {
     const read = readLoanDraft(effective, false)
     if (Either.isLeft(read)) return setError(read.left)
     setError(null)
-    create.mutate(read.right, { onSuccess: () => navigate("/more") })
+    create.mutate(read.right, { onSuccess: () => navigate(routes.more) })
   }
   return (
-    <FormPage title="Add loan" backTo="/more" submitLabel="Save loan" onSubmit={submit} busy={create.isPending} error={error ?? create.error?.message ?? null}>
+    <FormPage title="Add loan" backTo={routes.more} submitLabel="Save loan" onSubmit={submit} busy={create.isPending} error={error ?? create.error?.message ?? null}>
       <LoanFields draft={effective} onChange={setDraft} />
     </FormPage>
   )
@@ -98,12 +99,12 @@ export function EditLoanPage() {
     id: loan.data?.id,
     title: `Delete ${loan.data?.description || "this loan"}?`,
     body: "Any transactions recorded while settling it stay.",
-    after: () => navigate("/more")
+    after: () => navigate(routes.more)
   })
 
   if (loan.isPending || draft === null) {
     return (
-      <FormPage title="Edit loan" backTo="/more">
+      <FormPage title="Edit loan" backTo={routes.more}>
         <QueryState of={loan} />
       </FormPage>
     )
@@ -113,12 +114,12 @@ export function EditLoanPage() {
     const read = readLoanDraft(draft, true)
     if (Either.isLeft(read)) return setError(read.left)
     setError(null)
-    update.mutate({ id: l.id, payload: read.right }, { onSuccess: () => navigate(`/more/loans/${l.id}`) })
+    update.mutate({ id: l.id, payload: read.right }, { onSuccess: () => navigate(routes.loan(l.id)) })
   }
   return (
     <FormPage
       title="Edit loan"
-      backTo={`/more/loans/${l.id}`}
+      backTo={routes.loan(l.id)}
       submitLabel="Save loan"
       onSubmit={submit}
       busy={update.isPending}

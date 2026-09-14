@@ -3,6 +3,7 @@ import { useState } from "react"
 import { Link, useNavigate } from "react-router"
 import { useCategoryIndex, useLoans, useRecurrings, useWalletIndex } from "../../api/queries"
 import { ListPage } from "../../layout/Page"
+import { routes } from "../../routes"
 import { Button, Empty, Heading, QueryState } from "../../ui"
 import { LoanCard } from "./LoanCard"
 import { RecurringCard } from "./RecurringCard"
@@ -23,7 +24,7 @@ export function MorePage() {
     <ListPage title="More">
       <div className="mt-2 flex items-center justify-between">
         <Heading as="h2">Recurring</Heading>
-        <Button variant="secondary" size="sm" onClick={() => navigate("/more/recurrings/new")}>
+        <Button variant="secondary" size="sm" onClick={() => navigate(routes.addRecurring)}>
           + Add
         </Button>
       </div>
@@ -43,7 +44,7 @@ export function MorePage() {
 
       <div className="mt-8 flex items-center justify-between">
         <Heading as="h2">Loans</Heading>
-        <Button variant="secondary" size="sm" onClick={() => navigate("/more/loans/new")}>
+        <Button variant="secondary" size="sm" onClick={() => navigate(routes.addLoan)}>
           + Add
         </Button>
       </div>
@@ -56,7 +57,7 @@ export function MorePage() {
       </div>
       {archived.length > 0 ? (
         <div className="mt-3 flex justify-end">
-          <Link to="/more/loans/archive" className="font-heading text-sm font-bold hover:underline">
+          <Link to={routes.loansArchive} className="font-heading text-sm font-bold hover:underline">
             Archive ({archived.length}) ›
           </Link>
         </div>

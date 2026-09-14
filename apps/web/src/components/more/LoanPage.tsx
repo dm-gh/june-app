@@ -22,18 +22,18 @@ export function LoanPage() {
     id: l?.id,
     title: `Delete ${l?.description || "this loan"}?`,
     body: "Any transactions recorded while settling it stay.",
-    after: () => navigate("/more")
+    after: () => navigate(routes.more)
   })
   const since = (d: { epochMillis: number }) => formatLongDate(fromEpochMillis(d.epochMillis))
 
   return (
     <Page
       title={l ? l.description || "Loan" : "Loan"}
-      backTo={l?.archived ? "/more/loans/archive" : "/more"}
+      backTo={l?.archived ? routes.loansArchive : routes.more}
       menu={
         l
           ? [
-              { label: "Edit", icon: PencilSimple, onSelect: () => navigate(`/more/loans/${l.id}/edit`) },
+              { label: "Edit", icon: PencilSimple, onSelect: () => navigate(routes.editLoan(l.id)) },
               {
                 label: l.archived ? "Unarchive" : "Archive",
                 icon: l.archived ? ArrowCounterClockwise : Archive,
