@@ -1,11 +1,10 @@
 import type { CategoryId, TransactionId, WalletId } from "@june/shared"
-import { X } from "@phosphor-icons/react"
 import { useMemo, useState } from "react"
 import { Navigate, useLocation, useNavigate } from "react-router"
 import { useBulkUpdate, useCategories, useTags, useTransactions, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { usePeriod } from "../../lib/period"
-import { Badge, Field, Loading, Select, TagInput } from "../../ui"
+import { CategorySelect, Field, Loading, TagChip, TagInput, WalletSelect } from "../../ui"
 
 const KEEP = "__keep__"
 
@@ -48,7 +47,6 @@ export function BulkEditPage() {
   const currency = [...currencies][0]
   const sign = [...signs][0]
   const walletOptions = (wallets.data?.wallets ?? []).filter((w) => w.currency === currency)
-  const categoryOptions = (categories.data ?? []).filter((c) => c.type === sign)
 
   const submit = () =>
     bulk.mutate(
@@ -65,26 +63,14 @@ export function BulkEditPage() {
   return (
     <FormPage title={`Edit ${ids.length} items`} backTo="/transactions" submitLabel={`Save ${ids.length} items`} onSubmit={submit} busy={bulk.isPending} error={bulk.error?.message ?? null}>
       <Field label="Wallet" htmlFor="wallet" hint={walletLocked ? (allChanges ? "The selection mixes currencies, so the Wallet stays as it is" : "Only ordinary transactions can move Wallet") : undefined}>
-        <Select id="wallet" value={walletId} disabled={walletLocked} onChange={(e) => setWalletId(e.target.value)}>
+        <WalletSelect<string> id="wallet" wallets={walletOptions} value={walletId} disabled={walletLocked} onChange={setWalletId}>
           <option value={KEEP}>Keep as is</option>
-          {walletOptions.map((w) => (
-            <option key={w.id} value={w.id}>
-              {w.name} · {w.currency}
-            </option>
-          ))}
-        </Select>
+        </WalletSelect>
       </Field>
       <Field label="Category" htmlFor="category" hint={categoryLocked ? (allChanges ? "The selection mixes expenses and income, so the Category stays as it is" : "Only ordinary transactions have a Category") : undefined}>
-        <Select id="category" value={categoryId} disabled={categoryLocked} onChange={(e) => setCategoryId(e.target.value)}>
+        <CategorySelect<string> id="category" categories={categories.data ?? []} type={sign ?? "expense"} value={categoryId} disabled={categoryLocked} onChange={setCategoryId}>
           <option value={KEEP}>Keep as is</option>
-          <option value="">Uncategorised</option>
-          {categoryOptions.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.emoji ? `${c.emoji} ` : ""}
-              {c.name}
-            </option>
-          ))}
-        </Select>
+        </CategorySelect>
       </Field>
       <Field label="Tags" htmlFor="tags" hint="Tags every selected item shares; remove any, or add tags to all of them">
         <div className="flex flex-col gap-2">
@@ -93,17 +79,13 @@ export function BulkEditPage() {
               {shared.map((tag) => {
                 const gone = removed.includes(tag)
                 return (
-                  <Badge key={tag} prefix="#" accent={gone ? "grey" : "paper"} className="gap-1.5 pr-1">
-                    <span className={gone ? "line-through" : undefined}>{tag}</span>
-                    <button
-                      type="button"
-                      aria-label={gone ? `Keep ${tag}` : `Remove ${tag} from all`}
-                      onClick={() => setRemoved((r) => (gone ? r.filter((t) => t !== tag) : [...r, tag]))}
-                      className="ml-0.5 inline-flex size-5 items-center justify-center hover:bg-ink/10"
-                    >
-                      <X size={12} weight="bold" />
-                    </button>
-                  </Badge>
+                  <TagChip
+                    key={tag}
+                    tag={tag}
+                    muted={gone}
+                    removeLabel={gone ? `Keep ${tag}` : `Remove ${tag} from all`}
+                    onRemove={() => setRemoved((r) => (gone ? r.filter((t) => t !== tag) : [...r, tag]))}
+                  />
                 )
               })}
             </div>

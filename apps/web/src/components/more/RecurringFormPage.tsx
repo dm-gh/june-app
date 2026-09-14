@@ -1,11 +1,11 @@
 import { type Recurring, type RecurringId, toMajorFixed } from "@june/shared"
 import { Trash } from "@phosphor-icons/react"
 import { Either } from "effect"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCategories, useCreateRecurring, useDeleteRecurring, useRecurring, useTags, useUpdateRecurring, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
-import { Checkbox, Dialog, Field, Input, Loading, Notice, TagsField, Text } from "../../ui"
+import { Checkbox, Dialog, Field, Input, Loading, Notice, TagsField, Text, useDraft } from "../../ui"
 import { type ChangeErrors, type ChangeFieldsDraft, readChangeDraft } from "../transactions/changeDraft"
 import { ChangeFields } from "../transactions/ChangeFields"
 import { emptySchedule, type ScheduleDraft, scheduleFromRecurring, schedulePayload, SchedulePicker } from "./SchedulePicker"
@@ -76,15 +76,11 @@ export function AddRecurringPage() {
   const categories = useCategories()
   const tags = useTags()
   const create = useCreateRecurring()
-  const [draft, setDraft] = useState<RecurringDraft | null>(null)
+  // Seeded into the first Wallet once the list is there; with no Wallet at all there is nothing to seed.
+  const [draft, setDraft] = useDraft(wallets.data, ({ wallets: [first] }): RecurringDraft | null =>
+    first ? { name: "", sign: "-", amount: "", currency: first.currency, walletId: first.id, categoryId: "", description: "", tags: [], auto: false, schedule: { ...emptySchedule(), kind: "monthly" } } : null
+  )
   const [errors, setErrors] = useState<RecurringErrors>({})
-
-  useEffect(() => {
-    const first = wallets.data?.wallets[0]
-    if (first && draft === null) {
-      setDraft({ name: "", sign: "-", amount: "", currency: first.currency, walletId: first.id, categoryId: "", description: "", tags: [], auto: false, schedule: { ...emptySchedule(), kind: "monthly" } })
-    }
-  }, [wallets.data, draft])
 
   if (wallets.isPending || categories.isPending) {
     return (
@@ -124,13 +120,9 @@ export function EditRecurringPage() {
   const tags = useTags()
   const update = useUpdateRecurring()
   const remove = useDeleteRecurring()
-  const [draft, setDraft] = useState<RecurringDraft | null>(null)
+  const [draft, setDraft] = useDraft(recurring.data, draftFromRecurring)
   const [errors, setErrors] = useState<RecurringErrors>({})
   const [confirm, setConfirm] = useState(false)
-
-  useEffect(() => {
-    if (recurring.data && draft === null) setDraft(draftFromRecurring(recurring.data))
-  }, [recurring.data, draft])
 
   if (recurring.isPending || wallets.isPending || categories.isPending || draft === null) {
     return (

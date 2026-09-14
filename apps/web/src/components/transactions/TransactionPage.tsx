@@ -1,13 +1,13 @@
 import type { ExchangeId, TransactionId } from "@june/shared"
 import { Trash } from "@phosphor-icons/react"
 import { Either } from "effect"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCategories, useDeleteTransactions, useExchange, useTags, useTransaction, useUpdateExchange, useUpdateTransaction, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
-import { Dialog, ErrorNotice, Loading } from "../../ui"
-import { type ChangeDraft, type ChangeErrors, draftFromTransaction, readChangeDraft } from "./changeDraft"
-import { draftFromLegs, type ExchangeDraft, exchangePayload } from "./exchangeDraft"
+import { Dialog, ErrorNotice, Loading, useDraft } from "../../ui"
+import { type ChangeErrors, draftFromTransaction, readChangeDraft } from "./changeDraft"
+import { draftFromLegs, exchangePayload } from "./exchangeDraft"
 import { ExchangeFields } from "./ExchangeForm"
 import { TransactionForm } from "./TransactionForm"
 
@@ -31,13 +31,9 @@ function EditExchangePage({ exchangeId }: { exchangeId: ExchangeId }) {
   const tags = useTags()
   const update = useUpdateExchange()
   const remove = useDeleteTransactions()
-  const [draft, setDraft] = useState<ExchangeDraft | null>(null)
+  const [draft, setDraft] = useDraft(legs.data, draftFromLegs)
   const [error, setError] = useState<string | null>(null)
   const [confirm, setConfirm] = useState(false)
-
-  useEffect(() => {
-    if (legs.data && draft === null) setDraft(draftFromLegs(legs.data))
-  }, [legs.data, draft])
 
   const walletList = wallets.data?.wallets ?? []
   if (legs.isPending || wallets.isPending) {
@@ -96,13 +92,9 @@ function EditChangePage({ id }: { id: TransactionId }) {
   const tags = useTags()
   const update = useUpdateTransaction()
   const remove = useDeleteTransactions()
-  const [draft, setDraft] = useState<ChangeDraft | null>(null)
+  const [draft, setDraft] = useDraft(transaction.data, draftFromTransaction)
   const [errors, setErrors] = useState<ChangeErrors>({})
   const [confirm, setConfirm] = useState(false)
-
-  useEffect(() => {
-    if (transaction.data && draft === null) setDraft(draftFromTransaction(transaction.data))
-  }, [transaction.data, draft])
 
   if (transaction.isPending || wallets.isPending || categories.isPending || draft === null) {
     return (

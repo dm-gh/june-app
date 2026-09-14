@@ -1,6 +1,6 @@
-import type { Wallet, WalletId } from "@june/shared"
+import type { Wallet } from "@june/shared"
 import { useMemo } from "react"
-import { AmountInput, DateInput, Field, Input, Notice, Select, TagInput } from "../../ui"
+import { AmountInput, DateInput, Field, Input, Notice, TagsField, WalletSelect } from "../../ui"
 import type { ExchangeDraft } from "./exchangeDraft"
 
 export interface ExchangeFieldsProps {
@@ -22,23 +22,13 @@ export function ExchangeFields({ draft, onChange, wallets, tagSuggestions }: Exc
     return s > 0 && r > 0 ? (r / s).toFixed(4) : null
   }, [draft.sent, draft.received])
 
-  const walletOptions = wallets.map((w) => (
-    <option key={w.id} value={w.id}>
-      {w.name} · {w.currency}
-    </option>
-  ))
-
   return (
     <>
       <Field label="From wallet" htmlFor="from">
-        <Select id="from" value={draft.source} onChange={(e) => set("source", e.target.value as WalletId)}>
-          {walletOptions}
-        </Select>
+        <WalletSelect id="from" wallets={wallets} value={draft.source} onChange={(source) => set("source", source)} />
       </Field>
       <Field label="To wallet" htmlFor="to">
-        <Select id="to" value={draft.target} onChange={(e) => set("target", e.target.value as WalletId)}>
-          {walletOptions}
-        </Select>
+        <WalletSelect id="to" wallets={wallets} value={draft.target} onChange={(target) => set("target", target)} />
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label={`Sent · ${from?.currency ?? ""}`} htmlFor="sent" hint={from ? `Leaves ${from.name}` : undefined}>
@@ -54,9 +44,7 @@ export function ExchangeFields({ draft, onChange, wallets, tagSuggestions }: Exc
       <Field label="Description" htmlFor="description">
         <Input id="description" value={draft.description} onChange={(e) => set("description", e.target.value)} placeholder="What was it?" />
       </Field>
-      <Field label="Tags" htmlFor="tags" hint="Space-separated, e.g. vacation-2026">
-        <TagInput id="tags" value={draft.tags} onChange={(tags) => set("tags", tags)} suggestions={tagSuggestions} />
-      </Field>
+      <TagsField value={draft.tags} onChange={(tags) => set("tags", tags)} suggestions={tagSuggestions} />
       {sameCurrency || !from || !to ? null : (
         <Notice accent="sky" label="Different currencies">
           {implied ? (
