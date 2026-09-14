@@ -18,7 +18,7 @@ import { type WalletRow, WalletsRepo } from "../wallets/WalletsRepo.js"
 import { RecordChange } from "./RecordChange.js"
 import { type TransactionRow, TransactionsRepo } from "./TransactionsRepo.js"
 
-import { categoryFits, checkChange as checkChangeRule, requireCategory as requireCategoryRule, requireWallet as requireWalletRule, violation } from "./rules.js"
+import { categoryFits, categoryMismatch, checkChange as checkChangeRule, requireCategory as requireCategoryRule, requireWallet as requireWalletRule, violation } from "./rules.js"
 
 export const toTransaction = (
   row: TransactionRow,
@@ -230,9 +230,7 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
           if (payload.categoryId !== undefined && payload.categoryId !== null) {
             const category = yield* requireCategory(user, payload.categoryId)
             if (rows.some((r) => r.type !== "change")) return yield* violation("Only Changes have a Category")
-            if (rows.some((r) => !categoryFits(category, r.amountMinor))) {
-              return yield* violation(`${category.name} is an ${category.type} Category`)
-            }
+            if (rows.some((r) => !categoryFits(category, r.amountMinor))) return yield* categoryMismatch(category)
           }
           yield* repo.bulkSet(user.id, payload.ids, {
             ...(payload.walletId !== undefined ? { walletId: payload.walletId } : {}),

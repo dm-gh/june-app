@@ -1,4 +1,4 @@
-import { HttpApiBuilder, HttpApiError } from "@effect/platform"
+import { HttpApiBuilder } from "@effect/platform"
 import { SqlClient } from "@effect/sql"
 import {
   type CategoryId,
@@ -8,37 +8,22 @@ import {
   type LocalDate,
   nextOnOrAfter,
   parseCron,
-  type Recurring,
-  type RecurringId,
+  Recurring,
   todayUtc,
   type WalletId
 } from "@june/shared"
-import { DateTime, Effect, Either, Option } from "effect"
+import { Effect, Either } from "effect"
 import { CategoriesRepo } from "../categories/Categories.js"
+import { orNotFound } from "../http/errors.js"
 import { Rates } from "../rates/Rates.js"
-import { requireCategory, requireWallet, violation } from "../transactions/rules.js"
+import { checkChange, violation } from "../transactions/rules.js"
 import { toTransaction } from "../transactions/Transactions.js"
 import { WalletsRepo } from "../wallets/WalletsRepo.js"
 import { RecurringFiring } from "./Firing.js"
-import { type RecurringPatch, type RecurringRow, RecurringsRepo } from "./RecurringsRepo.js"
+import { type RecurringRow, RecurringsRepo } from "./RecurringsRepo.js"
 
-export const toRecurring = (row: RecurringRow): Recurring =>
-  ({
-    id: row.id,
-    name: row.name,
-    walletId: row.walletId,
-    amountMinor: row.amountMinor,
-    currency: row.currency,
-    categoryId: row.categoryId,
-    description: row.description,
-    tags: row.tags,
-    auto: row.auto,
-    cron: row.cron,
-    nextOn: row.nextOn,
-    lastFiredOn: row.lastFiredOn,
-    createdAt: DateTime.unsafeFromDate(row.createdAt),
-    updatedAt: DateTime.unsafeFromDate(row.updatedAt)
-  }) as Recurring
+/** The Recurring the api returns: the row without its User. */
+export const toRecurring = (row: RecurringRow): Recurring => new Recurring(row)
 
 /**
  * The Schedule the client asked for, resolved: a cron expression gives the first due date on or
@@ -65,26 +50,20 @@ export const RecurringsHandlersLive = HttpApiBuilder.group(JuneApi, "recurrings"
     const categories = yield* CategoriesRepo
     const rates = yield* Rates
     const firing = yield* RecurringFiring
-    const provideRepos = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-      effect.pipe(Effect.provideService(WalletsRepo, wallets), Effect.provideService(CategoriesRepo, categories))
 
-    const findOrNotFound = (user: CurrentUserShape, id: RecurringId) =>
-      repo.find(user.id, id).pipe(Effect.flatMap(Option.match({ onNone: () => new HttpApiError.NotFound(), onSome: Effect.succeed })))
-
-    /** The template's own rule: a Wallet in its currency and a Category of the right type. Unassigned only happens by deletion. */
+    /**
+     * The template obeys the hand-entered Change's rule: a Wallet that exists and a Category of
+     * the right type (its amount is non-zero by schema). Unassigned only happens by deletion.
+     */
     const checkTemplate = (user: CurrentUserShape, t: { walletId: WalletId; amountMinor: number; categoryId: CategoryId | null | undefined }) =>
-      Effect.gen(function* () {
-        const wallet = yield* requireWallet(user.id, t.walletId)
-        if (t.categoryId) {
-          const category = yield* requireCategory(user.id, t.categoryId)
-          if ((t.amountMinor < 0) !== (category.type === "expense")) return yield* violation(`${category.name} is an ${category.type} Category`)
-        }
-        return wallet
-      }).pipe(provideRepos)
+      checkChange(user.id, { walletId: t.walletId, amountMinor: t.amountMinor, categoryId: t.categoryId ?? null }).pipe(
+        Effect.provideService(WalletsRepo, wallets),
+        Effect.provideService(CategoriesRepo, categories)
+      )
 
     return handlers
       .handle("list", () => CurrentUser.pipe(Effect.flatMap((user) => repo.list(user.id)), Effect.map((rows) => rows.map(toRecurring))))
-      .handle("get", ({ path }) => CurrentUser.pipe(Effect.flatMap((user) => findOrNotFound(user, path.id)), Effect.map(toRecurring)))
+      .handle("get", ({ path }) => CurrentUser.pipe(Effect.flatMap((user) => orNotFound(repo.find(user.id, path.id))), Effect.map(toRecurring)))
       .handle("create", ({ payload }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
@@ -109,15 +88,9 @@ export const RecurringsHandlersLive = HttpApiBuilder.group(JuneApi, "recurrings"
       .handle("update", ({ path, payload }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
-          const current = yield* findOrNotFound(user, path.id)
-          const patch: RecurringPatch = {
-            ...(payload.name !== undefined ? { name: payload.name } : {}),
-            ...(payload.amountMinor !== undefined ? { amountMinor: payload.amountMinor } : {}),
-            ...(payload.categoryId !== undefined ? { categoryId: payload.categoryId } : {}),
-            ...(payload.description !== undefined ? { description: payload.description } : {}),
-            ...(payload.tags !== undefined ? { tags: payload.tags } : {}),
-            ...(payload.auto !== undefined ? { auto: payload.auto } : {})
-          }
+          const current = yield* orNotFound(repo.find(user.id, path.id))
+          // A Wallet named moves the template into it, currency included; the rule is checked against whichever Wallet stands.
+          let walletFields: { walletId: WalletId; currency: string } | undefined
           const walletId = payload.walletId ?? current.walletId
           if (walletId !== null) {
             const wallet = yield* checkTemplate(user, {
@@ -125,33 +98,42 @@ export const RecurringsHandlersLive = HttpApiBuilder.group(JuneApi, "recurrings"
               amountMinor: payload.amountMinor ?? current.amountMinor,
               categoryId: payload.categoryId === undefined ? current.categoryId : payload.categoryId
             })
-            if (payload.walletId !== undefined) Object.assign(patch, { walletId: wallet.id, currency: wallet.currency })
+            if (payload.walletId !== undefined) walletFields = { walletId: wallet.id, currency: wallet.currency }
           }
           // Any word about the Schedule or Auto recomputes the next due date from today.
-          const touchesSchedule = payload.cron !== undefined || payload.nextOn !== undefined || payload.auto !== undefined
-          if (touchesSchedule) {
+          let scheduleFields: { cron: string | null; nextOn: LocalDate | null } | undefined
+          if (payload.cron !== undefined || payload.nextOn !== undefined || payload.auto !== undefined) {
             const cron = payload.cron === undefined ? current.cron : payload.cron
             const nextOn = payload.nextOn === undefined ? (payload.cron !== undefined ? null : current.nextOn) : payload.nextOn
             const schedule = resolveSchedule({ cron, nextOn, auto: payload.auto ?? current.auto }, todayUtc())
             if (Either.isLeft(schedule)) return yield* violation(schedule.left)
-            Object.assign(patch, schedule.right)
+            scheduleFields = schedule.right
           }
-          const updated = yield* repo.update(user.id, current.id, patch)
-          if (Option.isNone(updated)) return yield* new HttpApiError.NotFound()
-          return toRecurring(updated.value)
+          const updated = yield* orNotFound(
+            repo.update(user.id, current.id, {
+              name: payload.name,
+              amountMinor: payload.amountMinor,
+              categoryId: payload.categoryId,
+              description: payload.description,
+              tags: payload.tags,
+              auto: payload.auto,
+              ...walletFields,
+              ...scheduleFields
+            })
+          )
+          return toRecurring(updated)
         })
       )
       .handle("delete", ({ path }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
-          const removed = yield* repo.remove(user.id, path.id)
-          if (!removed) return yield* new HttpApiError.NotFound()
+          yield* orNotFound(repo.remove(user.id, path.id))
         })
       )
       .handle("fire", ({ path, payload }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
-          const row = yield* findOrNotFound(user, path.id)
+          const row = yield* orNotFound(repo.find(user.id, path.id))
           const recorded = yield* firing.fireOne(row, payload.change).pipe(sql.withTransaction, Effect.catchTag("SqlError", (e) => Effect.die(e)))
           yield* rates.ensure([recorded.occurredOn])
           const table = yield* rates.table([recorded.occurredOn])

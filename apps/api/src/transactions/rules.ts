@@ -9,6 +9,9 @@ export const violation = (message: string) => new RuleViolation({ message })
 export const categoryFits = (category: CategoryRow, amountMinor: number): boolean =>
   amountMinor < 0 ? category.type === "expense" : category.type === "income"
 
+/** The refusal when it does not. */
+export const categoryMismatch = (category: CategoryRow) => violation(`${category.name} is an ${category.type} Category`)
+
 export const requireWallet = (userId: UserId, id: WalletId): Effect.Effect<WalletRow, RuleViolation, WalletsRepo> =>
   WalletsRepo.pipe(
     Effect.flatMap((wallets) => wallets.find(userId, id)),
@@ -40,9 +43,7 @@ export const checkChange = (
     }
     if (change.categoryId !== null) {
       const category = yield* requireCategory(userId, change.categoryId)
-      if (!categoryFits(category, change.amountMinor)) {
-        return yield* violation(`${category.name} is an ${category.type} Category`)
-      }
+      if (!categoryFits(category, change.amountMinor)) return yield* categoryMismatch(category)
     }
     return wallet
   })

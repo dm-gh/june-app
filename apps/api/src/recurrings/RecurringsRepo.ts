@@ -1,26 +1,17 @@
 import { SqlClient } from "@effect/sql"
-import type { Fragment } from "@effect/sql/Statement"
-import type { CategoryId, LocalDate, RecurringId, UserId, WalletId } from "@june/shared"
-import { Context, Effect, Layer, Option } from "effect"
+import { type CategoryId, type LocalDate, Recurring, RecurringId, UserId, type WalletId } from "@june/shared"
+import { Context, Effect, Layer, type Option, Schema } from "effect"
+import { ownedTable } from "../db/ownedTable.js"
 import { textArray } from "../db/sqlHelpers.js"
 
-export interface RecurringRow {
-  readonly id: RecurringId
-  readonly userId: UserId
-  readonly name: string
-  readonly walletId: WalletId | null
-  readonly amountMinor: number
-  readonly currency: string
-  readonly categoryId: CategoryId | null
-  readonly description: string
-  readonly tags: ReadonlyArray<string>
-  readonly auto: boolean
-  readonly cron: string | null
-  readonly nextOn: LocalDate | null
-  readonly lastFiredOn: LocalDate | null
-  readonly createdAt: Date
-  readonly updatedAt: Date
-}
+/** A Recurring as stored: its own fields, its User (the tick fires for every User), timestamps read from Date. */
+export const RecurringRow = Schema.Struct({
+  ...Recurring.fields,
+  userId: UserId,
+  createdAt: Schema.DateTimeUtcFromDate,
+  updatedAt: Schema.DateTimeUtcFromDate
+})
+export type RecurringRow = typeof RecurringRow.Type
 
 export interface NewRecurring {
   readonly name: string
@@ -35,25 +26,26 @@ export interface NewRecurring {
   readonly nextOn: LocalDate | null
 }
 
-export interface RecurringPatch {
-  readonly name?: string
-  readonly walletId?: WalletId
-  readonly amountMinor?: number
-  readonly currency?: string
-  readonly categoryId?: CategoryId | null
-  readonly description?: string
-  readonly tags?: ReadonlyArray<string>
-  readonly auto?: boolean
-  readonly cron?: string | null
-  readonly nextOn?: LocalDate | null
+export type RecurringPatch = {
+  readonly name?: string | undefined
+  readonly walletId?: WalletId | undefined
+  readonly amountMinor?: number | undefined
+  readonly currency?: string | undefined
+  readonly categoryId?: CategoryId | null | undefined
+  readonly description?: string | undefined
+  readonly tags?: ReadonlyArray<string> | undefined
+  readonly auto?: boolean | undefined
+  readonly cron?: string | null | undefined
+  readonly nextOn?: LocalDate | null | undefined
 }
 
 export interface RecurringsRepoShape {
+  /** Soonest due first, overdue at the very top; the ones with no date come last, by name. */
   readonly list: (userId: UserId) => Effect.Effect<ReadonlyArray<RecurringRow>>
   readonly find: (userId: UserId, id: RecurringId) => Effect.Effect<Option.Option<RecurringRow>>
   readonly insert: (userId: UserId, row: NewRecurring) => Effect.Effect<RecurringRow>
   readonly update: (userId: UserId, id: RecurringId, patch: RecurringPatch) => Effect.Effect<Option.Option<RecurringRow>>
-  readonly remove: (userId: UserId, id: RecurringId) => Effect.Effect<boolean>
+  readonly remove: (userId: UserId, id: RecurringId) => Effect.Effect<Option.Option<RecurringId>>
   /** Ids of every User's auto Recurrings due on or before `today`. */
   readonly dueIds: (today: LocalDate) => Effect.Effect<ReadonlyArray<RecurringId>>
   /** The row, locked for the current transaction; none when another worker holds it. */
@@ -65,55 +57,24 @@ export interface RecurringsRepoShape {
 
 export class RecurringsRepo extends Context.Tag("RecurringsRepo")<RecurringsRepo, RecurringsRepoShape>() {}
 
-const columns = `id, user_id, name, wallet_id, amount_minor, currency, category_id, description, tags, auto, cron,
-  to_char(next_on, 'YYYY-MM-DD') as next_on, to_char(last_fired_on, 'YYYY-MM-DD') as last_fired_on, created_at, updated_at`
-
 export const RecurringsRepoLive = Layer.effect(
   RecurringsRepo,
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient
-    const cols = sql.literal(columns)
-    const normalise = (row: RecurringRow): RecurringRow => ({ ...row, currency: row.currency.trim() })
-    const rows = (effect: Effect.Effect<ReadonlyArray<RecurringRow>, unknown>) =>
-      effect.pipe(Effect.map((rs) => rs.map(normalise)), Effect.orDie)
-    const first = (effect: Effect.Effect<ReadonlyArray<RecurringRow>, unknown>) => rows(effect).pipe(Effect.map((rs) => Option.fromNullable(rs[0])))
+    const recurrings = ownedTable(sql, {
+      table: "recurring",
+      id: RecurringId,
+      row: RecurringRow,
+      columns: `id, user_id, name, wallet_id, amount_minor, trim(currency) as currency, category_id, description, tags, auto, cron,
+        to_char(next_on, 'YYYY-MM-DD') as next_on, to_char(last_fired_on, 'YYYY-MM-DD') as last_fired_on, created_at, updated_at`,
+      order: "next_on asc nulls last, name, created_at",
+      stampsUpdatedAt: true
+    })
 
-    // Soonest due first, overdue at the very top; the ones with no date come last, by name.
-    const list: RecurringsRepoShape["list"] = (userId) =>
-      rows(sql<RecurringRow>`select ${cols} from recurring where user_id = ${userId} order by next_on asc nulls last, name, created_at`)
+    const insert: RecurringsRepoShape["insert"] = (userId, row) => recurrings.insert(userId, { ...row, tags: textArray(sql, row.tags) })
 
-    const find: RecurringsRepoShape["find"] = (userId, id) =>
-      first(sql<RecurringRow>`select ${cols} from recurring where user_id = ${userId} and id = ${id}`)
-
-    const insert: RecurringsRepoShape["insert"] = (userId, row) =>
-      rows(sql<RecurringRow>`
-        insert into recurring (user_id, name, wallet_id, amount_minor, currency, category_id, description, tags, auto, cron, next_on)
-        values (${userId}, ${row.name}, ${row.walletId}, ${row.amountMinor}, ${row.currency}, ${row.categoryId}, ${row.description},
-                ${textArray(sql, row.tags)}, ${row.auto}, ${row.cron}, ${row.nextOn})
-        returning ${cols}`).pipe(Effect.map((rs) => rs[0]!))
-
-    const update: RecurringsRepoShape["update"] = (userId, id, patch) => {
-      const sets: Array<Fragment> = []
-      if (patch.name !== undefined) sets.push(sql`name = ${patch.name}`)
-      if (patch.walletId !== undefined) sets.push(sql`wallet_id = ${patch.walletId}`)
-      if (patch.amountMinor !== undefined) sets.push(sql`amount_minor = ${patch.amountMinor}`)
-      if (patch.currency !== undefined) sets.push(sql`currency = ${patch.currency}`)
-      if (patch.categoryId !== undefined) sets.push(sql`category_id = ${patch.categoryId}`)
-      if (patch.description !== undefined) sets.push(sql`description = ${patch.description}`)
-      if (patch.tags !== undefined) sets.push(sql`tags = ${textArray(sql, patch.tags)}`)
-      if (patch.auto !== undefined) sets.push(sql`auto = ${patch.auto}`)
-      if (patch.cron !== undefined) sets.push(sql`cron = ${patch.cron}`)
-      if (patch.nextOn !== undefined) sets.push(sql`next_on = ${patch.nextOn}`)
-      if (sets.length === 0) return find(userId, id)
-      sets.push(sql`updated_at = now()`)
-      return first(sql<RecurringRow>`update recurring set ${sql.csv(sets)} where user_id = ${userId} and id = ${id} returning ${cols}`)
-    }
-
-    const remove: RecurringsRepoShape["remove"] = (userId, id) =>
-      sql<{ id: string }>`delete from recurring where user_id = ${userId} and id = ${id} returning id`.pipe(
-        Effect.map((rs) => rs.length > 0),
-        Effect.orDie
-      )
+    const update: RecurringsRepoShape["update"] = (userId, id, patch) =>
+      recurrings.patch(userId, id, { ...patch, tags: patch.tags && textArray(sql, patch.tags) })
 
     const dueIds: RecurringsRepoShape["dueIds"] = (today) =>
       sql<{ id: RecurringId }>`select id from recurring where auto and next_on <= ${today} order by next_on`.pipe(
@@ -122,7 +83,7 @@ export const RecurringsRepoLive = Layer.effect(
       )
 
     const lock: RecurringsRepoShape["lock"] = (id) =>
-      first(sql<RecurringRow>`select ${cols} from recurring where id = ${id} for update skip locked`)
+      recurrings.first(sql`select ${recurrings.columns} from recurring where id = ${id} for update skip locked`)
 
     const fired: RecurringsRepoShape["fired"] = (id, firedOn, nextOn) =>
       sql`update recurring
@@ -135,6 +96,6 @@ export const RecurringsRepoLive = Layer.effect(
         Effect.orDie
       )
 
-    return { list, find, insert, update, remove, dueIds, lock, fired, countWithoutWallet }
+    return { list: recurrings.list, find: recurrings.find, insert, update, remove: recurrings.remove, dueIds, lock, fired, countWithoutWallet }
   })
 )
