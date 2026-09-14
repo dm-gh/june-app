@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router"
 import { useCategories, useDeleteTransactions, useExchange, useTags, useTransaction, useUpdateExchange, useUpdateTransaction, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
+import { routes } from "../../routes"
 import { ErrorNotice, QueryState, useDraft } from "../../ui"
 import { type ChangeErrors, draftFromTransaction, readChangeDraft } from "./changeDraft"
 import { draftFromLegs, exchangePayload } from "./exchangeDraft"
@@ -38,20 +39,20 @@ function EditExchangePage({ exchangeId }: { exchangeId: ExchangeId }) {
     id: legs.data?.[0] ? [legs.data[0].id] : undefined,
     title: "Delete this exchange?",
     body: "Both legs go, and both Wallets' Balances move back.",
-    after: () => navigate("/transactions")
+    after: () => navigate(routes.transactions)
   })
 
   const walletList = wallets.data?.wallets ?? []
   if (legs.isPending || wallets.isPending) {
     return (
-      <FormPage title="Edit exchange" backTo="/transactions">
+      <FormPage title="Edit exchange" backTo={routes.transactions}>
         <QueryState of={[legs, wallets]} />
       </FormPage>
     )
   }
   if (draft === null) {
     return (
-      <FormPage title="Edit exchange" backTo="/transactions">
+      <FormPage title="Edit exchange" backTo={routes.transactions}>
         <ErrorNotice message="One side of this Exchange lost its Wallet, so it can only be deleted." />
       </FormPage>
     )
@@ -61,13 +62,13 @@ function EditExchangePage({ exchangeId }: { exchangeId: ExchangeId }) {
     const payload = exchangePayload(draft, walletList)
     if (Either.isLeft(payload)) return setError(payload.left)
     setError(null)
-    update.mutate({ exchangeId, payload: payload.right }, { onSuccess: () => navigate("/transactions") })
+    update.mutate({ exchangeId, payload: payload.right }, { onSuccess: () => navigate(routes.transactions) })
   }
 
   return (
     <FormPage
       title="Edit exchange"
-      backTo="/transactions"
+      backTo={routes.transactions}
       submitLabel="Save exchange"
       onSubmit={submit}
       busy={update.isPending}
@@ -96,12 +97,12 @@ function EditChangePage({ id }: { id: TransactionId }) {
     id: transaction.data ? [transaction.data.id] : undefined,
     title: "Delete this transaction?",
     body: "It is removed for good and the Wallet's Balance moves accordingly.",
-    after: () => navigate("/transactions")
+    after: () => navigate(routes.transactions)
   })
 
   if (transaction.isPending || wallets.isPending || categories.isPending || draft === null) {
     return (
-      <FormPage title="Edit transaction" backTo="/transactions">
+      <FormPage title="Edit transaction" backTo={routes.transactions}>
         <QueryState of={[transaction, wallets, categories]} />
       </FormPage>
     )
@@ -116,14 +117,14 @@ function EditChangePage({ id }: { id: TransactionId }) {
     const { walletId: _wallet, currency: _currency, categoryId: _category, ...init } = read.right
     // An Init keeps its Wallet and currency; sending them, even unchanged, is refused by the api.
     const payload = t.type === "init" ? init : read.right
-    update.mutate({ id: t.id, payload }, { onSuccess: () => navigate("/transactions") })
+    update.mutate({ id: t.id, payload }, { onSuccess: () => navigate(routes.transactions) })
   }
 
   const canDelete = t.type !== "init"
   return (
     <FormPage
       title={titles[t.type]}
-      backTo="/transactions"
+      backTo={routes.transactions}
       submitLabel="Save changes"
       onSubmit={submit}
       busy={update.isPending}

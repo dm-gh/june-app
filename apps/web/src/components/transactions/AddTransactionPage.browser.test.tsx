@@ -5,7 +5,7 @@ import { Route, Routes } from "react-router"
 import { endpoint } from "../../test/client.mock"
 import { loan, recurring } from "../../test/fixtures"
 import { mockQueries, Where } from "../../test/queries.mock"
-import { AddTransactionPage, addTransactionFor, prefillFrom } from "./AddTransactionPage"
+import { AddTransactionPage } from "./AddTransactionPage"
 
 vi.mock("../../api/client", async () => (await import("../../test/client.mock")).clientMock())
 
@@ -20,13 +20,6 @@ afterEach(() => vi.useRealTimers())
 const lent = loan()
 const rent = recurring()
 
-test("addTransactionFor writes the query string that prefillFrom reads back; plain Add carries nothing", () => {
-  expect(addTransactionFor({ loan: lent.id })).toBe(`/transactions/new?loan=${lent.id}`)
-  expect(addTransactionFor({ recurring: rent.id })).toBe(`/transactions/new?recurring=${rent.id}`)
-  expect(prefillFrom(new URLSearchParams(addTransactionFor({ loan: lent.id }).split("?")[1]))).toEqual({ loan: lent.id })
-  expect(prefillFrom(new URLSearchParams(addTransactionFor({ recurring: rent.id }).split("?")[1]))).toEqual({ recurring: rent.id })
-  expect(prefillFrom(new URLSearchParams("type=exchange"))).toBeNull()
-})
 const open = (search: string) => {
   const { wrap } = mockQueries()
   return render(

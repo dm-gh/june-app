@@ -4,6 +4,7 @@ import { Navigate, useLocation, useNavigate } from "react-router"
 import { useBulkUpdate, useCategories, useTags, useTransactions, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { usePeriod } from "../../lib/period"
+import { routes } from "../../routes"
 import { CategorySelect, Field, QueryState, TagChip, TagInput, WalletSelect } from "../../ui"
 
 const KEEP = "__keep__"
@@ -33,7 +34,7 @@ export function BulkEditPage() {
     [rows]
   )
 
-  if (ids.length === 0) return <Navigate to="/transactions" replace />
+  if (ids.length === 0) return <Navigate to={routes.transactions} replace />
   if (transactions.isPending || wallets.isPending || categories.isPending) {
     return (
       <FormPage title={`Edit ${ids.length} items`}>
@@ -57,11 +58,11 @@ export function BulkEditPage() {
         addTags: added as never,
         removeTags: removed as never
       },
-      { onSuccess: () => navigate("/transactions") }
+      { onSuccess: () => navigate(routes.transactions) }
     )
 
   return (
-    <FormPage title={`Edit ${ids.length} items`} backTo="/transactions" submitLabel={`Save ${ids.length} items`} onSubmit={submit} busy={bulk.isPending} error={bulk.error?.message ?? null}>
+    <FormPage title={`Edit ${ids.length} items`} backTo={routes.transactions} submitLabel={`Save ${ids.length} items`} onSubmit={submit} busy={bulk.isPending} error={bulk.error?.message ?? null}>
       <Field label="Wallet" htmlFor="wallet" hint={walletLocked ? (allChanges ? "The selection mixes currencies, so the Wallet stays as it is" : "Only ordinary transactions can move Wallet") : undefined}>
         <WalletSelect<string> id="wallet" wallets={walletOptions} value={walletId} disabled={walletLocked} onChange={setWalletId}>
           <option value={KEEP}>Keep as is</option>

@@ -10,6 +10,7 @@ import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
 import { filterItems, isEmptyFilter, useFilter } from "../../lib/filter"
 import { dayHeading, plural } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
+import { routes } from "../../routes"
 import { Empty, ErrorNotice, IconButton, Label, Menu, QueryState } from "../../ui"
 import { groupByDay, itemIds, toItems } from "./listItems"
 import { TransactionCard } from "./TransactionCard"
@@ -65,7 +66,7 @@ export function TransactionsPage() {
                   label: `Edit ${selectedCount} items`,
                   icon: PencilSimple,
                   disabled: ids.length === 0,
-                  onSelect: () => navigate("/transactions/bulk-edit", { state: { ids } })
+                  onSelect: () => navigate(routes.bulkEdit, { state: { ids } })
                 },
                 confirmDelete.menuItem
               ]}
@@ -98,7 +99,7 @@ export function TransactionsPage() {
                     item={item}
                     category={categories.get(t.categoryId)}
                     walletName={wallets.name}
-                    onOpen={() => navigate(`/transactions/${t.id}`)}
+                    onOpen={() => navigate(routes.transaction(t.id))}
                     selectable={{
                       selecting,
                       selected: ids.every((id) => selected.has(id)),
