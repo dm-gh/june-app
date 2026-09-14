@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router"
 import { useCreateWallet, useDeleteWallet, useMe, useUpdateWallet, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
+import { routes } from "../../routes"
 import { CurrencySelect, Field, Input, Loading, useDraft } from "../../ui"
 import { AmountInput } from "../../ui/AmountInput"
 import { readAmount, type Sign } from "../transactions/changeDraft"
@@ -65,11 +66,11 @@ export function AddWalletPage() {
     const read = readWalletDraft(effective)
     if (Either.isLeft(read)) return setError(read.left)
     setError(null)
-    create.mutate(read.right, { onSuccess: () => navigate("/settings") })
+    create.mutate(read.right, { onSuccess: () => navigate(routes.settings) })
   }
 
   return (
-    <FormPage title="Add wallet" backTo="/settings" submitLabel="Create wallet" onSubmit={submit} busy={create.isPending} error={error ?? create.error?.message ?? null}>
+    <FormPage title="Add wallet" backTo={routes.settings} submitLabel="Create wallet" onSubmit={submit} busy={create.isPending} error={error ?? create.error?.message ?? null}>
       <WalletFields draft={effective} onChange={setDraft} mode="add" />
     </FormPage>
   )
@@ -89,12 +90,12 @@ export function EditWalletPage() {
     id: wallet ? (wallet.id as WalletId) : undefined,
     title: `Delete ${wallet?.name ?? "this wallet"}?`,
     body: "Its transactions stay but lose their wallet; exchanges with other wallets become plain transactions there. The opening balance goes.",
-    after: () => navigate("/settings")
+    after: () => navigate(routes.settings)
   })
 
   if (!wallet || draft === null) {
     return (
-      <FormPage title="Edit wallet" backTo="/settings">
+      <FormPage title="Edit wallet" backTo={routes.settings}>
         <Loading />
       </FormPage>
     )
@@ -105,13 +106,13 @@ export function EditWalletPage() {
     if (Either.isLeft(read)) return setError(read.left)
     setError(null)
     const { name, initMinor } = read.right
-    update.mutate({ id: wallet.id as WalletId, payload: { name, initMinor } }, { onSuccess: () => navigate("/settings") })
+    update.mutate({ id: wallet.id as WalletId, payload: { name, initMinor } }, { onSuccess: () => navigate(routes.settings) })
   }
 
   return (
     <FormPage
       title="Edit wallet"
-      backTo="/settings"
+      backTo={routes.settings}
       submitLabel="Save wallet"
       onSubmit={submit}
       busy={update.isPending}

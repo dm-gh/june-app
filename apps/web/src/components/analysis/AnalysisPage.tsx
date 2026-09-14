@@ -9,6 +9,7 @@ import { filterRows, useFilter } from "../../lib/filter"
 import { fromMinor } from "@june/shared"
 import { balanceMoney, moneyCode, signedMoney } from "../../lib/format"
 import { todayLocal, usePeriod } from "../../lib/period"
+import { routes } from "../../routes"
 import { Card, cn, Empty, Heading, Label, QueryState } from "../../ui"
 import { breakdown, breakdownBoth, elapsedBuckets, flowSeries, granularityFor, incomeMinor, type Side, spendSeries, spentMinor, withEveryWallet } from "./analysis"
 import { BreakdownList, type Dimension, dimensionTitle, FlowList, keysOf, lookOf, type Sides, walletBalance } from "./BreakdownList"
@@ -174,7 +175,7 @@ export function AnalysisPage() {
     const title = sides.expense && sides.income ? (side === "expense" ? "Spent by category" : "Income by category") : "By category"
     return (
       <>
-        {heading(title, slices.length, side === "expense" ? "/analysis/categories" : "/analysis/categories/income")}
+        {heading(title, slices.length, routes.breakdown("categories", side))}
         {transactions.data && slices.length === 0 ? <Empty>No {side === "expense" ? "spending" : "income"} by category in this period.</Empty> : null}
         <BreakdownList slices={slices.slice(0, ROWS)} look={look("categories")} currency={currency} total={side === "expense" ? Math.abs(spent) : income} />
       </>
@@ -182,7 +183,7 @@ export function AnalysisPage() {
   }
   const flowSection = (dimension: "wallets" | "tags", title: string, slices: typeof walletSlices) => (
     <>
-      {heading(title, slices.length, `/analysis/${dimension}`)}
+      {heading(title, slices.length, routes.breakdown(dimension))}
       {dimension === "wallets" && totalBalance !== null ? (
         <div className="-mt-1 mb-3 font-mono text-sm tabular-nums">
           <span className="text-grey-ink">Total balance</span> ≈ <span className="font-bold">{balanceMoney(totalBalance, currency)}</span>

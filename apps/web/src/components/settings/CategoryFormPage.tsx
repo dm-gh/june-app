@@ -5,6 +5,7 @@ import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory 
 import { FormPage } from "../../layout/FormPage"
 import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
 import { categoryLabel, hueColor } from "../../lib/format"
+import { routes } from "../../routes"
 import { Field, HueSlider, Input, Loading, Segmented, Sheet, useDraft } from "../../ui"
 import { FitText } from "../../ui/FitText"
 
@@ -109,12 +110,12 @@ export function AddCategoryPage() {
   const submit = () =>
     create.mutate(
       { type: draft.type, name: draft.name.trim(), emoji: draft.emoji || null, hue: draft.hue as Hue },
-      { onSuccess: () => navigate("/settings") }
+      { onSuccess: () => navigate(routes.settings) }
     )
   return (
     <FormPage
       title={<TitlePreview verb="Add" draft={draft} />}
-      backTo="/settings"
+      backTo={routes.settings}
       submitLabel="Create category"
       onSubmit={submit}
       busy={create.isPending}
@@ -139,12 +140,12 @@ export function EditCategoryPage() {
     id: category ? (category.id as CategoryId) : undefined,
     title: `Delete ${category?.name ?? "this category"}?`,
     body: "Its transactions stay and become Uncategorised. A Shortcut still sending this slug records Uncategorised too.",
-    after: () => navigate("/settings")
+    after: () => navigate(routes.settings)
   })
 
   if (!category || draft === null) {
     return (
-      <FormPage title="Edit category" backTo="/settings">
+      <FormPage title="Edit category" backTo={routes.settings}>
         <Loading />
       </FormPage>
     )
@@ -155,12 +156,12 @@ export function EditCategoryPage() {
         id: category.id as CategoryId,
         payload: { name: draft.name.trim(), emoji: draft.emoji || null, hue: draft.hue as Hue, slug: category.slug as Slug }
       },
-      { onSuccess: () => navigate("/settings") }
+      { onSuccess: () => navigate(routes.settings) }
     )
   return (
     <FormPage
       title={<TitlePreview verb="Edit" draft={draft} />}
-      backTo="/settings"
+      backTo={routes.settings}
       submitLabel="Save category"
       onSubmit={submit}
       busy={update.isPending}

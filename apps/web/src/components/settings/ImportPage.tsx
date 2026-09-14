@@ -16,6 +16,7 @@ import { useCategoryIndex, useImportPreview, useImportRun, useWalletIndex } from
 import { FormPage } from "../../layout/FormPage"
 import { plural } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
+import { routes } from "../../routes"
 import { Button, Card, Checkbox, cn, CopyButton, ErrorNotice, Label, Loading, Notice, Text } from "../../ui"
 import { TransactionCard } from "../transactions/TransactionCard"
 
@@ -158,14 +159,14 @@ export function ImportPage() {
 
   if (run.data) {
     return (
-      <FormPage title="Import" backTo="/settings">
+      <FormPage title="Import" backTo={routes.settings}>
         <Notice accent="green" label="Done">
           <Text className="text-sm">
             Imported {run.data.imported.toLocaleString("en")} {plural(run.data.imported, "row")} from {chosen?.name}.
             {run.data.skipped.length > 0 ? ` ${run.data.skipped.length} could not be read and were left out.` : ""}
           </Text>
         </Notice>
-        <Button size="lg" className="w-full" onClick={() => navigate("/transactions")}>
+        <Button size="lg" className="w-full" onClick={() => navigate(routes.transactions)}>
           See the transactions
         </Button>
         <Button variant="ghost" className="w-full" onClick={() => choose(undefined)}>
@@ -176,7 +177,7 @@ export function ImportPage() {
   }
 
   return (
-    <FormPage title="Import" backTo="/settings">
+    <FormPage title="Import" backTo={routes.settings}>
       <Card accent="sky" shadow="sm" className="p-3">
         <div className="flex items-center justify-between gap-3">
           <Label as="div">June's template</Label>

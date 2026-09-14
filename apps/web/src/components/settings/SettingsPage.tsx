@@ -9,6 +9,7 @@ import { signOut } from "../../api/auth"
 import { useCategories, useMe, useReorderWallets, useSetDefaultCurrency, useWallets } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { balanceMoney, hueColor } from "../../lib/format"
+import { routes } from "../../routes"
 import { Button, Card, cn, CurrencySelect, Display, ErrorNotice, Field, Heading, Label, QueryState, Text } from "../../ui"
 
 function WalletRow({ wallet, index }: { wallet: Wallet; index: number }) {
@@ -17,7 +18,7 @@ function WalletRow({ wallet, index }: { wallet: Wallet; index: number }) {
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={isDragging ? "z-10 opacity-90" : undefined}>
       <Card className="flex items-center gap-3 p-3">
         <span className="w-4 font-mono text-sm text-grey-ink">{index + 1}</span>
-        <Link to={`/settings/wallets/${wallet.id}`} className="min-w-0 flex-1">
+        <Link to={routes.wallet(wallet.id)} className="min-w-0 flex-1">
           <div className="truncate font-heading font-bold">{wallet.name}</div>
           <div className="font-mono text-xs text-grey-ink">{wallet.currency}</div>
         </Link>
@@ -32,7 +33,7 @@ function WalletRow({ wallet, index }: { wallet: Wallet; index: number }) {
 
 function CategoryRow({ category }: { category: Category }) {
   return (
-    <Link to={`/settings/categories/${category.id}`} className="block">
+    <Link to={routes.category(category.id)} className="block">
       <Card className="flex items-center gap-3 p-3 lift">
         <span className="flex size-8 items-center justify-center border-2 border-ink text-lg" style={{ background: hueColor(category.hue) }}>
           {category.emoji ?? ""}
@@ -81,7 +82,7 @@ export function SettingsPage() {
 
       <div className="flex items-center justify-between">
         <Heading as="h2">Wallets</Heading>
-        <Button variant="secondary" size="sm" onClick={() => navigate("/settings/wallets/new")}>
+        <Button variant="secondary" size="sm" onClick={() => navigate(routes.addWallet)}>
           + Add
         </Button>
       </div>
@@ -100,7 +101,7 @@ export function SettingsPage() {
 
       <div className="mt-8 flex items-center justify-between">
         <Heading as="h2">Categories</Heading>
-        <Button variant="secondary" size="sm" onClick={() => navigate("/settings/categories/new")}>
+        <Button variant="secondary" size="sm" onClick={() => navigate(routes.addCategory)}>
           + Add
         </Button>
       </div>
@@ -139,7 +140,7 @@ export function SettingsPage() {
           Capture a transaction from your iPhone in one tap. The guide walks you through building the Shortcut in the Shortcuts app, with your
           categories, currencies and capture URL filled in.
         </Text>
-        <Button className="mt-3 w-full" onClick={() => navigate("/settings/shortcut")}>
+        <Button className="mt-3 w-full" onClick={() => navigate(routes.shortcut)}>
           Open the guide
         </Button>
       </Card>
@@ -152,14 +153,14 @@ export function SettingsPage() {
           Bring in transactions from a CSV file in June's template: one row per transaction, with the date, amount, currency, category
           slug, description and tags.
         </Text>
-        <Button className="mt-3 w-full" onClick={() => navigate("/settings/import")}>
+        <Button className="mt-3 w-full" onClick={() => navigate(routes.importCsv)}>
           Import from CSV
         </Button>
       </Card>
 
       <div className="mt-8 mb-8">
         <div className="font-mono text-xs text-grey-ink">Signed in as {me.data?.email ?? "…"}</div>
-        <button type="button" onClick={() => signOut().then(() => navigate("/sign-in"))} className="mt-2 font-heading font-bold hover:underline">
+        <button type="button" onClick={() => signOut().then(() => navigate(routes.signIn))} className="mt-2 font-heading font-bold hover:underline">
           Sign out
         </button>
       </div>

@@ -2,6 +2,7 @@ import type { CaptureTokenIssued } from "@june/shared"
 import { type ReactNode, useMemo, useState } from "react"
 import { useCategories, useMe, useRegenerateCaptureToken, useWallets } from "../../api/queries"
 import { Page } from "../../layout/Page"
+import { routes } from "../../routes"
 import { Button, Card, cn, CopyButton, Dialog, ErrorNotice, Heading, Label, Notice, Text } from "../../ui"
 
 /** The plain token is shown once by the api; the tab remembers it so a reload mid-setup does not lose it. */
@@ -115,7 +116,7 @@ export function ShortcutPage() {
   const provided = <Variable name="Provided Input" />
 
   return (
-    <Page title="Shortcut" backTo="/settings" tabs={false}>
+    <Page title="Shortcut" backTo={routes.settings} tabs={false}>
       <Text>
         Build it once in the Shortcuts app on your iPhone and put it on the home screen. From then on a capture is one tap: amount, category, currency, done.
         Every action below is shown with your own values filled in.
