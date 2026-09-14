@@ -4,15 +4,16 @@ import { NavLink, useMatch, useNavigate } from "react-router"
 import { signOut } from "../api/auth"
 import { useMe } from "../api/queries"
 import { FilterContext, filterSearch } from "../lib/filter"
+import { routes } from "../routes"
 import { cn, Display } from "../ui"
 import { AttentionBanner, useAttentionNeeded } from "./AttentionBanner"
 import { gutter } from "./gutter"
 
 const tabs: ReadonlyArray<{ to: string; label: string; icon: Icon; filtered: boolean }> = [
-  { to: "/analysis", label: "Analysis", icon: ChartBar, filtered: true },
-  { to: "/transactions", label: "Transactions", icon: Receipt, filtered: true },
-  { to: "/more", label: "More", icon: SquaresFour, filtered: false },
-  { to: "/settings", label: "Settings", icon: GearSix, filtered: false }
+  { to: routes.analysis, label: "Analysis", icon: ChartBar, filtered: true },
+  { to: routes.transactions, label: "Transactions", icon: Receipt, filtered: true },
+  { to: routes.more, label: "More", icon: SquaresFour, filtered: false },
+  { to: routes.settings, label: "Settings", icon: GearSix, filtered: false }
 ]
 
 /** Transactions and Analysis share the Filter, so their tab links carry it. */
@@ -26,7 +27,7 @@ const useTabLinks = () => {
 function TabBar() {
   const navigate = useNavigate()
   const tabs = useTabLinks()
-  const onTransactions = useMatch({ path: "/transactions", end: false }) !== null
+  const onTransactions = useMatch({ path: routes.transactions, end: false }) !== null
   return (
     <nav
       aria-label="Main"
@@ -34,7 +35,7 @@ function TabBar() {
     >
       <ul className="grid h-20 grid-cols-4 items-center">
         {tabs.map((tab) => {
-          const withPlus = tab.to === "/transactions"
+          const withPlus = tab.to === routes.transactions
           const Glyph = tab.icon
           return (
             <li key={tab.to} className="relative flex justify-center">
@@ -44,7 +45,7 @@ function TabBar() {
                   aria-label="Add transaction"
                   aria-hidden={!onTransactions}
                   tabIndex={onTransactions ? 0 : -1}
-                  onClick={() => navigate("/transactions/new")}
+                  onClick={() => navigate(routes.addTransaction())}
                   className={cn(
                     "absolute bottom-full left-1/2 mb-1 flex size-11 -translate-x-1/2 items-center justify-center border-3 border-ink bg-accent shadow-hard-sm lift",
                     "lift-slide",
@@ -84,7 +85,7 @@ function Sidebar() {
   const me = useMe()
   const navigate = useNavigate()
   const tabs = useTabLinks()
-  const onTransactions = useMatch({ path: "/transactions", end: false }) !== null
+  const onTransactions = useMatch({ path: routes.transactions, end: false }) !== null
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r-3 border-ink bg-paper p-6 md:flex">
       <Display size="sm" as="div">
@@ -92,7 +93,7 @@ function Sidebar() {
       </Display>
       <nav aria-label="Main" className="mt-8 flex flex-col gap-2">
         {tabs.map((tab) => {
-          const withPlus = tab.to === "/transactions"
+          const withPlus = tab.to === routes.transactions
           const Glyph = tab.icon
           return (
             <div key={tab.to} className="relative">
@@ -116,7 +117,7 @@ function Sidebar() {
                   aria-label="Add transaction"
                   aria-hidden={!onTransactions}
                   tabIndex={onTransactions ? 0 : -1}
-                  onClick={() => navigate("/transactions/new")}
+                  onClick={() => navigate(routes.addTransaction())}
                   className={cn(
                     // Straddles the rail's right border: the nav sits 24px inside the rail.
                     "absolute top-1/2 -right-6 z-10 flex size-11 -translate-y-1/2 translate-x-1/2 items-center justify-center border-3 border-ink bg-accent shadow-hard-sm lift",
@@ -135,7 +136,7 @@ function Sidebar() {
         <div className="font-mono text-xs text-grey-ink">{me.data?.email ?? ""}</div>
         <button
           type="button"
-          onClick={() => signOut().then(() => navigate("/sign-in"))}
+          onClick={() => signOut().then(() => navigate(routes.signIn))}
           className="self-start font-heading text-sm font-bold hover:underline"
         >
           Sign out

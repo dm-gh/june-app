@@ -2,6 +2,7 @@ import { CaretRight } from "@phosphor-icons/react"
 import { Link } from "react-router"
 import { useAttention } from "../api/queries"
 import { plural } from "../lib/format"
+import { routes } from "../routes"
 import { Card, Text } from "../ui"
 
 /** Anything that needs a Wallet: Recurrings whose Wallet was deleted, Transactions left Unassigned. */
@@ -23,7 +24,7 @@ export function AttentionBanner() {
     ...(unassigned > 0 ? [`${unassigned} ${plural(unassigned, "transaction")} ${plural(unassigned, "is", "are")} unassigned`] : [])
   ]
   return (
-    <Link to={recurrings > 0 ? "/more" : "/transactions"} className="block">
+    <Link to={recurrings > 0 ? routes.more : routes.transactions} className="block">
       <Card accent="coral" shadow="sm" className="flex items-center gap-3 p-3 lift">
         <div className="min-w-0 flex-1">
           <div className="font-heading font-bold">Some items need attention</div>

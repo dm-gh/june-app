@@ -1,13 +1,14 @@
 import { type ReactNode, useState } from "react"
 import { Navigate } from "react-router"
 import { signInWithGoogle, useSession } from "../../api/auth"
+import { routes } from "../../routes"
 import { Button, Display, ErrorNotice, Loading } from "../../ui"
 
 export function SignInPage() {
   const session = useSession()
   const [error, setError] = useState<string | null>(null)
   if (session.isPending) return <Loading />
-  if (session.data) return <Navigate to="/transactions" replace />
+  if (session.data) return <Navigate to={routes.transactions} replace />
   return (
     <main className="flex min-h-dvh items-center justify-center px-4">
       <div className="flex w-full max-w-[440px] flex-col gap-6">
@@ -36,6 +37,6 @@ export function SignInPage() {
 export function RequireAuth({ children }: { children: ReactNode }) {
   const session = useSession()
   if (session.isPending) return <Loading />
-  if (!session.data) return <Navigate to="/sign-in" replace />
+  if (!session.data) return <Navigate to={routes.signIn} replace />
   return <>{children}</>
 }

@@ -20,6 +20,7 @@ import { EditTransactionPage } from "./components/transactions/TransactionPage"
 import { TransactionsPage } from "./components/transactions/TransactionsPage"
 import { type Filter, FilterContext, parseFilter } from "./lib/filter"
 import { monthPeriod, type Period, PeriodContext, todayLocal } from "./lib/period"
+import { patterns, routes } from "./routes"
 
 const PERIOD_KEY = "june.period"
 
@@ -62,7 +63,7 @@ export function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/sign-in" element={<SignInPage />} />
+        <Route path={routes.signIn} element={<SignInPage />} />
         <Route
           path="/*"
           element={
@@ -70,32 +71,32 @@ export function App() {
               <PeriodProvider>
                 <FilterProvider>
                 <Routes>
-                  <Route index element={<Navigate to="/transactions" replace />} />
-                  <Route path="transactions" element={<TransactionsPage />} />
-                  <Route path="transactions/new" element={<AddTransactionPage />} />
-                  <Route path="transactions/bulk-edit" element={<BulkEditPage />} />
-                  <Route path="transactions/:id" element={<EditTransactionPage />} />
-                  <Route path="analysis" element={<AnalysisPage />} />
-                  <Route path="analysis/categories" element={<BreakdownPage dimension="categories" />} />
-                  <Route path="analysis/categories/income" element={<BreakdownPage dimension="categories" side="income" />} />
-                  <Route path="analysis/wallets" element={<BreakdownPage dimension="wallets" />} />
-                  <Route path="analysis/tags" element={<BreakdownPage dimension="tags" />} />
-                  <Route path="more" element={<MorePage />} />
-                  <Route path="more/recurrings/new" element={<AddRecurringPage />} />
-                  <Route path="more/recurrings/:id" element={<RecurringPage />} />
-                  <Route path="more/recurrings/:id/edit" element={<EditRecurringPage />} />
-                  <Route path="more/loans/new" element={<AddLoanPage />} />
-                  <Route path="more/loans/archive" element={<LoansArchivePage />} />
-                  <Route path="more/loans/:id" element={<LoanPage />} />
-                  <Route path="more/loans/:id/edit" element={<EditLoanPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
-                  <Route path="settings/shortcut" element={<ShortcutPage />} />
-                  <Route path="settings/import" element={<ImportPage />} />
-                  <Route path="settings/wallets/new" element={<AddWalletPage />} />
-                  <Route path="settings/wallets/:id" element={<EditWalletPage />} />
-                  <Route path="settings/categories/new" element={<AddCategoryPage />} />
-                  <Route path="settings/categories/:id" element={<EditCategoryPage />} />
-                  <Route path="*" element={<Navigate to="/transactions" replace />} />
+                  <Route index element={<Navigate to={routes.transactions} replace />} />
+                  <Route path={routes.transactions} element={<TransactionsPage />} />
+                  <Route path={routes.addTransaction()} element={<AddTransactionPage />} />
+                  <Route path={routes.bulkEdit} element={<BulkEditPage />} />
+                  <Route path={patterns.transaction} element={<EditTransactionPage />} />
+                  <Route path={routes.analysis} element={<AnalysisPage />} />
+                  <Route path={routes.breakdown("categories")} element={<BreakdownPage dimension="categories" />} />
+                  <Route path={routes.breakdown("categories", "income")} element={<BreakdownPage dimension="categories" side="income" />} />
+                  <Route path={routes.breakdown("wallets")} element={<BreakdownPage dimension="wallets" />} />
+                  <Route path={routes.breakdown("tags")} element={<BreakdownPage dimension="tags" />} />
+                  <Route path={routes.more} element={<MorePage />} />
+                  <Route path={routes.addRecurring} element={<AddRecurringPage />} />
+                  <Route path={patterns.recurring} element={<RecurringPage />} />
+                  <Route path={patterns.editRecurring} element={<EditRecurringPage />} />
+                  <Route path={routes.addLoan} element={<AddLoanPage />} />
+                  <Route path={routes.loansArchive} element={<LoansArchivePage />} />
+                  <Route path={patterns.loan} element={<LoanPage />} />
+                  <Route path={patterns.editLoan} element={<EditLoanPage />} />
+                  <Route path={routes.settings} element={<SettingsPage />} />
+                  <Route path={routes.shortcut} element={<ShortcutPage />} />
+                  <Route path={routes.importCsv} element={<ImportPage />} />
+                  <Route path={routes.addWallet} element={<AddWalletPage />} />
+                  <Route path={patterns.wallet} element={<EditWalletPage />} />
+                  <Route path={routes.addCategory} element={<AddCategoryPage />} />
+                  <Route path={patterns.category} element={<EditCategoryPage />} />
+                  <Route path="*" element={<Navigate to={routes.transactions} replace />} />
                 </Routes>
                 </FilterProvider>
               </PeriodProvider>
