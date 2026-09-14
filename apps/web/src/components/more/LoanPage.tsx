@@ -57,7 +57,6 @@ export function LoanPage() {
           {remove.error ? <ErrorNotice message={remove.error.message} /> : null}
         </div>
       ) : null}
-      <div className="pb-8" />
       <Dialog
         open={confirm}
         title={`Delete ${who}?`}

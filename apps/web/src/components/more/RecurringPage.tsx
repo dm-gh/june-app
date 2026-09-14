@@ -78,7 +78,6 @@ export function RecurringPage() {
           {remove.error ? <ErrorNotice message={remove.error.message} /> : null}
         </div>
       ) : null}
-      <div className="pb-8" />
 
       {r && submitting ? <SubmitDialog recurring={r} onClose={() => setSubmitting(false)} /> : null}
       <Dialog

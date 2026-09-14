@@ -276,7 +276,6 @@ export function AnalysisPage() {
 
       {flowSection("wallets", "By wallet", walletSlices)}
       {flowSection("tags", "By tag", tagSlices)}
-      <div className="pb-6" />
     </AppShell>
   )
 }

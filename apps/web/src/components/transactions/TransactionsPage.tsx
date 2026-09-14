@@ -82,7 +82,7 @@ export function TransactionsPage() {
         <Empty>Nothing in this period matches the filter.</Empty>
       ) : null}
 
-      <div className="flex flex-col gap-4 pb-6">
+      <div className="flex flex-col gap-4">
         {groups.map(([day, rows]) => (
           <section key={day}>
             <Label as="h2" className="mb-2 block text-grey-ink">

@@ -6,6 +6,7 @@ import { useMe } from "../api/queries"
 import { FilterContext, filterSearch } from "../lib/filter"
 import { cn, Display } from "../ui"
 import { AttentionBanner, useAttentionNeeded } from "./AttentionBanner"
+import { gutter } from "./gutter"
 
 const tabs: ReadonlyArray<{ to: string; label: string; icon: Icon; filtered: boolean }> = [
   { to: "/analysis", label: "Analysis", icon: ChartBar, filtered: true },
@@ -145,37 +146,41 @@ function Sidebar() {
 }
 
 export interface AppShellProps {
-  /** Phone screens without the tab bar (full-screen forms). */
-  fullscreen?: boolean
+  /** The phone tab bar, and the attention banner every tabbed screen shows; off for full-screen forms. */
+  tabs?: boolean
   /** Content column width: lists 720px, forms 560px. */
   width?: "list" | "form"
+  /** What ends the column: a gap below the last card (24px on a list, 32px on a form), or a bar the page brings, such as a form's sticky action bar. */
+  bottom?: "gap" | "bar"
   children: ReactNode
 }
 
-export function AppShell({ fullscreen = false, width = "list", children }: AppShellProps) {
-  // The banner shows on every tabbed screen; a page's sticky header swallows the column's top padding, so it gets its own.
-  const attention = useAttentionNeeded() && !fullscreen
+export function AppShell({ tabs = true, width = "list", bottom = "gap", children }: AppShellProps) {
+  // A page's sticky header swallows the column's top padding, so the banner gets its own.
+  const attention = useAttentionNeeded() && tabs
   return (
     <div className="min-h-dvh md:flex">
       <Sidebar />
-      <main className={cn("flex min-h-dvh flex-1 flex-col", !fullscreen && "pb-[calc(80px+env(safe-area-inset-bottom))] md:pb-0")}>
+      <main className={cn("flex min-h-dvh flex-1 flex-col", tabs && "pb-[calc(80px+env(safe-area-inset-bottom))] md:pb-0")}>
         <div
           className={cn(
-            "mx-auto flex w-full flex-1 flex-col px-4 pt-4 md:px-8 md:pt-8",
-            width === "form" ? "max-w-[calc(560px+4rem)]" : "max-w-[calc(720px+4rem)]"
+            "mx-auto flex w-full flex-1 flex-col",
+            gutter.around,
+            width === "form" ? "max-w-[calc(560px+4rem)]" : "max-w-[calc(720px+4rem)]",
+            bottom === "gap" && (width === "form" ? "pb-8" : "pb-6")
           )}
         >
           {attention ? (
             <>
               <AttentionBanner />
-              <div className="flex flex-1 flex-col pt-4 md:pt-8">{children}</div>
+              <div className={cn("flex flex-1 flex-col", gutter.top)}>{children}</div>
             </>
           ) : (
             children
           )}
         </div>
       </main>
-      {fullscreen ? null : <TabBar />}
+      {tabs ? <TabBar /> : null}
     </div>
   )
 }

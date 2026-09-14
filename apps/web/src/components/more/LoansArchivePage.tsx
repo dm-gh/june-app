@@ -30,7 +30,6 @@ export function LoansArchivePage() {
           <LoanCard key={l.id} loan={l} />
         ))}
       </div>
-      <div className="pb-6" />
     </AppShell>
   )
 }

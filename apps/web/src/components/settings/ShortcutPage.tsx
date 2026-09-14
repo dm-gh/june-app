@@ -119,7 +119,7 @@ export function ShortcutPage() {
   const provided = <Variable name="Provided Input" />
 
   return (
-    <AppShell fullscreen width="form">
+    <AppShell tabs={false} width="form">
       <StickyBar className="pb-2">
         <div className="-ml-2.5 flex items-center">
           <IconButton icon={ArrowLeft} label="Back" onClick={() => navigate("/settings")} />
@@ -276,7 +276,6 @@ export function ShortcutPage() {
           Run it once to test, then in the Shortcut's details choose <strong>Add to Home Screen</strong>. Regenerating the capture URL later means pasting the new one into step 8.
         </Text>
       </Step>
-      <div className="pb-8" />
 
       <Dialog
         open={confirm}

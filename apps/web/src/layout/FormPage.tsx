@@ -32,7 +32,7 @@ export function FormPage({ title, backTo, menu, submitLabel, onSubmit, busy, can
     onSubmit?.()
   }
   return (
-    <AppShell fullscreen width="form">
+    <AppShell tabs={false} width="form" bottom={submitLabel ? "bar" : "gap"}>
       <form onSubmit={submit} className="flex flex-1 flex-col">
         <StickyBar className="pb-2">
           <div className="-ml-2.5 flex items-center justify-between">
@@ -58,9 +58,7 @@ export function FormPage({ title, backTo, menu, submitLabel, onSubmit, busy, can
               {submitLabel}
             </Button>
           </div>
-        ) : (
-          <div className="pb-8" />
-        )}
+        ) : null}
       </form>
     </AppShell>
   )

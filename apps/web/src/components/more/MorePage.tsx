@@ -70,7 +70,6 @@ export function MorePage() {
           </Link>
         </div>
       ) : null}
-      <div className="pb-6" />
 
       {submitting ? <SubmitDialog recurring={submitting} onClose={() => setSubmitting(null)} /> : null}
     </AppShell>

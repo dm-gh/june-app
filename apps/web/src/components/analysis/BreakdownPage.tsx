@@ -104,7 +104,6 @@ export function BreakdownPage({ dimension, side = "expense" }: { dimension: Dime
       ) : (
         <BreakdownList slices={slices} look={look} currency={currency} total={total} />
       )}
-      <div className="pb-6" />
     </AppShell>
   )
 }
