@@ -1,11 +1,11 @@
 import type { LoanId } from "@june/shared"
-import { Archive, ArrowCounterClockwise, PencilSimple, Trash } from "@phosphor-icons/react"
-import { useState } from "react"
+import { Archive, ArrowCounterClockwise, PencilSimple } from "@phosphor-icons/react"
 import { useNavigate, useParams } from "react-router"
 import { useDeleteLoan, useLoan, useUpdateLoan } from "../../api/queries"
 import { Page } from "../../layout/Page"
+import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
 import { formatLongDate, fromEpochMillis } from "../../lib/period"
-import { Button, Dialog, QueryState } from "../../ui"
+import { Button, QueryState } from "../../ui"
 import { LoanCard } from "./LoanCard"
 
 /** A Loan's page: the same card as the list, and Settle. Edit, Archive and Delete sit behind the menu. */
@@ -15,9 +15,14 @@ export function LoanPage() {
   const loan = useLoan(id as LoanId)
   const update = useUpdateLoan()
   const remove = useDeleteLoan()
-  const [confirm, setConfirm] = useState(false)
   const l = loan.data
-  const who = l?.description || "this loan"
+  const confirmDelete = useDeleteConfirm({
+    remove,
+    id: l?.id,
+    title: `Delete ${l?.description || "this loan"}?`,
+    body: "Any transactions recorded while settling it stay.",
+    after: () => navigate("/more")
+  })
   const since = (d: { epochMillis: number }) => formatLongDate(fromEpochMillis(d.epochMillis))
 
   return (
@@ -34,7 +39,7 @@ export function LoanPage() {
                 disabled: update.isPending,
                 onSelect: () => update.mutate({ id: l.id, payload: { archived: !l.archived } })
               },
-              { label: "Delete", icon: Trash, danger: true, onSelect: () => setConfirm(true) }
+              confirmDelete.menuItem
             ]
           : undefined
       }
@@ -49,16 +54,7 @@ export function LoanPage() {
           </Button>
         </div>
       ) : null}
-      <Dialog
-        open={confirm}
-        title={`Delete ${who}?`}
-        body="Any transactions recorded while settling it stay."
-        confirmLabel="Delete"
-        danger
-        busy={remove.isPending}
-        onConfirm={() => l && remove.mutate(l.id, { onSuccess: () => navigate("/more") })}
-        onCancel={() => setConfirm(false)}
-      />
+      {confirmDelete.dialog}
     </Page>
   )
 }

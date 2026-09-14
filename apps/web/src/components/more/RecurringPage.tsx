@@ -1,11 +1,12 @@
 import type { RecurringId } from "@june/shared"
-import { PencilSimple, Trash } from "@phosphor-icons/react"
+import { PencilSimple } from "@phosphor-icons/react"
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCategoryIndex, useDeleteRecurring, useRecurring, useWalletIndex } from "../../api/queries"
 import { Page } from "../../layout/Page"
+import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
 import { formatLongDate } from "../../lib/period"
-import { Badge, Button, Card, Dialog, Label, QueryState } from "../../ui"
+import { Badge, Button, Card, Label, QueryState } from "../../ui"
 import { dueState, scheduleWords } from "./recurring"
 import { RecurringCard } from "./RecurringCard"
 import { SubmitDialog } from "./SubmitDialog"
@@ -19,9 +20,15 @@ export function RecurringPage() {
   const wallets = useWalletIndex()
   const remove = useDeleteRecurring()
   const [submitting, setSubmitting] = useState(false)
-  const [confirm, setConfirm] = useState(false)
 
   const r = recurring.data
+  const confirmDelete = useDeleteConfirm({
+    remove,
+    id: r?.id,
+    title: `Delete ${r?.name ?? "this recurring"}?`,
+    body: "The transactions it already recorded stay.",
+    after: () => navigate("/more")
+  })
   const category = categories.get(r?.categoryId)
   const wallet = r?.walletId ? wallets.byId.get(r.walletId) : undefined
   const due = r ? dueState(r) : null
@@ -34,7 +41,7 @@ export function RecurringPage() {
         r
           ? [
               { label: "Edit", icon: PencilSimple, onSelect: () => navigate(`/more/recurrings/${r.id}/edit`) },
-              { label: "Delete", icon: Trash, danger: true, onSelect: () => setConfirm(true) }
+              confirmDelete.menuItem
             ]
           : undefined
       }
@@ -73,16 +80,7 @@ export function RecurringPage() {
       ) : null}
 
       {r && submitting ? <SubmitDialog recurring={r} onClose={() => setSubmitting(false)} /> : null}
-      <Dialog
-        open={confirm}
-        title={`Delete ${r?.name ?? "this recurring"}?`}
-        body="The transactions it already recorded stay."
-        confirmLabel="Delete"
-        danger
-        busy={remove.isPending}
-        onConfirm={() => r && remove.mutate(r.id, { onSuccess: () => navigate("/more") })}
-        onCancel={() => setConfirm(false)}
-      />
+      {confirmDelete.dialog}
     </Page>
   )
 }

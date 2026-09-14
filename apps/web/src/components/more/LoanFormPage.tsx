@@ -1,11 +1,11 @@
 import { type CurrencyCode, type Loan, type LoanId, type MinorAmount, toMajorFixed } from "@june/shared"
-import { Trash } from "@phosphor-icons/react"
 import { Either } from "effect"
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCreateLoan, useDeleteLoan, useLoan, useMe, useUpdateLoan } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
-import { CurrencySelect, Dialog, Field, Input, QueryState, Segmented, useDraft } from "../../ui"
+import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
+import { CurrencySelect, Field, Input, QueryState, Segmented, useDraft } from "../../ui"
 import { AmountInput } from "../../ui/AmountInput"
 import { readAmount } from "../transactions/changeDraft"
 
@@ -93,7 +93,13 @@ export function EditLoanPage() {
   const remove = useDeleteLoan()
   const [draft, setDraft] = useDraft(loan.data, draftFromLoan)
   const [error, setError] = useState<string | null>(null)
-  const [confirm, setConfirm] = useState(false)
+  const confirmDelete = useDeleteConfirm({
+    remove,
+    id: loan.data?.id,
+    title: `Delete ${loan.data?.description || "this loan"}?`,
+    body: "Any transactions recorded while settling it stay.",
+    after: () => navigate("/more")
+  })
 
   if (loan.isPending || draft === null) {
     return (
@@ -117,19 +123,10 @@ export function EditLoanPage() {
       onSubmit={submit}
       busy={update.isPending}
       error={error ?? update.error?.message ?? remove.error?.message ?? null}
-      menu={[{ label: "Delete", icon: Trash, danger: true, onSelect: () => setConfirm(true) }]}
+      menu={[confirmDelete.menuItem]}
     >
       <LoanFields draft={draft} onChange={setDraft} />
-      <Dialog
-        open={confirm}
-        title={`Delete ${l.description || "this loan"}?`}
-        body="Any transactions recorded while settling it stay."
-        confirmLabel="Delete"
-        danger
-        busy={remove.isPending}
-        onConfirm={() => remove.mutate(l.id, { onSuccess: () => navigate("/more") })}
-        onCancel={() => setConfirm(false)}
-      />
+      {confirmDelete.dialog}
     </FormPage>
   )
 }

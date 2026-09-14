@@ -1,11 +1,11 @@
 import { type CurrencyCode, type MinorAmount, toMajorFixed, type Wallet, type WalletId } from "@june/shared"
-import { Trash } from "@phosphor-icons/react"
 import { Either } from "effect"
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCreateWallet, useDeleteWallet, useMe, useUpdateWallet, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
-import { CurrencySelect, Dialog, Field, Input, Loading, useDraft } from "../../ui"
+import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
+import { CurrencySelect, Field, Input, Loading, useDraft } from "../../ui"
 import { AmountInput } from "../../ui/AmountInput"
 import { readAmount, type Sign } from "../transactions/changeDraft"
 
@@ -83,8 +83,14 @@ export function EditWalletPage() {
   const remove = useDeleteWallet()
   const wallet = wallets.data?.wallets.find((w) => w.id === id)
   const [draft, setDraft] = useDraft(wallet, draftFromWallet)
-  const [confirm, setConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const confirmDelete = useDeleteConfirm({
+    remove,
+    id: wallet ? (wallet.id as WalletId) : undefined,
+    title: `Delete ${wallet?.name ?? "this wallet"}?`,
+    body: "Its transactions stay but lose their wallet; exchanges with other wallets become plain transactions there. The opening balance goes.",
+    after: () => navigate("/settings")
+  })
 
   if (!wallet || draft === null) {
     return (
@@ -110,19 +116,10 @@ export function EditWalletPage() {
       onSubmit={submit}
       busy={update.isPending}
       error={error ?? update.error?.message ?? remove.error?.message ?? null}
-      menu={[{ label: "Delete", icon: Trash, danger: true, onSelect: () => setConfirm(true) }]}
+      menu={[confirmDelete.menuItem]}
     >
       <WalletFields draft={draft} onChange={setDraft} mode="edit" />
-      <Dialog
-        open={confirm}
-        title={`Delete ${wallet.name}?`}
-        body="Its transactions stay but lose their wallet; exchanges with other wallets become plain transactions there. The opening balance goes."
-        confirmLabel="Delete"
-        danger
-        busy={remove.isPending}
-        onConfirm={() => remove.mutate(wallet.id as WalletId, { onSuccess: () => navigate("/settings") })}
-        onCancel={() => setConfirm(false)}
-      />
+      {confirmDelete.dialog}
     </FormPage>
   )
 }

@@ -1,11 +1,11 @@
 import { type CategoryId, type CategoryType, type Hue, type Slug, slugify } from "@june/shared"
-import { Trash } from "@phosphor-icons/react"
 import { lazy, Suspense, useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
+import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
 import { categoryLabel, hueColor } from "../../lib/format"
-import { Dialog, Field, HueSlider, Input, Loading, Segmented, Sheet } from "../../ui"
+import { Field, HueSlider, Input, Loading, Segmented, Sheet } from "../../ui"
 import { FitText } from "../../ui/FitText"
 
 const EmojiPicker = lazy(() => import("emoji-picker-react"))
@@ -132,7 +132,13 @@ export function EditCategoryPage() {
   const remove = useDeleteCategory()
   const category = categories.data?.find((c) => c.id === id)
   const [draft, setDraft] = useState<Draft | null>(null)
-  const [confirm, setConfirm] = useState(false)
+  const confirmDelete = useDeleteConfirm({
+    remove,
+    id: category ? (category.id as CategoryId) : undefined,
+    title: `Delete ${category?.name ?? "this category"}?`,
+    body: "Its transactions stay and become Uncategorised. A Shortcut still sending this slug records Uncategorised too.",
+    after: () => navigate("/settings")
+  })
 
   useEffect(() => {
     if (category && draft === null) setDraft({ type: category.type, emoji: category.emoji ?? "", name: category.name, hue: category.hue })
@@ -162,19 +168,10 @@ export function EditCategoryPage() {
       busy={update.isPending}
       canSubmit={draft.name.trim().length > 0}
       error={update.error?.message ?? remove.error?.message ?? null}
-      menu={[{ label: "Delete", icon: Trash, danger: true, onSelect: () => setConfirm(true) }]}
+      menu={[confirmDelete.menuItem]}
     >
       <CategoryFields draft={draft} onChange={setDraft} slug={category.slug} typeLocked />
-      <Dialog
-        open={confirm}
-        title={`Delete ${category.name}?`}
-        body="Its transactions stay and become Uncategorised. A Shortcut still sending this slug records Uncategorised too."
-        confirmLabel="Delete"
-        danger
-        busy={remove.isPending}
-        onConfirm={() => remove.mutate(category.id as CategoryId, { onSuccess: () => navigate("/settings") })}
-        onCancel={() => setConfirm(false)}
-      />
+      {confirmDelete.dialog}
     </FormPage>
   )
 }

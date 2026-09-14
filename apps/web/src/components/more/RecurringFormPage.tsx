@@ -1,11 +1,11 @@
 import { type Recurring, type RecurringId, toMajorFixed } from "@june/shared"
-import { Trash } from "@phosphor-icons/react"
 import { Either } from "effect"
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCategories, useCreateRecurring, useDeleteRecurring, useRecurring, useTags, useUpdateRecurring, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
-import { Checkbox, Dialog, Field, Input, Notice, QueryState, TagsField, Text, useDraft } from "../../ui"
+import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
+import { Checkbox, Field, Input, Notice, QueryState, TagsField, Text, useDraft } from "../../ui"
 import { type ChangeErrors, type ChangeFieldsDraft, readChangeDraft } from "../transactions/changeDraft"
 import { ChangeFields } from "../transactions/ChangeFields"
 import { emptySchedule, type ScheduleDraft, scheduleFromRecurring, schedulePayload, SchedulePicker } from "./SchedulePicker"
@@ -122,7 +122,13 @@ export function EditRecurringPage() {
   const remove = useDeleteRecurring()
   const [draft, setDraft] = useDraft(recurring.data, draftFromRecurring)
   const [errors, setErrors] = useState<RecurringErrors>({})
-  const [confirm, setConfirm] = useState(false)
+  const confirmDelete = useDeleteConfirm({
+    remove,
+    id: recurring.data?.id,
+    title: `Delete ${recurring.data?.name ?? "this recurring"}?`,
+    body: "The transactions it already recorded stay.",
+    after: () => navigate("/more")
+  })
 
   if (recurring.isPending || wallets.isPending || categories.isPending || draft === null) {
     return (
@@ -163,19 +169,10 @@ export function EditRecurringPage() {
       onSubmit={submit}
       busy={update.isPending}
       error={update.error?.message ?? remove.error?.message ?? null}
-      menu={[{ label: "Delete", icon: Trash, danger: true, onSelect: () => setConfirm(true) }]}
+      menu={[confirmDelete.menuItem]}
     >
       <RecurringFields draft={draft} onChange={setDraft} wallets={wallets.data?.wallets ?? []} categories={categories.data ?? []} tagSuggestions={tags.data ?? []} errors={errors} />
-      <Dialog
-        open={confirm}
-        title={`Delete ${r.name}?`}
-        body="The transactions it already recorded stay."
-        confirmLabel="Delete"
-        danger
-        busy={remove.isPending}
-        onConfirm={() => remove.mutate(r.id, { onSuccess: () => navigate("/more") })}
-        onCancel={() => setConfirm(false)}
-      />
+      {confirmDelete.dialog}
     </FormPage>
   )
 }

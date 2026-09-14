@@ -1,11 +1,11 @@
 import type { ExchangeId, TransactionId } from "@june/shared"
-import { Trash } from "@phosphor-icons/react"
 import { Either } from "effect"
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCategories, useDeleteTransactions, useExchange, useTags, useTransaction, useUpdateExchange, useUpdateTransaction, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
-import { Dialog, ErrorNotice, QueryState, useDraft } from "../../ui"
+import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
+import { ErrorNotice, QueryState, useDraft } from "../../ui"
 import { type ChangeErrors, draftFromTransaction, readChangeDraft } from "./changeDraft"
 import { draftFromLegs, exchangePayload } from "./exchangeDraft"
 import { ExchangeFields } from "./ExchangeForm"
@@ -33,7 +33,13 @@ function EditExchangePage({ exchangeId }: { exchangeId: ExchangeId }) {
   const remove = useDeleteTransactions()
   const [draft, setDraft] = useDraft(legs.data, draftFromLegs)
   const [error, setError] = useState<string | null>(null)
-  const [confirm, setConfirm] = useState(false)
+  const confirmDelete = useDeleteConfirm({
+    remove,
+    id: legs.data?.[0] ? [legs.data[0].id] : undefined,
+    title: "Delete this exchange?",
+    body: "Both legs go, and both Wallets' Balances move back.",
+    after: () => navigate("/transactions")
+  })
 
   const walletList = wallets.data?.wallets ?? []
   if (legs.isPending || wallets.isPending) {
@@ -66,19 +72,10 @@ function EditExchangePage({ exchangeId }: { exchangeId: ExchangeId }) {
       onSubmit={submit}
       busy={update.isPending}
       error={error ?? update.error?.message ?? remove.error?.message ?? null}
-      menu={[{ label: "Delete", icon: Trash, danger: true, onSelect: () => setConfirm(true) }]}
+      menu={[confirmDelete.menuItem]}
     >
       <ExchangeFields draft={draft} onChange={setDraft} wallets={walletList} tagSuggestions={tags.data ?? []} />
-      <Dialog
-        open={confirm}
-        title="Delete this exchange?"
-        body="Both legs go, and both Wallets' Balances move back."
-        confirmLabel="Delete"
-        danger
-        busy={remove.isPending}
-        onConfirm={() => remove.mutate([legs.data![0]!.id], { onSuccess: () => navigate("/transactions") })}
-        onCancel={() => setConfirm(false)}
-      />
+      {confirmDelete.dialog}
     </FormPage>
   )
 }
@@ -94,7 +91,13 @@ function EditChangePage({ id }: { id: TransactionId }) {
   const remove = useDeleteTransactions()
   const [draft, setDraft] = useDraft(transaction.data, draftFromTransaction)
   const [errors, setErrors] = useState<ChangeErrors>({})
-  const [confirm, setConfirm] = useState(false)
+  const confirmDelete = useDeleteConfirm({
+    remove,
+    id: transaction.data ? [transaction.data.id] : undefined,
+    title: "Delete this transaction?",
+    body: "It is removed for good and the Wallet's Balance moves accordingly.",
+    after: () => navigate("/transactions")
+  })
 
   if (transaction.isPending || wallets.isPending || categories.isPending || draft === null) {
     return (
@@ -125,7 +128,7 @@ function EditChangePage({ id }: { id: TransactionId }) {
       onSubmit={submit}
       busy={update.isPending}
       error={update.error?.message ?? remove.error?.message ?? null}
-      menu={canDelete ? [{ label: "Delete", icon: Trash, danger: true, onSelect: () => setConfirm(true) }] : undefined}
+      menu={canDelete ? [confirmDelete.menuItem] : undefined}
     >
       <TransactionForm
         draft={draft}
@@ -137,16 +140,7 @@ function EditChangePage({ id }: { id: TransactionId }) {
         transactionType={t.type}
         errors={errors}
       />
-      <Dialog
-        open={confirm}
-        title="Delete this transaction?"
-        body="It is removed for good and the Wallet's Balance moves accordingly."
-        confirmLabel="Delete"
-        danger
-        busy={remove.isPending}
-        onConfirm={() => remove.mutate([t.id], { onSuccess: () => navigate("/transactions") })}
-        onCancel={() => setConfirm(false)}
-      />
+      {confirmDelete.dialog}
     </FormPage>
   )
 }

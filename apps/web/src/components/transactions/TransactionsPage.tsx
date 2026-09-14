@@ -1,15 +1,16 @@
 import type { TransactionId } from "@june/shared"
-import { PencilSimple, Trash, X } from "@phosphor-icons/react"
+import { PencilSimple, X } from "@phosphor-icons/react"
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router"
 import { useCategoryIndex, useDeleteTransactions, useTransactions, useWalletIndex } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { PeriodHeader } from "../../layout/PeriodHeader"
 import { StickyBar } from "../../layout/StickyBar"
+import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
 import { filterItems, isEmptyFilter, useFilter } from "../../lib/filter"
 import { dayHeading, plural } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
-import { Dialog, Empty, ErrorNotice, IconButton, Label, Menu, QueryState } from "../../ui"
+import { Empty, ErrorNotice, IconButton, Label, Menu, QueryState } from "../../ui"
 import { groupByDay, itemIds, toItems } from "./listItems"
 import { TransactionCard } from "./TransactionCard"
 
@@ -23,7 +24,6 @@ export function TransactionsPage() {
   const remove = useDeleteTransactions()
   const [selected, setSelected] = useState<ReadonlySet<TransactionId>>(new Set())
   const [selecting, setSelecting] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const items = useMemo(() => filterItems(toItems(transactions.data ?? []), filter, categories.slugOf), [transactions.data, filter, categories.slugOf])
   const groups = useMemo(() => groupByDay(items), [items])
@@ -42,14 +42,15 @@ export function TransactionsPage() {
   }
   const ids = [...selected]
   const selectedCount = items.filter((item) => itemIds(item).every((id) => selected.has(id))).length
-
-  const deleteSelected = () =>
-    remove.mutate(ids, {
-      onSuccess: () => {
-        setConfirmDelete(false)
-        exitSelection()
-      }
-    })
+  const confirmDelete = useDeleteConfirm({
+    remove,
+    id: ids,
+    title: `Delete ${selectedCount} ${plural(selectedCount, "transaction")}?`,
+    body: "They are removed for good and every affected Balance moves accordingly.",
+    after: exitSelection,
+    label: `Delete ${selectedCount} items`,
+    disabled: ids.length === 0
+  })
 
   return (
     <AppShell>
@@ -66,7 +67,7 @@ export function TransactionsPage() {
                   disabled: ids.length === 0,
                   onSelect: () => navigate("/transactions/bulk-edit", { state: { ids } })
                 },
-                { label: `Delete ${selectedCount} items`, icon: Trash, danger: true, disabled: ids.length === 0, onSelect: () => setConfirmDelete(true) }
+                confirmDelete.menuItem
               ]}
             />
           </header>
@@ -115,16 +116,7 @@ export function TransactionsPage() {
         ))}
       </div>
 
-      <Dialog
-        open={confirmDelete}
-        title={`Delete ${selectedCount} ${plural(selectedCount, "transaction")}?`}
-        body="They are removed for good and every affected Balance moves accordingly."
-        confirmLabel="Delete"
-        danger
-        busy={remove.isPending}
-        onConfirm={deleteSelected}
-        onCancel={() => setConfirmDelete(false)}
-      />
+      {confirmDelete.dialog}
       {remove.isError ? (
         <div className="mb-4">
           <ErrorNotice message={remove.error.message} />
