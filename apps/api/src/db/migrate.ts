@@ -1,8 +1,8 @@
 import { NodeContext, NodeRuntime } from "@effect/platform-node"
 import * as PgMigrator from "@effect/sql-pg/PgMigrator"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import * as path from "node:path"
-import { PgLive } from "./PgLive.js"
+import { PgLive, PgPoolLive } from "./PgLive.js"
 
 /**
  * Runs every migration in ../migrations that has not yet been applied, then exits.
@@ -19,7 +19,7 @@ const program = PgMigrator.run({
       ? Effect.logInfo("No pending migrations")
       : Effect.logInfo(`Applied ${applied.length} migration(s): ${applied.map(([id, name]) => `${id}_${name}`).join(", ")}`)
   ),
-  Effect.provide(PgLive),
+  Effect.provide(PgLive.pipe(Layer.provide(PgPoolLive))),
   Effect.provide(NodeContext.layer)
 )
 

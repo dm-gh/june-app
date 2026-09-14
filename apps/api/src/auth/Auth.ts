@@ -1,28 +1,24 @@
 import type { UserId } from "@june/shared"
 import { betterAuth } from "better-auth"
-import { Config, Context, Effect, Layer, Redacted, Runtime } from "effect"
-import { Pool } from "pg"
+import { Context, Effect, Layer, Redacted, Runtime } from "effect"
 import { CaptureTokens } from "../capture/CaptureTokens.js"
 import { AppConfig } from "../config.js"
+import { PgPool } from "../db/PgLive.js"
 import { authOptions } from "./authOptions.js"
 
 const makeAuth = (settings: Parameters<typeof authOptions>[0]) => betterAuth(authOptions(settings))
 export type JuneAuth = ReturnType<typeof makeAuth>
 
-/** The Better Auth instance. Owns its own pg Pool, separate from Effect's SqlClient. */
+/** The Better Auth instance. Its Kysely dialect draws from the same pg Pool as Effect's SqlClient. */
 export class Auth extends Context.Tag("Auth")<Auth, JuneAuth>() {}
 
-export const AuthLive = Layer.scoped(
+export const AuthLive = Layer.effect(
   Auth,
   Effect.gen(function* () {
     const config = yield* AppConfig
+    const pool = yield* PgPool
     const captureTokens = yield* CaptureTokens
     const runtime = yield* Effect.runtime<never>()
-    const databaseUrl = yield* Config.redacted("DATABASE_URL")
-    const pool = yield* Effect.acquireRelease(
-      Effect.sync(() => new Pool({ connectionString: Redacted.value(databaseUrl) })),
-      (pool) => Effect.promise(() => pool.end())
-    )
     return makeAuth({
       pool,
       baseURL: config.baseUrl,

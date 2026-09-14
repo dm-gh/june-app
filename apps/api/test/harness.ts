@@ -7,19 +7,12 @@ import { Context, Effect, Layer, Redacted } from "effect"
 import { randomBytes, randomUUID } from "node:crypto"
 import * as path from "node:path"
 import { Client } from "pg"
-import { CaptureTokens, CaptureTokensLive } from "../src/capture/CaptureTokens.js"
-import { CategoriesRepoLive } from "../src/categories/Categories.js"
+import { CaptureTokens } from "../src/capture/CaptureTokens.js"
 import { AppConfig } from "../src/config.js"
-import { PgLiveForUrl } from "../src/db/PgLive.js"
-import { HandlersLive } from "../src/http/Api.js"
-import { LoansRepoLive } from "../src/loans/LoansRepo.js"
-import { RecurringFiringLive } from "../src/recurrings/Firing.js"
-import { RecurringsRepoLive } from "../src/recurrings/RecurringsRepo.js"
-import { RateProvider, type RateProviderShape } from "../src/rates/RateProvider.js"
-import { RatesLive } from "../src/rates/Rates.js"
-import { RecordChangeLive } from "../src/transactions/RecordChange.js"
-import { TransactionsRepoLive } from "../src/transactions/TransactionsRepo.js"
-import { WalletsRepoLive } from "../src/wallets/WalletsRepo.js"
+import { PgLive, PgPoolForUrl } from "../src/db/PgLive.js"
+import { ApiLive } from "../src/http/Api.js"
+import { RateProvider, type RateProviderShape, RateProviderStub } from "../src/rates/RateProvider.js"
+import { ServicesLive } from "../src/Services.js"
 
 /**
  * Tests run against the local docker compose Postgres only, never Railway (docs/mvp-scope.md,
@@ -50,7 +43,7 @@ export const testDatabase = Effect.acquireRelease(
     const url = new URL(adminUrl)
     url.pathname = `/${name}`
     yield* PgMigrator.run({ loader: PgMigrator.fromFileSystem(migrationsDirectory) }).pipe(
-      Effect.provide(PgLiveForUrl(url.toString())),
+      Effect.provide(PgLive.pipe(Layer.provide(PgPoolForUrl(url.toString())))),
       Effect.provide(NodeContext.layer)
     )
     return { name, url: url.toString() }
@@ -84,9 +77,10 @@ const testConfig = Layer.succeed(AppConfig, {
 })
 
 /**
- * The whole api in-process: a migrated database, the real handlers and repos, a stubbed Rate
- * Provider, and the session middleware replaced by a fixed test User. Requests go through the
- * real HttpApi web handler, so encoding, validation and status codes are exercised too.
+ * The whole api in-process, through the same ApiLive and ServicesLive main.ts serves. The
+ * substitution points are a fixed configuration, a throwaway database, a stubbed Rate Provider
+ * and a fixed test User in place of the session. Requests go through the real HttpApi web
+ * handler, so encoding, validation and status codes are exercised too.
  */
 export const makeHarness = (options?: {
   readonly user?: Partial<CurrentUserShape>
@@ -95,32 +89,21 @@ export const makeHarness = (options?: {
   Effect.gen(function* () {
     const user: CurrentUserShape = { ...testUser, ...options?.user }
     const db = yield* testDatabase
-    const PgTest = PgLiveForUrl(db.url)
 
-    const services = Layer.mergeAll(RatesLive, CaptureTokensLive, RecurringFiringLive).pipe(
-      Layer.provideMerge(RecordChangeLive),
-      Layer.provideMerge(Layer.mergeAll(WalletsRepoLive, CategoriesRepoLive, TransactionsRepoLive, RecurringsRepoLive, LoansRepoLive)),
+    const services = ServicesLive.pipe(
       Layer.provideMerge(
         Layer.mergeAll(
-          CaptureTokensLive,
-          Layer.succeed(
-            RateProvider,
-            options?.rateProvider ?? { ratesFor: () => Effect.succeed(stubRates) }
-          )
+          testConfig,
+          PgPoolForUrl(db.url),
+          options?.rateProvider === undefined ? RateProviderStub(stubRates) : Layer.succeed(RateProvider, options.rateProvider)
         )
-      ),
-      Layer.provideMerge(Layer.mergeAll(testConfig, PgTest))
+      )
     )
-
     const AuthStub = Layer.succeed(Authentication, Effect.succeed(user))
 
     // Build the services once for the test's scope so the handlers and the test share one pool.
     const context = yield* Layer.build(services)
-    const api = HttpApiBuilder.api(JuneApi).pipe(
-      Layer.provide(HandlersLive),
-      Layer.provide(AuthStub),
-      Layer.provide(Layer.succeedContext(context))
-    )
+    const api = ApiLive.pipe(Layer.provide(AuthStub), Layer.provide(Layer.succeedContext(context)))
     const { handler, dispose } = HttpApiBuilder.toWebHandler(Layer.mergeAll(api, HttpServer.layerContext), {
       // A 5xx in a test is a defect; print its cause instead of a bare status.
       middleware: (app) => app.pipe(Effect.tapErrorCause((cause) => Effect.logError("api failed", cause)))

@@ -1,4 +1,4 @@
-import { type Attention, type Category, type Loan, type Me, type Recurring, Tag, type Transaction, type WalletList } from "@june/shared"
+import { type Attention, type Category, type Loan, type Me, MinorAmount, type Recurring, Tag, type Transaction, type WalletList } from "@june/shared"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { createElement, type ReactNode } from "react"
 import { MemoryRouter } from "react-router"
@@ -31,7 +31,7 @@ export const fixturePeriod: Period = { from: "2026-09-01", to: "2026-09-30" } as
 
 export const defaultSeed: Seed = {
   me,
-  wallets: { wallets: [wallets.card, wallets.cash], totalDefaultMinor: 129300 } as WalletList,
+  wallets: { wallets: [wallets.card, wallets.cash], totalDefaultMinor: MinorAmount.make(129300) },
   categories: [categories.groceries, categories.salary],
   tags: [Tag.make("food"), Tag.make("weekly")],
   period: fixturePeriod,
