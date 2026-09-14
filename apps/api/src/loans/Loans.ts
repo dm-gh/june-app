@@ -1,25 +1,15 @@
-import { HttpApiBuilder, HttpApiError } from "@effect/platform"
+import { HttpApiBuilder } from "@effect/platform"
 import { SqlClient } from "@effect/sql"
-import { CurrentUser, type CurrentUserShape, JuneApi, type Loan, type LoanId } from "@june/shared"
-import { DateTime, Effect, Option } from "effect"
+import { CurrentUser, JuneApi } from "@june/shared"
+import { Effect } from "effect"
+import { orNotFound } from "../http/errors.js"
 import { RecordChange } from "../transactions/RecordChange.js"
-import { type LoanRow, LoansRepo } from "./LoansRepo.js"
-
-export const toLoan = (row: LoanRow): Loan =>
-  ({
-    id: row.id,
-    amountMinor: row.amountMinor,
-    currency: row.currency,
-    description: row.description,
-    archived: row.archived,
-    createdAt: DateTime.unsafeFromDate(row.createdAt),
-    updatedAt: DateTime.unsafeFromDate(row.updatedAt)
-  }) as Loan
+import { LoansRepo } from "./LoansRepo.js"
 
 /**
  * Loans (CONTEXT.md): a stored current position, Lent when positive and Borrowed when negative.
  * Settling records an ordinary Change and moves the Loan by the opposite of its amount, in one
- * transaction; nothing links the two (ADR-0005).
+ * transaction; nothing links the two (ADR-0005). A decoded row is the Loan the api returns.
  */
 export const LoansHandlersLive = HttpApiBuilder.group(JuneApi, "loans", (handlers) =>
   Effect.gen(function* () {
@@ -27,45 +17,33 @@ export const LoansHandlersLive = HttpApiBuilder.group(JuneApi, "loans", (handler
     const repo = yield* LoansRepo
     const recordChange = yield* RecordChange
 
-    const findOrNotFound = (user: CurrentUserShape, id: LoanId) =>
-      repo.find(user.id, id).pipe(Effect.flatMap(Option.match({ onNone: () => new HttpApiError.NotFound(), onSome: Effect.succeed })))
-
     return handlers
-      .handle("list", () => CurrentUser.pipe(Effect.flatMap((user) => repo.list(user.id)), Effect.map((rows) => rows.map(toLoan))))
-      .handle("get", ({ path }) => CurrentUser.pipe(Effect.flatMap((user) => findOrNotFound(user, path.id)), Effect.map(toLoan)))
+      .handle("list", () => CurrentUser.pipe(Effect.flatMap((user) => repo.list(user.id))))
+      .handle("get", ({ path }) => CurrentUser.pipe(Effect.flatMap((user) => orNotFound(repo.find(user.id, path.id)))))
       .handle("create", ({ payload }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
-          const row = yield* repo.insert(user.id, { amountMinor: payload.amountMinor, currency: payload.currency, description: payload.description ?? "" })
-          return toLoan(row)
+          return yield* repo.insert(user.id, { amountMinor: payload.amountMinor, currency: payload.currency, description: payload.description ?? "" })
         })
       )
       .handle("update", ({ path, payload }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
-          const updated = yield* repo.update(user.id, path.id, {
-            ...(payload.amountMinor !== undefined ? { amountMinor: payload.amountMinor } : {}),
-            ...(payload.currency !== undefined ? { currency: payload.currency } : {}),
-            ...(payload.description !== undefined ? { description: payload.description } : {}),
-            ...(payload.archived !== undefined ? { archived: payload.archived } : {})
-          })
-          if (Option.isNone(updated)) return yield* new HttpApiError.NotFound()
-          return toLoan(updated.value)
+          return yield* orNotFound(repo.update(user.id, path.id, payload))
         })
       )
       .handle("delete", ({ path }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
-          const removed = yield* repo.remove(user.id, path.id)
-          if (!removed) return yield* new HttpApiError.NotFound()
+          yield* orNotFound(repo.remove(user.id, path.id))
         })
       )
       .handle("settle", ({ path, payload }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
-          const loan = yield* findOrNotFound(user, path.id)
+          const loan = yield* orNotFound(repo.find(user.id, path.id))
           const change = payload.change
-          const moved = yield* Effect.gen(function* () {
+          return yield* Effect.gen(function* () {
             // A settlement is entered by hand in the Loan's currency and Hidden from analysis unless the User says otherwise.
             yield* recordChange.strict(
               user.id,
@@ -82,10 +60,8 @@ export const LoansHandlersLive = HttpApiBuilder.group(JuneApi, "loans", (handler
               { hiddenFromAnalysis: true }
             )
             // Money arriving in the Wallet shrinks what they owe; money leaving grows it.
-            return yield* repo.move(user.id, loan.id, -change.amountMinor)
+            return yield* orNotFound(repo.move(user.id, loan.id, -change.amountMinor))
           }).pipe(sql.withTransaction, Effect.catchTag("SqlError", (e) => Effect.die(e)))
-          if (Option.isNone(moved)) return yield* new HttpApiError.NotFound()
-          return toLoan(moved.value)
         })
       )
   })
