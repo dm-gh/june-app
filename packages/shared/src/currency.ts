@@ -54,6 +54,21 @@ export const toMinor = (amount: number, currency: string): Either.Either<number,
 /** Minor units back to a decimal number, for display or for rate arithmetic. */
 export const fromMinor = (minor: number, currency: string): number => minor / 10 ** currencyExponent(currency)
 
+/** The unsigned amount as a form shows it in its text field: 1250 USD → "12.50", 1500 JPY → "1500". */
+export const toMajorFixed = (minor: number, currency: string): string =>
+  Math.abs(fromMinor(minor, currency)).toFixed(currencyExponent(currency))
+
+const displayNames = new Intl.DisplayNames(["en"], { type: "currency" })
+
+/** The English name of a currency, "US Dollar"; the code itself when the runtime has no name for it. */
+export const currencyName = (code: string): string => {
+  try {
+    return displayNames.of(code) ?? code
+  } catch {
+    return code
+  }
+}
+
 /**
  * Convert minor units between currencies using USD-pivoted rates (units of each currency per
  * 1 USD). Returns minor units of `to`, rounded half away from zero.

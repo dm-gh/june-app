@@ -1,6 +1,6 @@
 import { Either } from "effect"
 import { describe, expect, it } from "vitest"
-import { allCurrencies, convertMinor, currencyExponent, formatMinor, fromMinor, isCurrency, toMinor } from "./currency.js"
+import { allCurrencies, convertMinor, currencyExponent, currencyName, formatMinor, fromMinor, isCurrency, toMajorFixed, toMinor } from "./currency.js"
 
 describe("isCurrency", () => {
   it("knows real ISO 4217 codes and rejects made-up or lower-case ones", () => {
@@ -87,5 +87,23 @@ describe("formatMinor", () => {
     expect(formatMinor(-183420, "USD")).toBe("-$1,834.20")
     expect(formatMinor(1500, "JPY")).toBe("¥1,500")
     expect(formatMinor(183420, "EUR", "de")).toBe("1.834,20\u00A0€")
+  })
+})
+
+describe("toMajorFixed", () => {
+  it("is the unsigned major-unit text a form shows, with the currency's decimals", () => {
+    expect(toMajorFixed(1250, "USD")).toBe("12.50")
+    expect(toMajorFixed(-4250, "USD")).toBe("42.50")
+    expect(toMajorFixed(1500, "JPY")).toBe("1500")
+    expect(toMajorFixed(-1250, "BHD")).toBe("1.250")
+    expect(toMajorFixed(0, "USD")).toBe("0.00")
+  })
+})
+
+describe("currencyName", () => {
+  it("names a currency in English and falls back to the code", () => {
+    expect(currencyName("USD")).toBe("US Dollar")
+    expect(currencyName("EUR")).toBe("Euro")
+    expect(currencyName("XYZ")).toBe("XYZ")
   })
 })
