@@ -9,7 +9,7 @@ import { signOut } from "../../api/auth"
 import { useCategories, useMe, useReorderWallets, useSetDefaultCurrency, useWallets } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { balanceMoney, hueColor } from "../../lib/format"
-import { Button, Card, cn, CurrencySelect, Display, ErrorNotice, Field, Heading, Label, Loading, Text } from "../../ui"
+import { Button, Card, cn, CurrencySelect, Display, ErrorNotice, Field, Heading, Label, QueryState, Text } from "../../ui"
 
 function WalletRow({ wallet, index }: { wallet: Wallet; index: number }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: wallet.id })
@@ -86,7 +86,7 @@ export function SettingsPage() {
         </Button>
       </div>
       <Text className="mt-1 mb-3 text-sm text-grey-ink">Order matters: a Shortcut capture lands in the first wallet whose currency matches.</Text>
-      {wallets.isPending ? <Loading /> : null}
+      <QueryState of={wallets} />
       {reorder.isError ? <ErrorNotice message={reorder.error.message} /> : null}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={order.map((w) => w.id)} strategy={verticalListSortingStrategy}>
@@ -104,7 +104,7 @@ export function SettingsPage() {
           + Add
         </Button>
       </div>
-      {categories.isPending ? <Loading /> : null}
+      <QueryState of={categories} />
       <Label as="h3" className="mt-3 mb-2 block text-grey-ink">
         Expense
       </Label>

@@ -6,7 +6,7 @@ import { PeriodHeader } from "../../layout/PeriodHeader"
 import { filterRows, useFilter } from "../../lib/filter"
 import { balanceMoney, moneyCode } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
-import { Card, Empty, ErrorNotice, Label, Loading } from "../../ui"
+import { Card, Empty, Label, QueryState } from "../../ui"
 import { breakdown, breakdownBoth, type Side, withEveryWallet } from "./analysis"
 import { BreakdownList, type Dimension, dimensionTitle, FlowList, keysOf, lookOf, walletBalance } from "./BreakdownList"
 
@@ -41,8 +41,7 @@ export function BreakdownPage({ dimension, side = "expense" }: { dimension: Dime
   return (
     <AppShell>
       <PeriodHeader title={dimension === "categories" && side === "income" ? "Income categories" : dimensionTitle[dimension]} backTo="/analysis" />
-      {transactions.isError ? <ErrorNotice message={transactions.error.message} /> : null}
-      {transactions.isPending ? <Loading /> : null}
+      <QueryState of={transactions} />
 
       {dimension === "wallets" && totalBalance !== null ? (
         <Card accent="sky" shadow="sm" className="mb-5 p-3">

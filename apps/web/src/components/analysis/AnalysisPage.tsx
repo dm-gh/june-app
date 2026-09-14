@@ -9,7 +9,7 @@ import { filterRows, useFilter } from "../../lib/filter"
 import { fromMinor } from "@june/shared"
 import { balanceMoney, moneyCode, signedMoney } from "../../lib/format"
 import { todayLocal, usePeriod } from "../../lib/period"
-import { Card, cn, Empty, ErrorNotice, Heading, Label, Loading } from "../../ui"
+import { Card, cn, Empty, Heading, Label, QueryState } from "../../ui"
 import { breakdown, breakdownBoth, elapsedBuckets, flowSeries, granularityFor, incomeMinor, type Side, spendSeries, spentMinor, withEveryWallet } from "./analysis"
 import { BreakdownList, type Dimension, dimensionTitle, FlowList, keysOf, lookOf, type Sides, walletBalance } from "./BreakdownList"
 
@@ -204,8 +204,7 @@ export function AnalysisPage() {
   return (
     <AppShell>
       <PeriodHeader title="Analysis" />
-      {transactions.isError ? <ErrorNotice message={transactions.error.message} /> : null}
-      {transactions.isPending ? <Loading /> : null}
+      <QueryState of={transactions} />
       <div className="grid grid-cols-2 gap-3">
         <SideCard side="expense" on={sides.expense} label={`Spent · ${currency}`} value={transactions.data ? moneyCode(cardSpent, currency) : "…"} onPick={pick} />
         <SideCard side="income" on={sides.income} label={`Income · ${currency}`} value={transactions.data ? moneyCode(cardIncome, currency) : "…"} onPick={pick} />

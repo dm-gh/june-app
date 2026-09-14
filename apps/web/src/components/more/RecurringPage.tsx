@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router"
 import { useCategoryIndex, useDeleteRecurring, useRecurring, useWalletIndex } from "../../api/queries"
 import { Page } from "../../layout/Page"
 import { formatLongDate } from "../../lib/period"
-import { Badge, Button, Card, Dialog, ErrorNotice, Label, Loading } from "../../ui"
+import { Badge, Button, Card, Dialog, Label, QueryState } from "../../ui"
 import { dueState, scheduleWords } from "./recurring"
 import { RecurringCard } from "./RecurringCard"
 import { SubmitDialog } from "./SubmitDialog"
@@ -40,8 +40,7 @@ export function RecurringPage() {
       }
       error={remove.error?.message ?? null}
     >
-      {recurring.isError ? <ErrorNotice message={recurring.error.message} /> : null}
-      {recurring.isPending ? <Loading /> : null}
+      <QueryState of={recurring} />
       {r && due ? (
         <div className="flex flex-col gap-5">
           <RecurringCard recurring={r} category={category} walletName={wallet ? `${wallet.name} · ${wallet.currency}` : null} interactive={false} />

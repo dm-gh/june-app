@@ -19,6 +19,24 @@ export function ErrorNotice({ message }: { message: string }) {
   )
 }
 
+export interface QueryLike {
+  readonly isPending: boolean
+  readonly isError: boolean
+  readonly error: Error | null
+}
+
+/**
+ * What a screen shows while it waits on its queries: the first error as a card, or Loading while
+ * any is still pending. Nothing once every query has its data.
+ */
+export function QueryState({ of }: { of: QueryLike | ReadonlyArray<QueryLike> }) {
+  const queries: ReadonlyArray<QueryLike> = "isPending" in of ? [of] : of
+  const failed = queries.find((q) => q.isError)
+  if (failed?.error) return <ErrorNotice message={failed.error.message} />
+  if (queries.some((q) => q.isPending)) return <Loading />
+  return null
+}
+
 export function Empty({ children }: { children: ReactNode }) {
   return (
     <Card accent="paper" shadow="none" className="border-dashed p-6 text-center">

@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCategories, useDeleteTransactions, useExchange, useTags, useTransaction, useUpdateExchange, useUpdateTransaction, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
-import { Dialog, ErrorNotice, Loading, useDraft } from "../../ui"
+import { Dialog, ErrorNotice, QueryState, useDraft } from "../../ui"
 import { type ChangeErrors, draftFromTransaction, readChangeDraft } from "./changeDraft"
 import { draftFromLegs, exchangePayload } from "./exchangeDraft"
 import { ExchangeFields } from "./ExchangeForm"
@@ -39,7 +39,7 @@ function EditExchangePage({ exchangeId }: { exchangeId: ExchangeId }) {
   if (legs.isPending || wallets.isPending) {
     return (
       <FormPage title="Edit exchange" backTo="/transactions">
-        {legs.isError ? <ErrorNotice message={legs.error.message} /> : <Loading />}
+        <QueryState of={[legs, wallets]} />
       </FormPage>
     )
   }
@@ -99,7 +99,7 @@ function EditChangePage({ id }: { id: TransactionId }) {
   if (transaction.isPending || wallets.isPending || categories.isPending || draft === null) {
     return (
       <FormPage title="Edit transaction" backTo="/transactions">
-        {transaction.isError ? <ErrorNotice message={transaction.error.message} /> : <Loading />}
+        <QueryState of={[transaction, wallets, categories]} />
       </FormPage>
     )
   }

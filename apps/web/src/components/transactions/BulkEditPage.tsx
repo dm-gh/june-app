@@ -4,7 +4,7 @@ import { Navigate, useLocation, useNavigate } from "react-router"
 import { useBulkUpdate, useCategories, useTags, useTransactions, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { usePeriod } from "../../lib/period"
-import { CategorySelect, Field, Loading, TagChip, TagInput, WalletSelect } from "../../ui"
+import { CategorySelect, Field, QueryState, TagChip, TagInput, WalletSelect } from "../../ui"
 
 const KEEP = "__keep__"
 
@@ -37,7 +37,7 @@ export function BulkEditPage() {
   if (transactions.isPending || wallets.isPending || categories.isPending) {
     return (
       <FormPage title={`Edit ${ids.length} items`}>
-        <Loading />
+        <QueryState of={[transactions, wallets, categories]} />
       </FormPage>
     )
   }

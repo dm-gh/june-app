@@ -9,7 +9,7 @@ import { StickyBar } from "../../layout/StickyBar"
 import { filterItems, isEmptyFilter, useFilter } from "../../lib/filter"
 import { dayHeading, plural } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
-import { Dialog, Empty, ErrorNotice, IconButton, Label, Loading, Menu } from "../../ui"
+import { Dialog, Empty, ErrorNotice, IconButton, Label, Menu, QueryState } from "../../ui"
 import { groupByDay, itemIds, toItems } from "./listItems"
 import { TransactionCard } from "./TransactionCard"
 
@@ -75,8 +75,7 @@ export function TransactionsPage() {
         <PeriodHeader title="Transactions" />
       )}
 
-      {transactions.isPending ? <Loading /> : null}
-      {transactions.isError ? <ErrorNotice message={transactions.error.message} /> : null}
+      <QueryState of={transactions} />
       {transactions.data && transactions.data.length === 0 ? <Empty>Nothing recorded in this period.</Empty> : null}
       {transactions.data && transactions.data.length > 0 && items.length === 0 && !isEmptyFilter(filter) ? (
         <Empty>Nothing in this period matches the filter.</Empty>

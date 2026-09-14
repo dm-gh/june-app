@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCreateLoan, useDeleteLoan, useLoan, useMe, useUpdateLoan } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
-import { CurrencySelect, Dialog, Field, Input, Loading, Segmented, Text, useDraft } from "../../ui"
+import { CurrencySelect, Dialog, Field, Input, QueryState, Segmented, useDraft } from "../../ui"
 import { AmountInput } from "../../ui/AmountInput"
 import { readAmount } from "../transactions/changeDraft"
 
@@ -98,7 +98,7 @@ export function EditLoanPage() {
   if (loan.isPending || draft === null) {
     return (
       <FormPage title="Edit loan" backTo="/more">
-        {loan.isError ? <Text>{loan.error.message}</Text> : <Loading />}
+        <QueryState of={loan} />
       </FormPage>
     )
   }

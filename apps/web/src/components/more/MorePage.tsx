@@ -3,7 +3,7 @@ import { useState } from "react"
 import { Link, useNavigate } from "react-router"
 import { useCategoryIndex, useLoans, useRecurrings, useWalletIndex } from "../../api/queries"
 import { ListPage } from "../../layout/Page"
-import { Button, Empty, ErrorNotice, Heading, Loading } from "../../ui"
+import { Button, Empty, Heading, QueryState } from "../../ui"
 import { LoanCard } from "./LoanCard"
 import { RecurringCard } from "./RecurringCard"
 import { SubmitDialog } from "./SubmitDialog"
@@ -27,8 +27,7 @@ export function MorePage() {
           + Add
         </Button>
       </div>
-      {recurrings.isError ? <ErrorNotice message={recurrings.error.message} /> : null}
-      {recurrings.isPending ? <Loading /> : null}
+      <QueryState of={recurrings} />
       {recurrings.data && recurrings.data.length === 0 ? <Empty>Nothing repeats yet. Add rent, a salary or a subscription.</Empty> : null}
       <div className="mt-3 flex flex-col gap-3">
         {(recurrings.data ?? []).map((r) => (
@@ -48,8 +47,7 @@ export function MorePage() {
           + Add
         </Button>
       </div>
-      {loans.isError ? <ErrorNotice message={loans.error.message} /> : null}
-      {loans.isPending ? <Loading /> : null}
+      <QueryState of={loans} />
       {loans.data && live.length === 0 ? <Empty>No open loans. Money you lend or borrow goes here so it is not forgotten.</Empty> : null}
       <div className="mt-3 flex flex-col gap-3">
         {live.map((l) => (

@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCategories, useCreateRecurring, useDeleteRecurring, useRecurring, useTags, useUpdateRecurring, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
-import { Checkbox, Dialog, Field, Input, Loading, Notice, TagsField, Text, useDraft } from "../../ui"
+import { Checkbox, Dialog, Field, Input, Notice, QueryState, TagsField, Text, useDraft } from "../../ui"
 import { type ChangeErrors, type ChangeFieldsDraft, readChangeDraft } from "../transactions/changeDraft"
 import { ChangeFields } from "../transactions/ChangeFields"
 import { emptySchedule, type ScheduleDraft, scheduleFromRecurring, schedulePayload, SchedulePicker } from "./SchedulePicker"
@@ -85,7 +85,7 @@ export function AddRecurringPage() {
   if (wallets.isPending || categories.isPending) {
     return (
       <FormPage title="Add recurring" backTo="/more">
-        <Loading />
+        <QueryState of={[wallets, categories]} />
       </FormPage>
     )
   }
@@ -127,7 +127,7 @@ export function EditRecurringPage() {
   if (recurring.isPending || wallets.isPending || categories.isPending || draft === null) {
     return (
       <FormPage title="Edit recurring" backTo="/more">
-        {recurring.isError ? <Text>{recurring.error.message}</Text> : <Loading />}
+        <QueryState of={[recurring, wallets, categories]} />
       </FormPage>
     )
   }

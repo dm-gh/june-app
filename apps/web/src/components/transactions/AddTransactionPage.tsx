@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from "react-router"
 import { useCategories, useCreateChange, useCreateExchange, useFireRecurring, useLoan, useMe, useRecurring, useSettleLoan, useTags, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { todayLocal } from "../../lib/period"
-import { Field, Loading, Notice, Segmented, Text } from "../../ui"
+import { Field, Notice, QueryState, Segmented, Text } from "../../ui"
 import { type ChangeDraft, type ChangeErrors, readChangeDraft } from "./changeDraft"
 import { type ExchangeDraft, exchangePayload } from "./exchangeDraft"
 import { ExchangeFields } from "./ExchangeForm"
@@ -36,7 +36,7 @@ function FromRecurring({ id }: { id: RecurringId }) {
   if (!r) {
     return (
       <FormPage title="Submit" backTo="/more">
-        {recurring.isError ? <Text>{recurring.error.message}</Text> : <Loading />}
+        <QueryState of={recurring} />
       </FormPage>
     )
   }
@@ -67,7 +67,7 @@ function FromLoan({ id }: { id: LoanId }) {
   if (!l || wallets.isPending) {
     return (
       <FormPage title="Settle" backTo="/more">
-        {loan.isError ? <Text>{loan.error.message}</Text> : <Loading />}
+        <QueryState of={[loan, wallets]} />
       </FormPage>
     )
   }
@@ -103,7 +103,7 @@ function PlainAddTransactionPage({ source = { kind: "plain" }, title = "Add tran
   if (wallets.isPending || categories.isPending || me.isPending) {
     return (
       <FormPage title="Add transaction">
-        <Loading />
+        <QueryState of={[wallets, categories, me]} />
       </FormPage>
     )
   }

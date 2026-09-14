@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router"
 import { useDeleteLoan, useLoan, useUpdateLoan } from "../../api/queries"
 import { Page } from "../../layout/Page"
 import { formatLongDate, fromEpochMillis } from "../../lib/period"
-import { Button, Dialog, ErrorNotice, Loading } from "../../ui"
+import { Button, Dialog, QueryState } from "../../ui"
 import { LoanCard } from "./LoanCard"
 
 /** A Loan's page: the same card as the list, and Settle. Edit, Archive and Delete sit behind the menu. */
@@ -40,8 +40,7 @@ export function LoanPage() {
       }
       error={update.error?.message ?? remove.error?.message ?? null}
     >
-      {loan.isError ? <ErrorNotice message={loan.error.message} /> : null}
-      {loan.isPending ? <Loading /> : null}
+      <QueryState of={loan} />
       {l ? (
         <div className="flex flex-col gap-5">
           <LoanCard loan={l} interactive={false} detail={`Since ${since(l.createdAt)}${l.archived ? " · Archived" : ""}`} />

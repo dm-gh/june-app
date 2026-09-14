@@ -1,6 +1,6 @@
 import { useLoans } from "../../api/queries"
 import { ListPage } from "../../layout/Page"
-import { Empty, ErrorNotice, Loading, Text } from "../../ui"
+import { Empty, QueryState, Text } from "../../ui"
 import { LoanCard } from "./LoanCard"
 
 /** Loans set aside: settled ones land here by themselves, any can be brought back or deleted from its page. */
@@ -10,8 +10,7 @@ export function LoansArchivePage() {
   return (
     <ListPage title="Archive" backTo="/more">
       <Text className="mb-3 text-sm text-grey-ink">Loans set aside. A settled loan lands here by itself; open one to bring it back or delete it.</Text>
-      {loans.isError ? <ErrorNotice message={loans.error.message} /> : null}
-      {loans.isPending ? <Loading /> : null}
+      <QueryState of={loans} />
       {loans.data && archived.length === 0 ? <Empty>Nothing archived.</Empty> : null}
       <div className="flex flex-col gap-3">
         {archived.map((l) => (
