@@ -1,5 +1,5 @@
 import { SqlClient } from "@effect/sql"
-import { convertMinor, type LocalDate, RateUnavailable, todayUtc } from "@june/shared"
+import { convertMinor, type LocalDate, MinorAmount, RateUnavailable, todayUtc } from "@june/shared"
 import { Context, Effect, Layer } from "effect"
 import { dateArray } from "../db/sqlHelpers.js"
 import { RateProvider } from "./RateProvider.js"
@@ -17,7 +17,7 @@ export interface RatesShape {
   /** Rates for each date after `ensure`, with the nearest-earlier fallback resolved in SQL. */
   readonly table: (dates: Iterable<LocalDate>) => Effect.Effect<RateTable>
   /** Convert minor units between currencies on a date; null when the table lacks a rate. */
-  readonly convert: (table: RateTable, minor: number, from: string, to: string, date: LocalDate) => number | null
+  readonly convert: (table: RateTable, minor: number, from: string, to: string, date: LocalDate) => MinorAmount | null
 }
 
 export class Rates extends Context.Tag("Rates")<Rates, RatesShape>() {}
@@ -109,12 +109,12 @@ export const RatesLive = Layer.effect(
       }).pipe(Effect.orDie)
 
     const convert: RatesShape["convert"] = (table, minor, from, to, date) => {
-      if (from === to) return minor
+      if (from === to) return MinorAmount.make(minor)
       const rates = table.get(date)
       const rateFrom = rates?.get(from)
       const rateTo = rates?.get(to)
       if (rateFrom === undefined || rateTo === undefined) return null
-      return convertMinor(minor, from, to, rateFrom, rateTo)
+      return MinorAmount.make(convertMinor(minor, from, to, rateFrom, rateTo))
     }
 
     return { ensure, table, convert }

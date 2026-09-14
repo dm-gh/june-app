@@ -1,13 +1,11 @@
 import { SqlClient } from "@effect/sql"
-import type { UserId, WalletId } from "@june/shared"
-import { Context, Effect, Layer, Option } from "effect"
+import { type UserId, Wallet, WalletId } from "@june/shared"
+import { Context, Effect, Layer, type Option, Schema } from "effect"
+import { ownedTable } from "../db/ownedTable.js"
 
-export interface WalletRow {
-  readonly id: WalletId
-  readonly name: string
-  readonly currency: string
-  readonly position: number
-}
+/** A Wallet as stored: its own fields, without the derived Balance and Init amount. */
+export const WalletRow = Schema.Struct(Wallet.fields).pick("id", "name", "currency", "position")
+export type WalletRow = typeof WalletRow.Type
 
 export interface WalletsRepoShape {
   /** In Wallet Order. */
@@ -21,49 +19,40 @@ export interface WalletsRepoShape {
   readonly rename: (userId: UserId, id: WalletId, name: string) => Effect.Effect<Option.Option<WalletRow>>
   /** `ids` must be exactly the User's Wallets; positions are rewritten inside one transaction. */
   readonly reorder: (userId: UserId, ids: ReadonlyArray<WalletId>) => Effect.Effect<void>
-  readonly remove: (userId: UserId, id: WalletId) => Effect.Effect<boolean>
+  readonly remove: (userId: UserId, id: WalletId) => Effect.Effect<Option.Option<WalletId>>
 }
 
 export class WalletsRepo extends Context.Tag("WalletsRepo")<WalletsRepo, WalletsRepoShape>() {}
-
-const columns = "id, name, currency, position"
 
 export const WalletsRepoLive = Layer.effect(
   WalletsRepo,
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient
-    const cols = sql.literal(columns)
-    const normalise = (row: WalletRow): WalletRow => ({ ...row, currency: row.currency.trim() })
-    const rows = (effect: Effect.Effect<ReadonlyArray<WalletRow>, unknown>) =>
-      effect.pipe(Effect.map((rs) => rs.map(normalise)), Effect.orDie)
-
-    const list: WalletsRepoShape["list"] = (userId) =>
-      rows(sql<WalletRow>`select ${cols} from wallet where user_id = ${userId} order by position`)
-
-    const find: WalletsRepoShape["find"] = (userId, id) =>
-      rows(sql<WalletRow>`select ${cols} from wallet where user_id = ${userId} and id = ${id}`).pipe(
-        Effect.map((rs) => Option.fromNullable(rs[0]))
-      )
+    const wallets = ownedTable(sql, {
+      table: "wallet",
+      id: WalletId,
+      row: WalletRow,
+      columns: "id, name, trim(currency) as currency, position",
+      order: "position"
+    })
 
     const findMany: WalletsRepoShape["findMany"] = (userId, ids) =>
       ids.length === 0
         ? Effect.succeed([])
-        : rows(sql<WalletRow>`select ${cols} from wallet where user_id = ${userId} and ${sql.in("id", ids)}`)
+        : wallets.rows(sql`select ${wallets.columns} from wallet where user_id = ${userId} and ${sql.in("id", ids)}`)
 
     const firstWithCurrency: WalletsRepoShape["firstWithCurrency"] = (userId, currency) =>
-      rows(sql<WalletRow>`select ${cols} from wallet where user_id = ${userId} and currency = ${currency}
-                          order by position limit 1`).pipe(Effect.map((rs) => Option.fromNullable(rs[0])))
+      wallets.first(sql`select ${wallets.columns} from wallet where user_id = ${userId} and currency = ${currency}
+                        order by position limit 1`)
 
     const insert: WalletsRepoShape["insert"] = (userId, input) =>
-      rows(sql<WalletRow>`insert into wallet (user_id, name, currency, position)
-                          values (${userId}, ${input.name}, ${input.currency},
-                                  (select coalesce(max(position), -1) + 1 from wallet where user_id = ${userId}))
-                          returning ${cols}`).pipe(Effect.map((rs) => rs[0]!))
+      wallets.insert(userId, {
+        name: input.name,
+        currency: input.currency,
+        position: sql`(select coalesce(max(position), -1) + 1 from wallet where user_id = ${userId})`
+      })
 
-    const rename: WalletsRepoShape["rename"] = (userId, id, name) =>
-      rows(sql<WalletRow>`update wallet set name = ${name} where user_id = ${userId} and id = ${id} returning ${cols}`).pipe(
-        Effect.map((rs) => Option.fromNullable(rs[0]))
-      )
+    const rename: WalletsRepoShape["rename"] = (userId, id, name) => wallets.patch(userId, id, { name })
 
     const reorder: WalletsRepoShape["reorder"] = (userId, ids) =>
       Effect.gen(function* () {
@@ -73,12 +62,6 @@ export const WalletsRepoLive = Layer.effect(
         }
       }).pipe(sql.withTransaction, Effect.orDie)
 
-    const remove: WalletsRepoShape["remove"] = (userId, id) =>
-      sql<{ id: string }>`delete from wallet where user_id = ${userId} and id = ${id} returning id`.pipe(
-        Effect.map((rs) => rs.length > 0),
-        Effect.orDie
-      )
-
-    return { list, find, findMany, firstWithCurrency, insert, rename, reorder, remove }
+    return { list: wallets.list, find: wallets.find, findMany, firstWithCurrency, insert, rename, reorder, remove: wallets.remove }
   })
 )

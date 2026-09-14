@@ -1,16 +1,18 @@
-import { HttpApiBuilder, HttpApiError } from "@effect/platform"
+import { HttpApiBuilder } from "@effect/platform"
 import { SqlClient } from "@effect/sql"
 import {
   CurrentUser,
   type CurrentUserShape,
   JuneApi,
   type LocalDate,
+  MinorAmount,
   RuleViolation,
   todayUtc,
-  type Wallet,
+  Wallet,
   type WalletId
 } from "@june/shared"
 import { Effect, Option } from "effect"
+import { orNotFound } from "../http/errors.js"
 import { Rates } from "../rates/Rates.js"
 import { TransactionsRepo } from "../transactions/TransactionsRepo.js"
 import { type WalletRow, WalletsRepo } from "./WalletsRepo.js"
@@ -38,16 +40,15 @@ export const WalletsHandlersLive = HttpApiBuilder.group(JuneApi, "wallets", (han
         const result: Array<Wallet> = []
         for (const row of rows) {
           const init = yield* transactions.initOf(user.id, row.id)
-          const balanceMinor = balances.get(row.id) ?? 0
-          result.push({
-            id: row.id,
-            name: row.name,
-            currency: row.currency,
-            position: row.position,
-            balanceMinor,
-            initMinor: Option.isSome(init) ? init.value.amountMinor : 0,
-            balanceDefaultMinor: rates.convert(table, balanceMinor, row.currency, user.defaultCurrency, today)
-          } as Wallet)
+          const balanceMinor = MinorAmount.make(balances.get(row.id) ?? 0)
+          result.push(
+            new Wallet({
+              ...row,
+              balanceMinor,
+              initMinor: MinorAmount.make(Option.isSome(init) ? init.value.amountMinor : 0),
+              balanceDefaultMinor: rates.convert(table, balanceMinor, row.currency, user.defaultCurrency, today)
+            })
+          )
         }
         return result
       })
@@ -59,11 +60,11 @@ export const WalletsHandlersLive = HttpApiBuilder.group(JuneApi, "wallets", (han
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const list = yield* view(user, yield* wallets.list(user.id))
-          const total = list.reduce<number | null>(
-            (acc, w) => (acc === null || w.balanceDefaultMinor === null ? null : acc + w.balanceDefaultMinor),
-            0
+          const total = list.reduce<MinorAmount | null>(
+            (acc, w) => (acc === null || w.balanceDefaultMinor === null ? null : MinorAmount.make(acc + w.balanceDefaultMinor)),
+            MinorAmount.make(0)
           )
-          return { wallets: list, totalDefaultMinor: total } as never
+          return { wallets: list, totalDefaultMinor: total }
         })
       )
       .handle("create", ({ payload }) =>
@@ -91,9 +92,7 @@ export const WalletsHandlersLive = HttpApiBuilder.group(JuneApi, "wallets", (han
       .handle("update", ({ path, payload }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
-          const existing = yield* wallets.find(user.id, path.id)
-          if (Option.isNone(existing)) return yield* new HttpApiError.NotFound()
-          let row = existing.value
+          let row = yield* orNotFound(wallets.find(user.id, path.id))
           if (payload.name !== undefined) {
             row = Option.getOrElse(yield* wallets.rename(user.id, path.id, payload.name), () => row)
           }
@@ -121,9 +120,7 @@ export const WalletsHandlersLive = HttpApiBuilder.group(JuneApi, "wallets", (han
       .handle("delete", ({ path }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
-          const existing = yield* wallets.find(user.id, path.id)
-          if (Option.isNone(existing)) return yield* new HttpApiError.NotFound()
-          const wallet = existing.value
+          const wallet = yield* orNotFound(wallets.find(user.id, path.id))
           yield* Effect.gen(function* () {
             yield* transactions.deleteInitOf(user.id, wallet.id)
             yield* transactions.collapseExchangesOf(user.id, wallet.id, walletDeleteTag(wallet.currency, todayUtc()))
