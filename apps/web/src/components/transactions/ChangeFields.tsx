@@ -1,4 +1,4 @@
-import type { Category, Wallet } from "@june/shared"
+import { type Category, categoryTypeForSign, type Wallet } from "@june/shared"
 import { useMemo } from "react"
 import { AmountInput, CategorySelect, Field, Select, WalletSelect } from "../../ui"
 import type { ChangeErrors, ChangeFieldsDraft } from "./changeDraft"
@@ -65,7 +65,7 @@ export function ChangeFields({ draft, onChange, wallets, categories, errors, amo
       </Field>
       {showCategory ? (
         <Field label="Category" htmlFor="category">
-          <CategorySelect id="category" categories={categories} type={draft.sign === "-" ? "expense" : "income"} value={draft.categoryId} onChange={(categoryId) => onChange({ categoryId })} />
+          <CategorySelect id="category" categories={categories} type={categoryTypeForSign(draft.sign)} value={draft.categoryId} onChange={(categoryId) => onChange({ categoryId })} />
         </Field>
       ) : null}
     </>

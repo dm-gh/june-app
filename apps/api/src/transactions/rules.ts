@@ -1,15 +1,11 @@
-import { type CategoryId, RuleViolation, type UserId, type WalletId } from "@june/shared"
+import { type CategoryId, categoryFits, RuleViolation, type UserId, type WalletId } from "@june/shared"
 import { Effect, Option } from "effect"
 import { type CategoryRow, CategoriesRepo } from "../categories/Categories.js"
 import { type WalletRow, WalletsRepo } from "../wallets/WalletsRepo.js"
 
 export const violation = (message: string) => new RuleViolation({ message })
 
-/** A Category fits a Change when its type matches the sign of the amount. */
-export const categoryFits = (category: CategoryRow, amountMinor: number): boolean =>
-  amountMinor < 0 ? category.type === "expense" : category.type === "income"
-
-/** The refusal when it does not. */
+/** The refusal when a Category does not fit the sign of the Change. */
 export const categoryMismatch = (category: CategoryRow) => violation(`${category.name} is an ${category.type} Category`)
 
 export const requireWallet = (userId: UserId, id: WalletId): Effect.Effect<WalletRow, RuleViolation, WalletsRepo> =>

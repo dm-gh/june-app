@@ -1,8 +1,8 @@
-import type { CategoryId, LocalDate, RuleViolation, UserId, WalletId } from "@june/shared"
+import { type CategoryId, categoryFits, type LocalDate, type RuleViolation, type UserId, type WalletId } from "@june/shared"
 import { Context, Effect, Layer, Option } from "effect"
 import { type CategoryRow, CategoriesRepo } from "../categories/Categories.js"
 import { type WalletRow, WalletsRepo } from "../wallets/WalletsRepo.js"
-import { categoryFits, checkChange } from "./rules.js"
+import { checkChange } from "./rules.js"
 import { type NewChange, type TransactionRow, TransactionsRepo } from "./TransactionsRepo.js"
 
 /**

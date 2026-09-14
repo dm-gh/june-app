@@ -5,7 +5,7 @@ import { Select, type SelectProps } from "./Input"
 
 export interface CategorySelectProps<V extends string> extends Omit<SelectProps, "value" | "onChange" | "children"> {
   categories: ReadonlyArray<Category>
-  /** Only Categories of this Category Type are offered: a negative Change takes an Expense Category, a positive one an Income Category. */
+  /** Only Categories of this Category Type are offered; a Change's is `categoryTypeForSign` of its sign. */
   type: Category["type"]
   /** A Category id, "" for Uncategorised, or whatever the extra options carry. */
   value: V

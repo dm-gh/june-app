@@ -1,7 +1,7 @@
 import { Either, Schema } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { CurrencyCode } from "./currency.js"
-import { Hue, LocalDate, MinorAmount, Slug, Tag, slugify, splitTags, todayUtc } from "./domain.js"
+import { categoryFits, categoryTypeForSign, Hue, LocalDate, MinorAmount, NonZeroMinorAmount, Slug, Tag, slugify, splitTags, todayUtc } from "./domain.js"
 
 const decodes = <A, I>(schema: Schema.Schema<A, I>, input: I): boolean => Either.isRight(Schema.decodeUnknownEither(schema)(input))
 const decode = <A, I>(schema: Schema.Schema<A, I>, input: I): A => Schema.decodeUnknownSync(schema)(input)
@@ -96,5 +96,36 @@ describe("Hue and Slug schemas", () => {
     expect(decodes(Slug, "groceries-2")).toBe(true)
     expect(decodes(Slug, "Groceries")).toBe(false)
     expect(decodes(Slug, "a--b")).toBe(false)
+  })
+})
+
+describe("NonZeroMinorAmount schema", () => {
+  it("is a MinorAmount that refuses zero, saying so", () => {
+    expect(decodes(NonZeroMinorAmount, -1)).toBe(true)
+    expect(decodes(NonZeroMinorAmount, 1)).toBe(true)
+    expect(decodes(NonZeroMinorAmount, 1.5)).toBe(false)
+    expect(Either.match(Schema.decodeUnknownEither(NonZeroMinorAmount)(0), { onLeft: (e) => e.message, onRight: () => "" })).toContain("amount cannot be zero")
+  })
+})
+
+describe("Category Type and the sign of a Change", () => {
+  it("a negative Change takes an Expense Category, a positive one an Income Category", () => {
+    expect(categoryTypeForSign(-450)).toBe("expense")
+    expect(categoryTypeForSign(450)).toBe("income")
+    expect(categoryTypeForSign("-")).toBe("expense")
+    expect(categoryTypeForSign("+")).toBe("income")
+  })
+
+  it("zero counts as income, as the form's '+' does", () => {
+    expect(categoryTypeForSign(0)).toBe("income")
+  })
+
+  it("categoryFits accepts only the Category Type of the sign", () => {
+    const groceries = { type: "expense" } as const
+    const salary = { type: "income" } as const
+    expect(categoryFits(groceries, -450)).toBe(true)
+    expect(categoryFits(groceries, 450)).toBe(false)
+    expect(categoryFits(salary, 450)).toBe(true)
+    expect(categoryFits(salary, -450)).toBe(false)
   })
 })

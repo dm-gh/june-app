@@ -1,6 +1,6 @@
 import { HttpApiBuilder, HttpApiError } from "@effect/platform"
 import { SqlClient } from "@effect/sql"
-import { type CategoryId, type CreateExchange, CurrentUser, type CurrentUserShape, type ExchangeId, JuneApi, Transaction, type WalletId } from "@june/shared"
+import { type CategoryId, categoryFits, type CreateExchange, CurrentUser, type CurrentUserShape, type ExchangeId, JuneApi, Transaction, type WalletId } from "@june/shared"
 import { Effect, Option } from "effect"
 import { randomUUID } from "node:crypto"
 import { CategoriesRepo } from "../categories/Categories.js"
@@ -8,7 +8,7 @@ import { orNotFound } from "../http/errors.js"
 import { Rates, type RateTable } from "../rates/Rates.js"
 import { type WalletRow, WalletsRepo } from "../wallets/WalletsRepo.js"
 import { RecordChange } from "./RecordChange.js"
-import { categoryFits, categoryMismatch, checkChange as checkChangeRule, requireCategory as requireCategoryRule, requireWallet as requireWalletRule, violation } from "./rules.js"
+import { categoryMismatch, checkChange as checkChangeRule, requireCategory as requireCategoryRule, requireWallet as requireWalletRule, violation } from "./rules.js"
 import { type TransactionRow, TransactionsRepo } from "./TransactionsRepo.js"
 
 /** The Transaction the api returns: the row converted into Default Currency for its own date. */

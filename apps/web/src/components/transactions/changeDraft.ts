@@ -1,7 +1,7 @@
-import { type CategoryId, type CurrencyCode, type LocalDate, type MinorAmount, type Tag, toMajorFixed, toMinor, type Transaction, type WalletId } from "@june/shared"
+import { type CategoryId, type CurrencyCode, type LocalDate, type MinorAmount, type Sign, type Tag, toMajorFixed, toMinor, type Transaction, type WalletId } from "@june/shared"
 import { Either } from "effect"
 
-export type Sign = "-" | "+"
+export type { Sign }
 
 /** The fields every Change form edits, as text: sign and amount apart, the ids "" when unset. A Recurring edits exactly these. */
 export interface ChangeFieldsDraft {

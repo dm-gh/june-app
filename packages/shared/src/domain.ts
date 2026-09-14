@@ -67,6 +67,21 @@ export const splitTags = (input: string): ReadonlyArray<string> => [
 export const CategoryType = Schema.Literal("expense", "income")
 export type CategoryType = typeof CategoryType.Type
 
+/** The sign of a Change as the form shows it: "-" for money leaving, "+" for money arriving. */
+export type Sign = "-" | "+"
+
+/**
+ * The one Category Type a Change of this sign may carry (CONTEXT.md, Category Type): a negative
+ * Change an Expense Category, a positive one an Income Category. Takes the form's sign or the
+ * signed amount; zero, like "+", is income.
+ */
+export const categoryTypeForSign = (sign: Sign | number): CategoryType =>
+  (typeof sign === "number" ? sign < 0 : sign === "-") ? "expense" : "income"
+
+/** A Category fits a Change when its Category Type matches the sign of the amount. */
+export const categoryFits = (category: { readonly type: CategoryType }, amountMinor: number): boolean =>
+  category.type === categoryTypeForSign(amountMinor)
+
 export const TransactionType = Schema.Literal("change", "init", "exchange")
 export type TransactionType = typeof TransactionType.Type
 
