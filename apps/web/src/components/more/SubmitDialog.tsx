@@ -5,6 +5,7 @@ import { useFireRecurring } from "../../api/queries"
 import { shortDate, signedMoney } from "../../lib/format"
 import { formatLongDate, todayLocal } from "../../lib/period"
 import { Button, ErrorNotice, Heading, Text } from "../../ui"
+import { addTransactionFor } from "../transactions/AddTransactionPage"
 
 export interface SubmitDialogProps {
   recurring: Recurring
@@ -52,7 +53,7 @@ export function SubmitDialog({ recurring: r, onClose }: SubmitDialogProps) {
         <Button onClick={submit} disabled={fire.isPending}>
           Submit
         </Button>
-        <Button variant="secondary" onClick={() => navigate(`/transactions/new?recurring=${r.id}`)} disabled={fire.isPending}>
+        <Button variant="secondary" onClick={() => navigate(addTransactionFor({ recurring: r.id }))} disabled={fire.isPending}>
           Edit &amp; submit
         </Button>
         <Button variant="ghost" onClick={onClose} disabled={fire.isPending}>

@@ -1,37 +1,122 @@
 import { type LoanId, type RecurringId, toMajorFixed } from "@june/shared"
 import { Either } from "effect"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router"
-import { useCategories, useCreateChange, useCreateExchange, useFireRecurring, useLoan, useMe, useRecurring, useSettleLoan, useTags, useWallets } from "../../api/queries"
+import { useCategories, useCreateChange, useCreateExchange, useFireRecurring, useLoan, useRecurring, useSettleLoan, useTags, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { todayLocal } from "../../lib/period"
 import { Field, Notice, QueryState, Segmented, Text } from "../../ui"
-import { type ChangeDraft, type ChangeErrors, readChangeDraft } from "./changeDraft"
+import { type ChangeDraft, type ChangeErrors, type ChangePayload, readChangeDraft } from "./changeDraft"
 import { type ExchangeDraft, exchangePayload } from "./exchangeDraft"
 import { ExchangeFields } from "./ExchangeForm"
 import { TransactionForm } from "./TransactionForm"
 
-type Kind = "change" | "exchange"
+/** What Add transaction is opened for: a Recurring's Edit & submit, or a Loan's Settle. Plain Add carries neither. */
+export type Prefill = { readonly recurring: RecurringId } | { readonly loan: LoanId }
+
+/** The link to Add transaction prefilled from a Recurring or a Loan; `prefillFrom` reads it back. */
+export const addTransactionFor = (prefill: Prefill): string =>
+  "recurring" in prefill ? `/transactions/new?recurring=${prefill.recurring}` : `/transactions/new?loan=${prefill.loan}`
+
+export const prefillFrom = (params: URLSearchParams): Prefill | null => {
+  const recurring = params.get("recurring")
+  if (recurring) return { recurring: recurring as RecurringId }
+  const loan = params.get("loan")
+  if (loan) return { loan: loan as LoanId }
+  return null
+}
 
 /**
- * Where a prefilled Change goes when saved: a Recurring's Edit & submit fires it and advances the
- * Schedule, a Loan's Settle records it and moves the Loan. Plain is the ordinary Add transaction.
+ * How a Change is saved and where the form leads. Plain Add records it; a Recurring's Edit & submit
+ * fires the Recurring with it and advances the Schedule; a Loan's Settle records it and moves the Loan.
  */
-export type Source = { kind: "plain" } | { kind: "recurring"; id: RecurringId } | { kind: "loan"; id: LoanId }
+export interface SaveChange {
+  title: string
+  backTo: string
+  submitLabel: string
+  /** Runs the mutation and, on success, leaves the form. */
+  save: (change: ChangePayload) => void
+  busy: boolean
+  error: string | null
+}
 
-/** Add transaction: a Change (Expense or Income by sign) or, via the type toggle, an Exchange. */
 export function AddTransactionPage() {
   const [params] = useSearchParams()
-  const recurringId = params.get("recurring")
-  const loanId = params.get("loan")
-  if (recurringId) return <FromRecurring id={recurringId as RecurringId} />
-  if (loanId) return <FromLoan id={loanId as LoanId} />
-  return <PlainAddTransactionPage />
+  const prefill = prefillFrom(params)
+  if (prefill === null) return <PlainAdd />
+  return "recurring" in prefill ? <FromRecurring id={prefill.recurring} /> : <FromLoan id={prefill.loan} />
+}
+
+type Kind = "change" | "exchange"
+type Wallets = NonNullable<ReturnType<typeof useWallets>["data"]>["wallets"]
+type Categories = NonNullable<ReturnType<typeof useCategories>["data"]>
+interface Lists {
+  wallets: Wallets
+  categories: Categories
+  tags: ReadonlyArray<string>
+}
+/** The first tab reads Expense or Income after the sign of the amount; under the hood both are a Change. */
+type Toggle = (changeLabel: "Expense" | "Income") => ReactNode
+
+/** The lists every Add form needs, and what to show in the form's place until they are there, or when there is no Wallet at all. */
+const useLists = (): { lists: Lists; waiting: ((title: string, backTo: string) => ReactNode) | null } => {
+  const wallets = useWallets()
+  const categories = useCategories()
+  const tags = useTags()
+  const list = wallets.data?.wallets ?? []
+  const waiting =
+    wallets.isPending || categories.isPending
+      ? (title: string, backTo: string) => (
+          <FormPage title={title} backTo={backTo}>
+            <QueryState of={[wallets, categories]} />
+          </FormPage>
+        )
+      : list.length === 0
+        ? (title: string, backTo: string) => (
+            <FormPage title={title} backTo={backTo}>
+              <Notice accent="lavender" label="No wallets yet">
+                <Text>A Transaction needs a Wallet. Create your first one in Settings.</Text>
+              </Notice>
+            </FormPage>
+          )
+        : null
+  return { lists: { wallets: list, categories: categories.data ?? [], tags: tags.data ?? [] }, waiting }
+}
+
+/** Add transaction: a Change (Expense or Income by sign) or, via the type toggle, an Exchange. */
+function PlainAdd() {
+  const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
+  const create = useCreateChange()
+  const { lists, waiting } = useLists()
+  const kind: Kind = params.get("type") === "exchange" ? "exchange" : "change"
+  if (waiting) return waiting("Add transaction", "/transactions")
+  const toggle: Toggle = (changeLabel) => (
+    <Field label="Type">
+      <Segmented<Kind>
+        options={[{ value: "change", label: changeLabel }, { value: "exchange", label: "Exchange" }]}
+        value={kind}
+        onChange={(k) => setParams(k === "exchange" ? { type: "exchange" } : {}, { replace: true })}
+      />
+    </Field>
+  )
+  const saver: SaveChange = {
+    title: "Add transaction",
+    backTo: "/transactions",
+    submitLabel: "Save transaction",
+    save: (change) => create.mutate(change, { onSuccess: () => navigate("/transactions") }),
+    busy: create.isPending,
+    error: create.error?.message ?? null
+  }
+  return kind === "exchange" ? <ExchangeForm lists={lists} toggle={toggle} /> : <ChangeForm lists={lists} saver={saver} toggle={toggle} />
 }
 
 /** Edit & submit: the Change form with the Recurring's fields, dated its due date. */
 function FromRecurring({ id }: { id: RecurringId }) {
+  const navigate = useNavigate()
   const recurring = useRecurring(id)
+  const fire = useFireRecurring()
+  const { lists, waiting } = useLists()
   const r = recurring.data
   if (!r) {
     return (
@@ -40,10 +125,19 @@ function FromRecurring({ id }: { id: RecurringId }) {
       </FormPage>
     )
   }
+  const saver: SaveChange = {
+    title: `Submit ${r.name}`,
+    backTo: `/more/recurrings/${id}`,
+    submitLabel: "Submit",
+    save: (change) => fire.mutate({ id, payload: { change } }, { onSuccess: () => navigate("/transactions") }),
+    busy: fire.isPending,
+    error: fire.error?.message ?? null
+  }
+  if (waiting) return waiting(saver.title, saver.backTo)
   return (
-    <PlainAddTransactionPage
-      source={{ kind: "recurring", id }}
-      title={`Submit ${r.name}`}
+    <ChangeForm
+      lists={lists}
+      saver={saver}
       initial={{
         sign: r.amountMinor < 0 ? "-" : "+",
         amount: toMajorFixed(r.amountMinor, r.currency),
@@ -61,21 +155,32 @@ function FromRecurring({ id }: { id: RecurringId }) {
 
 /** Settle: the Change form with the remaining amount signed toward zero and Hidden on. */
 function FromLoan({ id }: { id: LoanId }) {
+  const navigate = useNavigate()
   const loan = useLoan(id)
-  const wallets = useWallets()
+  const settle = useSettleLoan()
+  const { lists, waiting } = useLists()
   const l = loan.data
-  if (!l || wallets.isPending) {
+  if (!l) {
     return (
       <FormPage title="Settle" backTo="/more">
-        <QueryState of={[loan, wallets]} />
+        <QueryState of={loan} />
       </FormPage>
     )
   }
-  const first = (wallets.data?.wallets ?? []).find((w) => w.currency === l.currency)
+  const saver: SaveChange = {
+    title: `Settle ${l.description || "loan"}`,
+    backTo: `/more/loans/${id}`,
+    submitLabel: "Settle",
+    save: (change) => settle.mutate({ id, payload: { change } }, { onSuccess: () => navigate(`/more/loans/${id}`) }),
+    busy: settle.isPending,
+    error: settle.error?.message ?? null
+  }
+  if (waiting) return waiting(saver.title, saver.backTo)
+  const first = lists.wallets.find((w) => w.currency === l.currency)
   return (
-    <PlainAddTransactionPage
-      source={{ kind: "loan", id }}
-      title={`Settle ${l.description || "loan"}`}
+    <ChangeForm
+      lists={lists}
+      saver={saver}
       initial={{
         // Lent (positive) settles with money coming back (+); Borrowed with money going out (−).
         sign: l.amountMinor >= 0 ? "+" : "-",
@@ -92,83 +197,8 @@ function FromLoan({ id }: { id: LoanId }) {
   )
 }
 
-function PlainAddTransactionPage({ source = { kind: "plain" }, title = "Add transaction", initial }: { source?: Source; title?: string; initial?: ChangeDraft }) {
-  const [params, setParams] = useSearchParams()
-  const kind: Kind = source.kind === "plain" && params.get("type") === "exchange" ? "exchange" : "change"
-  const wallets = useWallets()
-  const categories = useCategories()
-  const tags = useTags()
-  const me = useMe()
-
-  if (wallets.isPending || categories.isPending || me.isPending) {
-    return (
-      <FormPage title="Add transaction">
-        <QueryState of={[wallets, categories, me]} />
-      </FormPage>
-    )
-  }
-  const walletList = wallets.data?.wallets ?? []
-  if (walletList.length === 0) {
-    return (
-      <FormPage title="Add transaction" backTo="/transactions">
-        <Notice accent="lavender" label="No wallets yet">
-          <Text>A Transaction needs a Wallet. Create your first one in Settings.</Text>
-        </Notice>
-      </FormPage>
-    )
-  }
-  /** The first tab reads Expense or Income after the sign of the amount; under the hood both are a Change. */
-  const toggle = (changeLabel: "Expense" | "Income") => (
-    <Field label="Type">
-      <Segmented<Kind>
-        options={[{ value: "change", label: changeLabel }, { value: "exchange", label: "Exchange" }]}
-        value={kind}
-        onChange={(k) => setParams(k === "exchange" ? { type: "exchange" } : {}, { replace: true })}
-      />
-    </Field>
-  )
-  return kind === "exchange" ? (
-    <ExchangeForm wallets={walletList} tagSuggestions={tags.data ?? []} toggle={toggle} />
-  ) : (
-    <ChangeForm
-      wallets={walletList}
-      categories={categories.data ?? []}
-      tagSuggestions={tags.data ?? []}
-      toggle={source.kind === "plain" ? toggle : () => null}
-      source={source}
-      title={title}
-      {...(initial ? { initial } : {})}
-    />
-  )
-}
-
-type Wallets = NonNullable<ReturnType<typeof useWallets>["data"]>["wallets"]
-type Categories = NonNullable<ReturnType<typeof useCategories>["data"]>
-
-type Toggle = (changeLabel: "Expense" | "Income") => React.ReactNode
-
-function ChangeForm({
-  wallets,
-  categories,
-  tagSuggestions,
-  toggle,
-  source,
-  title,
-  initial
-}: {
-  wallets: Wallets
-  categories: Categories
-  tagSuggestions: ReadonlyArray<string>
-  toggle: Toggle
-  source: Source
-  title: string
-  initial?: ChangeDraft
-}) {
-  const navigate = useNavigate()
-  const create = useCreateChange()
-  const fire = useFireRecurring()
-  const settle = useSettleLoan()
-  const first = wallets[0]!
+function ChangeForm({ lists, saver, toggle, initial }: { lists: Lists; saver: SaveChange; toggle?: Toggle; initial?: ChangeDraft }) {
+  const first = lists.wallets[0]!
   const [draft, setDraft] = useState<ChangeDraft>(
     initial ?? {
       sign: "-",
@@ -183,40 +213,28 @@ function ChangeForm({
     }
   )
   const [errors, setErrors] = useState<ChangeErrors>({})
-  const busy = create.isPending || fire.isPending || settle.isPending
-  const error = create.error?.message ?? fire.error?.message ?? settle.error?.message ?? null
 
   const submit = () => {
     const read = readChangeDraft(draft)
     if (Either.isLeft(read)) return setErrors(read.left)
     setErrors({})
-    const change = read.right
-    switch (source.kind) {
-      case "plain":
-        return create.mutate(change, { onSuccess: () => navigate("/transactions") })
-      case "recurring":
-        return fire.mutate({ id: source.id, payload: { change } }, { onSuccess: () => navigate("/transactions") })
-      case "loan":
-        return settle.mutate({ id: source.id, payload: { change } }, { onSuccess: () => navigate(`/more/loans/${source.id}`) })
-    }
+    saver.save(read.right)
   }
-  const backTo = source.kind === "plain" ? "/transactions" : source.kind === "recurring" ? `/more/recurrings/${source.id}` : `/more/loans/${source.id}`
-  const submitLabel = source.kind === "plain" ? "Save transaction" : source.kind === "recurring" ? "Submit" : "Settle"
 
   return (
-    <FormPage title={title} backTo={backTo} submitLabel={submitLabel} onSubmit={submit} busy={busy} error={error}>
-      {toggle(draft.sign === "-" ? "Expense" : "Income")}
-      <TransactionForm draft={draft} onChange={setDraft} wallets={wallets} categories={categories} tagSuggestions={tagSuggestions} mode="add" errors={errors} />
+    <FormPage title={saver.title} backTo={saver.backTo} submitLabel={saver.submitLabel} onSubmit={submit} busy={saver.busy} error={saver.error}>
+      {toggle ? toggle(draft.sign === "-" ? "Expense" : "Income") : null}
+      <TransactionForm draft={draft} onChange={setDraft} wallets={lists.wallets} categories={lists.categories} tagSuggestions={lists.tags} mode="add" errors={errors} />
     </FormPage>
   )
 }
 
-function ExchangeForm({ wallets, tagSuggestions, toggle }: { wallets: Wallets; tagSuggestions: ReadonlyArray<string>; toggle: Toggle }) {
+function ExchangeForm({ lists, toggle }: { lists: Lists; toggle: Toggle }) {
   const navigate = useNavigate()
   const create = useCreateExchange()
   const [draft, setDraft] = useState<ExchangeDraft>({
-    source: wallets[0]!.id,
-    target: (wallets[1] ?? wallets[0])!.id,
+    source: lists.wallets[0]!.id,
+    target: (lists.wallets[1] ?? lists.wallets[0])!.id,
     sent: "",
     received: "",
     date: todayLocal(),
@@ -226,7 +244,7 @@ function ExchangeForm({ wallets, tagSuggestions, toggle }: { wallets: Wallets; t
   const [error, setError] = useState<string | null>(null)
 
   const submit = () => {
-    const payload = exchangePayload(draft, wallets)
+    const payload = exchangePayload(draft, lists.wallets)
     if (Either.isLeft(payload)) return setError(payload.left)
     setError(null)
     create.mutate(payload.right, { onSuccess: () => navigate("/transactions") })
@@ -235,7 +253,7 @@ function ExchangeForm({ wallets, tagSuggestions, toggle }: { wallets: Wallets; t
   return (
     <FormPage title="Add transaction" backTo="/transactions" submitLabel="Save exchange" onSubmit={submit} busy={create.isPending} error={error ?? create.error?.message ?? null}>
       {toggle("Expense")}
-      <ExchangeFields draft={draft} onChange={setDraft} wallets={wallets} tagSuggestions={tagSuggestions} />
+      <ExchangeFields draft={draft} onChange={setDraft} wallets={lists.wallets} tagSuggestions={lists.tags} />
     </FormPage>
   )
 }

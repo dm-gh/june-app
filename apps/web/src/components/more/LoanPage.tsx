@@ -6,6 +6,7 @@ import { Page } from "../../layout/Page"
 import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
 import { formatLongDate, fromEpochMillis } from "../../lib/period"
 import { Button, QueryState } from "../../ui"
+import { addTransactionFor } from "../transactions/AddTransactionPage"
 import { LoanCard } from "./LoanCard"
 
 /** A Loan's page: the same card as the list, and Settle. Edit, Archive and Delete sit behind the menu. */
@@ -49,7 +50,7 @@ export function LoanPage() {
       {l ? (
         <div className="flex flex-col gap-5">
           <LoanCard loan={l} interactive={false} detail={`Since ${since(l.createdAt)}${l.archived ? " · Archived" : ""}`} />
-          <Button size="lg" onClick={() => navigate(`/transactions/new?loan=${l.id}`)}>
+          <Button size="lg" onClick={() => navigate(addTransactionFor({ loan: l.id }))}>
             Settle
           </Button>
         </div>
