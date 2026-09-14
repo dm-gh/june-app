@@ -1,10 +1,9 @@
-import type { Category, Wallet } from "@june/shared"
 import { useMemo } from "react"
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts"
-import { useCategories, useMe, useTransactions, useWallets } from "../../api/queries"
+import { useCategoryIndex, useMe, useTransactions, useWalletIndex } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { PeriodHeader } from "../../layout/PeriodHeader"
-import { filterRows, slugLookup, useFilter } from "../../lib/filter"
+import { filterRows, useFilter } from "../../lib/filter"
 import { balanceMoney, moneyCode } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
 import { Card, Empty, ErrorNotice, Label, Loading } from "../../ui"
@@ -20,14 +19,10 @@ export function BreakdownPage({ dimension, side = "expense" }: { dimension: Dime
   const { filter } = useFilter()
   const me = useMe()
   const transactions = useTransactions(period)
-  const categories = useCategories()
-  const wallets = useWallets()
+  const { byId: categoryById, bySlug: categoryBySlug, slugOf } = useCategoryIndex()
+  const wallets = useWalletIndex()
+  const walletById = wallets.byId
   const currency = me.data?.defaultCurrency ?? "USD"
-
-  const categoryById = useMemo(() => new Map<string, Category>((categories.data ?? []).map((c) => [c.id, c])), [categories.data])
-  const categoryBySlug = useMemo(() => new Map<string, Category>((categories.data ?? []).map((c) => [c.slug, c])), [categories.data])
-  const walletById = useMemo(() => new Map<string, Wallet>((wallets.data?.wallets ?? []).map((w) => [w.id, w])), [wallets.data])
-  const slugOf = useMemo(() => slugLookup(categories.data), [categories.data])
 
   const rows = useMemo(() => filterRows(transactions.data ?? [], filter, slugOf), [transactions.data, filter, slugOf])
   const sides = { expense: !filter.types.includes("expense"), income: !filter.types.includes("income") }
@@ -36,12 +31,12 @@ export function BreakdownPage({ dimension, side = "expense" }: { dimension: Dime
   const flows = useMemo(() => {
     if (!twoSided) return []
     const all = breakdownBoth(rows, keysOf(dimension, categoryById))
-    return dimension === "wallets" ? withEveryWallet(all, (wallets.data?.wallets ?? []).map((w) => w.id)) : all
-  }, [rows, dimension, categoryById, twoSided, wallets.data])
+    return dimension === "wallets" ? withEveryWallet(all, wallets.list.map((w) => w.id)) : all
+  }, [rows, dimension, categoryById, twoSided, wallets.list])
   const total = slices.reduce((sum, s) => sum + s.sum, 0)
   const look = (key: string) => lookOf(dimension, key, categoryBySlug, walletById)
   const count = twoSided ? flows.length : slices.length
-  const totalBalance = wallets.data?.totalDefaultMinor ?? null
+  const totalBalance = wallets.totalDefaultMinor
 
   return (
     <AppShell>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useCategories, useTags, useWallets } from "../../api/queries"
+import { useCategoryIndex, useTags, useWalletIndex } from "../../api/queries"
 import { type Filter, isEmptyFilter, KINDS, kindLabel, toggleIn, UNASSIGNED, UNCATEGORISED, useFilter } from "../../lib/filter"
 import { categoryLabel, hueColor } from "../../lib/format"
 import { Button, cn, Label, Sheet } from "../../ui"
@@ -44,8 +44,8 @@ function ToggleChip({
  */
 export function FilterSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { filter, setFilter } = useFilter()
-  const categories = useCategories()
-  const wallets = useWallets()
+  const categories = useCategoryIndex()
+  const wallets = useWalletIndex()
   const tags = useTags()
   const [draft, setDraft] = useState<Filter>(filter)
 
@@ -59,8 +59,8 @@ export function FilterSheet({ open, onClose }: { open: boolean; onClose: () => v
     onClose()
   }
 
-  const expense = (categories.data ?? []).filter((c) => c.type === "expense")
-  const income = (categories.data ?? []).filter((c) => c.type === "income")
+  const expense = categories.list.filter((c) => c.type === "expense")
+  const income = categories.list.filter((c) => c.type === "income")
   const categoryChip = (c: (typeof expense)[number]) => (
     <ToggleChip
       key={c.id}
@@ -107,7 +107,7 @@ export function FilterSheet({ open, onClose }: { open: boolean; onClose: () => v
           Wallets
         </Label>
         <div className="flex flex-wrap gap-2">
-          {(wallets.data?.wallets ?? []).map((w) => (
+          {wallets.list.map((w) => (
             <ToggleChip key={w.id} label={w.name} color="var(--color-sky)" selected={!draft.wallets.includes(w.id)} onToggle={() => toggle("wallets", w.id)} />
           ))}
           <ToggleChip label="Unassigned" muted selected={!draft.wallets.includes(UNASSIGNED)} onToggle={() => toggle("wallets", UNASSIGNED)} />

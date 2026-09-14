@@ -45,9 +45,3 @@ export function Text<T extends ElementType = "p">({ as, className, ...rest }: Te
   const Tag = (as ?? "p") as ElementType
   return <Tag className={cn("font-sans text-base leading-snug", className)} {...rest} />
 }
-
-/** Engineered feel: amounts, slugs, tokens, dates. */
-export function Mono<T extends ElementType = "span">({ as, className, ...rest }: TextProps<T>) {
-  const Tag = (as ?? "span") as ElementType
-  return <Tag className={cn("font-mono", className)} {...rest} />
-}

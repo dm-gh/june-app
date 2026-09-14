@@ -1,8 +1,8 @@
-import type { Category, RecurringId, Wallet } from "@june/shared"
+import type { RecurringId } from "@june/shared"
 import { ArrowLeft, PencilSimple, Trash } from "@phosphor-icons/react"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
-import { useCategories, useDeleteRecurring, useRecurring, useWallets } from "../../api/queries"
+import { useCategoryIndex, useDeleteRecurring, useRecurring, useWalletIndex } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { StickyBar } from "../../layout/StickyBar"
 import { formatLongDate } from "../../lib/period"
@@ -16,17 +16,15 @@ export function RecurringPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const recurring = useRecurring(id as RecurringId)
-  const categories = useCategories()
-  const wallets = useWallets()
+  const categories = useCategoryIndex()
+  const wallets = useWalletIndex()
   const remove = useDeleteRecurring()
   const [submitting, setSubmitting] = useState(false)
   const [confirm, setConfirm] = useState(false)
-  const categoryById = useMemo(() => new Map<string, Category>((categories.data ?? []).map((c) => [c.id, c])), [categories.data])
-  const walletById = useMemo(() => new Map<string, Wallet>((wallets.data?.wallets ?? []).map((w) => [w.id, w])), [wallets.data])
 
   const r = recurring.data
-  const category = r?.categoryId ? categoryById.get(r.categoryId) : undefined
-  const wallet = r?.walletId ? walletById.get(r.walletId) : undefined
+  const category = categories.get(r?.categoryId)
+  const wallet = r?.walletId ? wallets.byId.get(r.walletId) : undefined
   const due = r ? dueState(r) : null
 
   return (

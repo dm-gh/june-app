@@ -1,7 +1,7 @@
-import type { Category, Recurring } from "@june/shared"
-import { useMemo, useState } from "react"
+import type { Recurring } from "@june/shared"
+import { useState } from "react"
 import { Link, useNavigate } from "react-router"
-import { useCategories, useLoans, useRecurrings, useWallets } from "../../api/queries"
+import { useCategoryIndex, useLoans, useRecurrings, useWalletIndex } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { StickyBar } from "../../layout/StickyBar"
 import { Button, Display, Empty, ErrorNotice, Heading, Loading } from "../../ui"
@@ -14,11 +14,9 @@ export function MorePage() {
   const navigate = useNavigate()
   const recurrings = useRecurrings()
   const loans = useLoans()
-  const categories = useCategories()
-  const wallets = useWallets()
+  const categories = useCategoryIndex()
+  const wallets = useWalletIndex()
   const [submitting, setSubmitting] = useState<Recurring | null>(null)
-  const categoryById = useMemo(() => new Map<string, Category>((categories.data ?? []).map((c) => [c.id, c])), [categories.data])
-  const walletNames = useMemo(() => new Map((wallets.data?.wallets ?? []).map((w) => [w.id, w.name])), [wallets.data])
   const live = (loans.data ?? []).filter((l) => !l.archived)
   const archived = (loans.data ?? []).filter((l) => l.archived)
 
@@ -44,8 +42,8 @@ export function MorePage() {
           <RecurringCard
             key={r.id}
             recurring={r}
-            category={r.categoryId ? categoryById.get(r.categoryId) : undefined}
-            walletName={r.walletId ? (walletNames.get(r.walletId) ?? null) : null}
+            category={categories.get(r.categoryId)}
+            walletName={wallets.name(r.walletId)}
             onSubmit={r.auto ? undefined : () => setSubmitting(r)}
           />
         ))}

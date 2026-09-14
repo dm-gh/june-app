@@ -1,12 +1,11 @@
-import type { Category, Wallet } from "@june/shared"
 import { CaretRight } from "@phosphor-icons/react"
 import { type ReactNode, useMemo } from "react"
 import { useNavigate } from "react-router"
 import { Bar, BarChart, Cell, ComposedChart, LabelList, type LabelProps, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { useCategories, useMe, useTransactions, useWallets } from "../../api/queries"
+import { useCategoryIndex, useMe, useTransactions, useWalletIndex } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { PeriodHeader } from "../../layout/PeriodHeader"
-import { filterRows, slugLookup, useFilter } from "../../lib/filter"
+import { filterRows, useFilter } from "../../lib/filter"
 import { fromMinor } from "@june/shared"
 import { balanceMoney, moneyCode, signedMoney } from "../../lib/format"
 import { todayLocal, usePeriod } from "../../lib/period"
@@ -119,15 +118,12 @@ export function AnalysisPage() {
   const { filter, setFilter } = useFilter()
   const me = useMe()
   const transactions = useTransactions(period)
-  const categories = useCategories()
-  const wallets = useWallets()
+  const { byId: categoryById, bySlug: categoryBySlug, slugOf } = useCategoryIndex()
+  const wallets = useWalletIndex()
+  const walletById = wallets.byId
   const currency = me.data?.defaultCurrency ?? "USD"
   const today = todayLocal()
 
-  const categoryById = useMemo(() => new Map<string, Category>((categories.data ?? []).map((c) => [c.id, c])), [categories.data])
-  const categoryBySlug = useMemo(() => new Map<string, Category>((categories.data ?? []).map((c) => [c.slug, c])), [categories.data])
-  const walletById = useMemo(() => new Map<string, Wallet>((wallets.data?.wallets ?? []).map((w) => [w.id, w])), [wallets.data])
-  const slugOf = useMemo(() => slugLookup(categories.data), [categories.data])
   const rows = useMemo(() => filterRows(transactions.data ?? [], filter, slugOf), [transactions.data, filter, slugOf])
 
   const spent = spentMinor(rows)
@@ -153,10 +149,10 @@ export function AnalysisPage() {
     [rows, categoryById]
   )
   const walletSlices = useMemo(
-    () => withEveryWallet(breakdownBoth(rows, keysOf("wallets", categoryById)), (wallets.data?.wallets ?? []).map((w) => w.id)),
-    [rows, categoryById, wallets.data]
+    () => withEveryWallet(breakdownBoth(rows, keysOf("wallets", categoryById)), wallets.list.map((w) => w.id)),
+    [rows, categoryById, wallets.list]
   )
-  const totalBalance = wallets.data?.totalDefaultMinor ?? null
+  const totalBalance = wallets.totalDefaultMinor
   const tagSlices = useMemo(() => breakdownBoth(rows, keysOf("tags", categoryById)), [rows, categoryById])
   const look = (dimension: Dimension) => (key: string) => lookOf(dimension, key, categoryBySlug, walletById)
 

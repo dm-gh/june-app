@@ -1,6 +1,4 @@
 import {
-  type Category,
-  type CategoryId,
   IMPORT_COLUMNS,
   IMPORT_MAX_ROWS,
   type ImportPlanned,
@@ -8,14 +6,13 @@ import {
   type ImportSkipped,
   parseCsv,
   type Transaction,
-  type TransactionId,
-  type WalletId
+  type TransactionId
 } from "@june/shared"
 import { FileCsv, UploadSimple } from "@phosphor-icons/react"
 import { DateTime } from "effect"
-import { type DragEvent, useMemo, useRef, useState } from "react"
+import { type DragEvent, useRef, useState } from "react"
 import { useNavigate } from "react-router"
-import { useCategories, useImportPreview, useImportRun, useWallets } from "../../api/queries"
+import { useCategoryIndex, useImportPreview, useImportRun, useWalletIndex } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { plural } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
@@ -106,8 +103,8 @@ function CountCard({ label, value, accent }: { label: string; value: number; acc
 export function ImportPage() {
   const navigate = useNavigate()
   const { setPeriod } = usePeriod()
-  const categories = useCategories()
-  const wallets = useWallets()
+  const categories = useCategoryIndex()
+  const wallets = useWalletIndex()
   const preview = useImportPreview()
   const run = useImportRun()
   const input = useRef<HTMLInputElement>(null)
@@ -116,10 +113,7 @@ export function ImportPage() {
   const [dragging, setDragging] = useState(false)
   const [skipDuplicates, setSkipDuplicates] = useState(true)
 
-  const categoryById = useMemo(() => new Map<string, Category>((categories.data ?? []).map((c) => [c.id, c])), [categories.data])
-  const walletNames = useMemo(() => new Map((wallets.data?.wallets ?? []).map((w) => [w.id, w.name])), [wallets.data])
-  const walletName = (id: WalletId | null) => (id === null ? null : (walletNames.get(id) ?? null))
-  const slugs = (categories.data ?? []).map((c) => c.slug)
+  const slugs = categories.list.map((c) => c.slug)
 
   const choose = (file: File | undefined) => {
     preview.reset()
@@ -264,8 +258,8 @@ export function ImportPage() {
                     <TransactionCard
                       key={r.line}
                       item={{ kind: "single", transaction: t }}
-                      category={r.categoryId ? categoryById.get(r.categoryId as CategoryId) : undefined}
-                      walletName={walletName}
+                      category={categories.get(r.categoryId)}
+                      walletName={wallets.name}
                       onOpen={() => undefined}
                     />
                   )

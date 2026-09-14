@@ -1,12 +1,12 @@
-import type { TransactionId, WalletId } from "@june/shared"
+import type { TransactionId } from "@june/shared"
 import { PencilSimple, Trash, X } from "@phosphor-icons/react"
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router"
-import { useCategories, useDeleteTransactions, useTransactions, useWallets } from "../../api/queries"
+import { useCategoryIndex, useDeleteTransactions, useTransactions, useWalletIndex } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { PeriodHeader } from "../../layout/PeriodHeader"
 import { StickyBar } from "../../layout/StickyBar"
-import { filterItems, isEmptyFilter, slugLookup, useFilter } from "../../lib/filter"
+import { filterItems, isEmptyFilter, useFilter } from "../../lib/filter"
 import { dayHeading, plural } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
 import { Dialog, Empty, ErrorNotice, IconButton, Label, Loading, Menu } from "../../ui"
@@ -18,18 +18,14 @@ export function TransactionsPage() {
   const { period } = usePeriod()
   const { filter } = useFilter()
   const transactions = useTransactions(period)
-  const categories = useCategories()
-  const wallets = useWallets()
+  const categories = useCategoryIndex()
+  const wallets = useWalletIndex()
   const remove = useDeleteTransactions()
   const [selected, setSelected] = useState<ReadonlySet<TransactionId>>(new Set())
   const [selecting, setSelecting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  const categoryById = useMemo(() => new Map((categories.data ?? []).map((c) => [c.id, c])), [categories.data])
-  const walletNames = useMemo(() => new Map((wallets.data?.wallets ?? []).map((w) => [w.id, w.name])), [wallets.data])
-  const walletName = (id: WalletId | null) => (id === null ? null : (walletNames.get(id) ?? null))
-  const slugOf = useMemo(() => slugLookup(categories.data), [categories.data])
-  const items = useMemo(() => filterItems(toItems(transactions.data ?? []), filter, slugOf), [transactions.data, filter, slugOf])
+  const items = useMemo(() => filterItems(toItems(transactions.data ?? []), filter, categories.slugOf), [transactions.data, filter, categories.slugOf])
   const groups = useMemo(() => groupByDay(items), [items])
 
   /** An item is selected as a whole: both legs of an Exchange go in and out together. */
@@ -100,8 +96,8 @@ export function TransactionsPage() {
                   <TransactionCard
                     key={t.id}
                     item={item}
-                    category={t.categoryId ? categoryById.get(t.categoryId) : undefined}
-                    walletName={walletName}
+                    category={categories.get(t.categoryId)}
+                    walletName={wallets.name}
                     onOpen={() => navigate(`/transactions/${t.id}`)}
                     selectable={{
                       selecting,

@@ -1,6 +1,6 @@
 import { Funnel } from "@phosphor-icons/react"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useCategories, useTags, useWallets } from "../api/queries"
+import { useCategoryIndex, useTags, useWalletIndex } from "../api/queries"
 import { FilterSheet } from "../components/transactions/FilterSheet"
 import { type ChipSummary, KINDS, kindLabel, summarise, UNCATEGORISED, useFilter, walletOptions } from "../lib/filter"
 import { categoryLabel, hueColor } from "../lib/format"
@@ -123,8 +123,8 @@ function Chip({ name, summary, onClick }: { name: string; summary: ChipSummary; 
 /** The ghost Filter button and the four always-visible chips: Type, Category, Wallet, Tag. One line, never wraps. */
 export function FilterRow() {
   const { filter } = useFilter()
-  const categories = useCategories()
-  const wallets = useWallets()
+  const categories = useCategoryIndex()
+  const wallets = useWalletIndex()
   const tags = useTags()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -136,13 +136,13 @@ export function FilterRow() {
     )
     const category = summarise(
       [
-        ...(categories.data ?? []).map((c) => ({ key: c.slug as string, label: categoryLabel(c), color: hueColor(c.hue) })),
+        ...categories.list.map((c) => ({ key: c.slug as string, label: categoryLabel(c), color: hueColor(c.hue) })),
         { key: UNCATEGORISED, label: "Uncategorised", color: "var(--color-grey)" }
       ],
       filter.categories
     )
     const wallet = summarise(
-      walletOptions(wallets.data?.wallets).map((w) => ({ ...w, color: w.key === "unassigned" ? "var(--color-grey)" : "var(--color-sky)" })),
+      walletOptions(wallets.list).map((w) => ({ ...w, color: w.key === "unassigned" ? "var(--color-grey)" : "var(--color-sky)" })),
       filter.wallets
     )
     const tag = summarise(
@@ -150,7 +150,7 @@ export function FilterRow() {
       filter.tags
     )
     return { type, category, wallet, tag }
-  }, [filter, categories.data, wallets.data, tags.data])
+  }, [filter, categories.list, wallets.list, tags.data])
 
   useMarquee(ref, [summaries.type.label, summaries.category.label, summaries.wallet.label, summaries.tag.label].join("|"))
 
