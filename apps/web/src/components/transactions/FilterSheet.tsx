@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useCategories, useTags, useWallets } from "../../api/queries"
 import { type Filter, isEmptyFilter, KINDS, kindLabel, toggleIn, UNASSIGNED, UNCATEGORISED, useFilter } from "../../lib/filter"
-import { hueColor } from "../../lib/format"
+import { categoryLabel, hueColor } from "../../lib/format"
 import { Button, cn, Label, Sheet } from "../../ui"
 
 /** A chip that reads as selected until tapped: a deselected one keeps its colour at half opacity. */
@@ -64,7 +64,7 @@ export function FilterSheet({ open, onClose }: { open: boolean; onClose: () => v
   const categoryChip = (c: (typeof expense)[number]) => (
     <ToggleChip
       key={c.id}
-      label={`${c.emoji ? `${c.emoji} ` : ""}${c.name}`}
+      label={categoryLabel(c)}
       color={hueColor(c.hue)}
       selected={!draft.categories.includes(c.slug)}
       onToggle={() => toggle("categories", c.slug)}

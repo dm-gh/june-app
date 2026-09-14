@@ -1,5 +1,5 @@
 import type { LocalDate, Transaction } from "@june/shared"
-import { addDays, addMonths, daysBetween, isWholeMonth, monthEnd, monthStart, parseLocalDate, type Period } from "../../lib/period"
+import { addDays, addMonths, daysBetween, isWholeMonth, monthEnd, monthStart, parseLocalDate, type Period, SHORT_MONTHS } from "../../lib/period"
 
 /** Pure arithmetic behind Analysis. Every figure is in Default Currency minor units, Hidden rows never count. */
 
@@ -19,8 +19,6 @@ export interface Bucket {
   readonly from: LocalDate
   readonly to: LocalDate
 }
-
-const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 export const bucketsFor = (p: Period): Array<Bucket> => {
   const out: Array<Bucket> = []

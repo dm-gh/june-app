@@ -1,5 +1,5 @@
 import type { LocalDate } from "@june/shared"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   addDays,
   addMonths,
@@ -8,6 +8,7 @@ import {
   daysBetween,
   formatLongDate,
   formatMonthYear,
+  fromEpochMillis,
   isWholeMonth,
   monthEnd,
   monthPeriod,
@@ -15,6 +16,7 @@ import {
   parseLocalDate,
   periodLabel,
   shiftPeriod,
+  SHORT_MONTHS,
   toLocalDate,
   type Period
 } from "./period"
@@ -31,6 +33,32 @@ describe("LocalDate <-> Date", () => {
     const parsed = parseLocalDate("2026-02-09")
     expect([parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), parsed.getHours()]).toEqual([2026, 1, 9, 0])
     expect(toLocalDate(parsed)).toBe("2026-02-09")
+  })
+})
+
+describe("fromEpochMillis", () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  it("reads the day an instant falls on in the local zone, whatever that zone is", () => {
+    expect(fromEpochMillis(new Date(2026, 8, 10, 23, 30).getTime())).toBe("2026-09-10")
+    expect(fromEpochMillis(new Date(2026, 8, 11, 0, 30).getTime())).toBe("2026-09-11")
+  })
+
+  it("does not slip a day near midnight the way the UTC date would, east of Greenwich", () => {
+    vi.stubEnv("TZ", "Asia/Tbilisi")
+    // 23:30 on 10 Sep in Tbilisi (UTC+4) is 19:30 UTC the same day; 01:30 on 11 Sep is 21:30 UTC on the 10th.
+    const lateEvening = Date.UTC(2026, 8, 10, 19, 30)
+    const smallHours = Date.UTC(2026, 8, 10, 21, 30)
+    expect(fromEpochMillis(lateEvening)).toBe("2026-09-10")
+    expect(fromEpochMillis(smallHours)).toBe("2026-09-11")
+    expect(new Date(smallHours).toISOString().slice(0, 10)).toBe("2026-09-10")
+  })
+})
+
+describe("SHORT_MONTHS", () => {
+  it("spells September as Sep, the way every date in June reads", () => {
+    expect(SHORT_MONTHS).toHaveLength(12)
+    expect(SHORT_MONTHS[8]).toBe("Sep")
   })
 })
 

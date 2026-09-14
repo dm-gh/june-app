@@ -2,10 +2,9 @@ import type { Recurring } from "@june/shared"
 import { useEffect, useRef } from "react"
 import { useNavigate } from "react-router"
 import { useFireRecurring } from "../../api/queries"
-import { signedMoney } from "../../lib/format"
+import { shortDate, signedMoney } from "../../lib/format"
 import { formatLongDate, todayLocal } from "../../lib/period"
 import { Button, ErrorNotice, Heading, Text } from "../../ui"
-import { shortDate } from "./recurring"
 
 export interface SubmitDialogProps {
   recurring: Recurring

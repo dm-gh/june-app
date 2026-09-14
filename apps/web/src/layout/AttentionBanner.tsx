@@ -1,6 +1,7 @@
 import { CaretRight } from "@phosphor-icons/react"
 import { Link } from "react-router"
 import { useAttention } from "../api/queries"
+import { plural } from "../lib/format"
 import { Card, Text } from "../ui"
 
 /** Anything that needs a Wallet: Recurrings whose Wallet was deleted, Transactions left Unassigned. */
@@ -8,8 +9,6 @@ export const useAttentionNeeded = (): boolean => {
   const attention = useAttention()
   return (attention.data?.recurringsWithoutWallet ?? 0) + (attention.data?.unassignedTransactions ?? 0) > 0
 }
-
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
 
 /**
  * "Some items need attention", on every tabbed screen while a Recurring has no Wallet or a
@@ -20,8 +19,8 @@ export function AttentionBanner() {
   const recurrings = attention.data?.recurringsWithoutWallet ?? 0
   const unassigned = attention.data?.unassignedTransactions ?? 0
   const parts = [
-    ...(recurrings > 0 ? [`${plural(recurrings, "recurring")} ${recurrings === 1 ? "has" : "have"} no wallet`] : []),
-    ...(unassigned > 0 ? [`${plural(unassigned, "transaction")} ${unassigned === 1 ? "is" : "are"} unassigned`] : [])
+    ...(recurrings > 0 ? [`${recurrings} ${plural(recurrings, "recurring")} ${plural(recurrings, "has", "have")} no wallet`] : []),
+    ...(unassigned > 0 ? [`${unassigned} ${plural(unassigned, "transaction")} ${plural(unassigned, "is", "are")} unassigned`] : [])
   ]
   return (
     <Link to={recurrings > 0 ? "/more" : "/transactions"} className="block">

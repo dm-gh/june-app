@@ -1,4 +1,4 @@
-import { type CategoryId, currencyExponent, type LoanId, type LocalDate, type MinorAmount, type RecurringId, toMinor, type WalletId } from "@june/shared"
+import { type LoanId, type RecurringId, toMajorFixed } from "@june/shared"
 import { Either } from "effect"
 import { useState } from "react"
 import { useNavigate, useSearchParams } from "react-router"
@@ -6,7 +6,7 @@ import { useCategories, useCreateChange, useCreateExchange, useFireRecurring, us
 import { FormPage } from "../../layout/FormPage"
 import { todayLocal } from "../../lib/period"
 import { Field, Loading, Notice, Segmented, Text } from "../../ui"
-import type { ChangeDraft } from "./changeDraft"
+import { type ChangeDraft, type ChangeErrors, readChangeDraft } from "./changeDraft"
 import { type ExchangeDraft, exchangePayload } from "./exchangeDraft"
 import { ExchangeFields } from "./ExchangeForm"
 import { TransactionForm } from "./TransactionForm"
@@ -18,8 +18,6 @@ type Kind = "change" | "exchange"
  * Schedule, a Loan's Settle records it and moves the Loan. Plain is the ordinary Add transaction.
  */
 export type Source = { kind: "plain" } | { kind: "recurring"; id: RecurringId } | { kind: "loan"; id: LoanId }
-
-const decimal = (minor: number, currency: string) => (Math.abs(minor) / 10 ** currencyExponent(currency)).toFixed(currencyExponent(currency))
 
 /** Add transaction: a Change (Expense or Income by sign) or, via the type toggle, an Exchange. */
 export function AddTransactionPage() {
@@ -48,7 +46,7 @@ function FromRecurring({ id }: { id: RecurringId }) {
       title={`Submit ${r.name}`}
       initial={{
         sign: r.amountMinor < 0 ? "-" : "+",
-        amount: decimal(r.amountMinor, r.currency),
+        amount: toMajorFixed(r.amountMinor, r.currency),
         currency: r.currency,
         walletId: r.walletId ?? "",
         categoryId: r.categoryId ?? "",
@@ -81,7 +79,7 @@ function FromLoan({ id }: { id: LoanId }) {
       initial={{
         // Lent (positive) settles with money coming back (+); Borrowed with money going out (−).
         sign: l.amountMinor >= 0 ? "+" : "-",
-        amount: decimal(l.amountMinor, l.currency),
+        amount: toMajorFixed(l.amountMinor, l.currency),
         currency: l.currency,
         walletId: first?.id ?? "",
         categoryId: "",
@@ -184,29 +182,15 @@ function ChangeForm({
       hidden: false
     }
   )
-  const [errors, setErrors] = useState<{ amount?: string; wallet?: string }>({})
+  const [errors, setErrors] = useState<ChangeErrors>({})
   const busy = create.isPending || fire.isPending || settle.isPending
   const error = create.error?.message ?? fire.error?.message ?? settle.error?.message ?? null
 
   const submit = () => {
-    const parsed = toMinor(Number(draft.amount), draft.currency)
-    const next: typeof errors = {}
-    if (draft.amount.trim() === "" || Either.isLeft(parsed) || parsed.right === 0) {
-      next.amount = Either.isLeft(parsed) ? parsed.left : "Enter an amount"
-    }
-    if (draft.walletId === "") next.wallet = `Create a ${draft.currency} wallet first`
-    setErrors(next)
-    if (Object.keys(next).length > 0 || Either.isLeft(parsed)) return
-    const amountMinor = ((draft.sign === "-" ? -1 : 1) * parsed.right) as MinorAmount
-    const change = {
-      walletId: draft.walletId as WalletId,
-      amountMinor,
-      occurredOn: draft.date as LocalDate,
-      description: draft.description.trim(),
-      tags: draft.tags as never,
-      categoryId: draft.categoryId === "" ? null : (draft.categoryId as CategoryId),
-      hiddenFromAnalysis: draft.hidden
-    }
+    const read = readChangeDraft(draft)
+    if (Either.isLeft(read)) return setErrors(read.left)
+    setErrors({})
+    const change = read.right
     switch (source.kind) {
       case "plain":
         return create.mutate(change, { onSuccess: () => navigate("/transactions") })

@@ -4,7 +4,7 @@ import { lazy, Suspense, useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
-import { hueColor } from "../../lib/format"
+import { categoryLabel, hueColor } from "../../lib/format"
 import { Dialog, Field, HueSlider, Input, Loading, Segmented, Sheet } from "../../ui"
 import { FitText } from "../../ui/FitText"
 
@@ -34,8 +34,7 @@ function TitlePreview({ verb, draft }: { verb: "Add" | "Edit"; draft: Draft }) {
           className="inline border-3 border-ink px-2 py-0.5 font-heading text-[0.8em] font-bold tracking-wide uppercase"
           style={{ background: hueColor(draft.hue), boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone" }}
         >
-          {draft.emoji ? `${draft.emoji} ` : ""}
-          {name}
+          {categoryLabel({ name, emoji: draft.emoji })}
         </span>
       ) : (
         "category"

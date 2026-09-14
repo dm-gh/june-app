@@ -7,7 +7,7 @@ import { AppShell } from "../../layout/AppShell"
 import { PeriodHeader } from "../../layout/PeriodHeader"
 import { StickyBar } from "../../layout/StickyBar"
 import { filterItems, isEmptyFilter, slugLookup, useFilter } from "../../lib/filter"
-import { dayHeading } from "../../lib/format"
+import { dayHeading, plural } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
 import { Dialog, Empty, ErrorNotice, IconButton, Label, Loading, Menu } from "../../ui"
 import { groupByDay, itemIds, toItems } from "./listItems"
@@ -122,7 +122,7 @@ export function TransactionsPage() {
 
       <Dialog
         open={confirmDelete}
-        title={`Delete ${selectedCount} ${selectedCount === 1 ? "transaction" : "transactions"}?`}
+        title={`Delete ${selectedCount} ${plural(selectedCount, "transaction")}?`}
         body="They are removed for good and every affected Balance moves accordingly."
         confirmLabel="Delete"
         danger

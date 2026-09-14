@@ -1,7 +1,7 @@
 import type { Category, Transaction, Wallet } from "@june/shared"
 import type { ReactNode } from "react"
 import { UNASSIGNED, UNCATEGORISED } from "../../lib/filter"
-import { balanceMoney, hueColor, moneyCode, signedMoney } from "../../lib/format"
+import { balanceMoney, categoryLabel, hueColor, moneyCode, signedMoney } from "../../lib/format"
 import { Badge, cn } from "../../ui"
 import type { SideSum, Slice, TwoSidedSlice } from "./analysis"
 
@@ -38,7 +38,7 @@ export const lookOf = (
   switch (dimension) {
     case "categories": {
       const c = categoryBySlug.get(key)
-      return c ? { label: `${c.emoji ? `${c.emoji} ` : ""}${c.name}`, color: hueColor(c.hue), muted: false } : { label: "Uncategorised", color: undefined, muted: true }
+      return c ? { label: categoryLabel(c), color: hueColor(c.hue), muted: false } : { label: "Uncategorised", color: undefined, muted: true }
     }
     case "wallets": {
       const w = walletById.get(key)

@@ -1,7 +1,7 @@
 import type { LocalDate } from "@june/shared"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { recurring } from "../../test/fixtures"
-import { dueState, scheduleWords, shortDate } from "./recurring"
+import { dueState, scheduleWords } from "./recurring"
 
 const d = (s: string) => s as LocalDate
 
@@ -10,13 +10,6 @@ beforeEach(() => {
   vi.setSystemTime(new Date(2026, 8, 14, 12, 0, 0))
 })
 afterEach(() => vi.useRealTimers())
-
-describe("shortDate", () => {
-  it("omits the year within this year and adds it beyond", () => {
-    expect(shortDate(d("2026-10-05"))).toBe("5 Oct")
-    expect(shortDate(d("2027-03-14"))).toBe("14 Mar 2027")
-  })
-})
 
 describe("scheduleWords", () => {
   it("describes a cron Schedule in words", () => {

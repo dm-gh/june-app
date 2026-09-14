@@ -1,6 +1,7 @@
 import type { LocalDate } from "@june/shared"
 import { CalendarBlank } from "@phosphor-icons/react"
 import { useState } from "react"
+import { describeDay } from "../lib/format"
 import { addDays, formatLongDate, monthStart, todayLocal } from "../lib/period"
 import { Button } from "./Button"
 import { Calendar } from "./Calendar"
@@ -14,14 +15,6 @@ export interface DateInputProps {
   onChange: (value: LocalDate) => void
   disabled?: boolean | undefined
   invalid?: boolean | undefined
-}
-
-/** "Today · 12 Sep 2026", "Yesterday · 11 Sep 2026", otherwise the date alone. */
-const describe = (d: LocalDate): string => {
-  const today = todayLocal()
-  if (d === today) return `Today · ${formatLongDate(d)}`
-  if (d === addDays(today, -1)) return `Yesterday · ${formatLongDate(d)}`
-  return formatLongDate(d)
 }
 
 /** A bordered control that reads like an input and opens June's calendar in a sheet instead of the system picker. */
@@ -47,7 +40,7 @@ export function DateInput({ id, value, onChange, disabled, invalid }: DateInputP
         onClick={show}
         className={cn(controlClass, "flex h-11 items-center justify-between gap-3 text-left")}
       >
-        <span>{describe(value)}</span>
+        <span>{describeDay(value, formatLongDate)}</span>
         <CalendarBlank size={20} weight="bold" className="shrink-0" />
       </button>
       <Sheet open={open} title="Date" onClose={() => setOpen(false)}>

@@ -1,6 +1,6 @@
 import type { LocalDate } from "@june/shared"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { balanceMoney, categoryLabel, dayHeading, hueColor, moneyCode, signedMoney } from "./format"
+import { balanceMoney, categoryLabel, dayHeading, describeDay, hueColor, moneyCode, plural, shortDate, signedMoney } from "./format"
 
 const MINUS = "−"
 
@@ -60,6 +60,58 @@ describe("dayHeading", () => {
 
   it("adds the year for a day in another year", () => {
     expect(heading("2025-12-28")).toBe("28 DEC 2025")
+  })
+})
+
+describe("shortDate", () => {
+  const today = "2026-09-14" as LocalDate
+
+  it("omits the year within today's year and adds it beyond, either way", () => {
+    expect(shortDate("2026-10-05" as LocalDate, today)).toBe("5 Oct")
+    expect(shortDate("2027-03-14" as LocalDate, today)).toBe("14 Mar 2027")
+    expect(shortDate("2025-12-28" as LocalDate, today)).toBe("28 Dec 2025")
+  })
+
+  it("reads today from the local clock when none is given", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2027, 0, 2, 12, 0, 0))
+    expect(shortDate("2027-03-14" as LocalDate)).toBe("14 Mar")
+    vi.useRealTimers()
+  })
+})
+
+describe("describeDay", () => {
+  const today = "2026-09-14" as LocalDate
+  const long = (d: LocalDate) => `long(${d})`
+
+  it("says Today and Yesterday with a middle dot before the rendered date", () => {
+    expect(describeDay("2026-09-14" as LocalDate, long, today)).toBe("Today · long(2026-09-14)")
+    expect(describeDay("2026-09-13" as LocalDate, long, today)).toBe("Yesterday · long(2026-09-13)")
+  })
+
+  it("leaves any other day, tomorrow included, as the rendered date alone", () => {
+    expect(describeDay("2026-09-12" as LocalDate, long, today)).toBe("long(2026-09-12)")
+    expect(describeDay("2026-09-15" as LocalDate, long, today)).toBe("long(2026-09-15)")
+  })
+
+  it("is what the date control shows: Today · 14 Sep 2026", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 8, 14, 12, 0, 0))
+    expect(describeDay("2026-09-14" as LocalDate, (d) => d)).toBe("Today · 2026-09-14")
+    vi.useRealTimers()
+  })
+})
+
+describe("plural", () => {
+  it("adds an s for anything but exactly one", () => {
+    expect(plural(1, "row")).toBe("row")
+    expect(plural(0, "row")).toBe("rows")
+    expect(plural(2, "row")).toBe("rows")
+  })
+
+  it("takes an irregular plural", () => {
+    expect(plural(1, "is", "are")).toBe("is")
+    expect(plural(3, "has", "have")).toBe("have")
   })
 })
 

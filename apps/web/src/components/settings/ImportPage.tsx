@@ -17,6 +17,7 @@ import { type DragEvent, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router"
 import { useCategories, useImportPreview, useImportRun, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
+import { plural } from "../../lib/format"
 import { usePeriod } from "../../lib/period"
 import { Button, Card, Checkbox, cn, CopyButton, ErrorNotice, Label, Loading, Notice, Text } from "../../ui"
 import { TransactionCard } from "../transactions/TransactionCard"
@@ -166,7 +167,7 @@ export function ImportPage() {
       <FormPage title="Import" backTo="/settings">
         <Notice accent="green" label="Done">
           <Text className="text-sm">
-            Imported {run.data.imported.toLocaleString("en")} {run.data.imported === 1 ? "row" : "rows"} from {chosen?.name}.
+            Imported {run.data.imported.toLocaleString("en")} {plural(run.data.imported, "row")} from {chosen?.name}.
             {run.data.skipped.length > 0 ? ` ${run.data.skipped.length} could not be read and were left out.` : ""}
           </Text>
         </Notice>
@@ -227,7 +228,7 @@ export function ImportPage() {
           <div className="min-w-0 flex-1">
             <div className="truncate font-heading font-bold">{chosen.name}</div>
             <div className="font-mono text-xs text-grey-ink">
-              {chosen.rows.length.toLocaleString("en")} {chosen.rows.length === 1 ? "row" : "rows"} · {fileSize(chosen.size)}
+              {chosen.rows.length.toLocaleString("en")} {plural(chosen.rows.length, "row")} · {fileSize(chosen.size)}
             </div>
           </div>
           <Button variant="secondary" size="sm" onClick={() => choose(undefined)}>
@@ -274,7 +275,7 @@ export function ImportPage() {
           ) : null}
 
           {skipped.length > 0 ? (
-            <Notice accent="coral" label={`${skipped.length} ${skipped.length === 1 ? "row" : "rows"} June cannot read`}>
+            <Notice accent="coral" label={`${skipped.length} ${plural(skipped.length, "row")} June cannot read`}>
               <ul className="flex flex-col gap-0.5 font-mono text-xs">
                 {skipped.slice(0, 20).map((s) => (
                   <li key={s.line}>
@@ -288,7 +289,7 @@ export function ImportPage() {
 
           {duplicates > 0 ? (
             <Checkbox
-              label={`Skip ${duplicates} ${duplicates === 1 ? "row" : "rows"} identical to an existing transaction`}
+              label={`Skip ${duplicates} ${plural(duplicates, "row")} identical to an existing transaction`}
               checked={skipDuplicates}
               onChange={(e) => setSkipDuplicates(e.target.checked)}
             />
@@ -296,7 +297,7 @@ export function ImportPage() {
 
           {run.isPending ? <Loading label="Importing" /> : null}
           <Button size="lg" className="w-full" disabled={willImport === 0 || run.isPending} onClick={startImport}>
-            Import {willImport.toLocaleString("en")} {willImport === 1 ? "row" : "rows"}
+            Import {willImport.toLocaleString("en")} {plural(willImport, "row")}
           </Button>
         </>
       )}

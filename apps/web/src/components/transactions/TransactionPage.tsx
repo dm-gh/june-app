@@ -1,4 +1,4 @@
-import { type CategoryId, type ExchangeId, type LocalDate, type MinorAmount, toMinor, type TransactionId, type WalletId } from "@june/shared"
+import type { ExchangeId, TransactionId } from "@june/shared"
 import { Trash } from "@phosphor-icons/react"
 import { Either } from "effect"
 import { useEffect, useState } from "react"
@@ -6,7 +6,7 @@ import { useNavigate, useParams } from "react-router"
 import { useCategories, useDeleteTransactions, useExchange, useTags, useTransaction, useUpdateExchange, useUpdateTransaction, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { Dialog, ErrorNotice, Loading } from "../../ui"
-import { type ChangeDraft, draftFromTransaction } from "./changeDraft"
+import { type ChangeDraft, type ChangeErrors, draftFromTransaction, readChangeDraft } from "./changeDraft"
 import { draftFromLegs, type ExchangeDraft, exchangePayload } from "./exchangeDraft"
 import { ExchangeFields } from "./ExchangeForm"
 import { TransactionForm } from "./TransactionForm"
@@ -97,7 +97,7 @@ function EditChangePage({ id }: { id: TransactionId }) {
   const update = useUpdateTransaction()
   const remove = useDeleteTransactions()
   const [draft, setDraft] = useState<ChangeDraft | null>(null)
-  const [errors, setErrors] = useState<{ amount?: string; wallet?: string }>({})
+  const [errors, setErrors] = useState<ChangeErrors>({})
   const [confirm, setConfirm] = useState(false)
 
   useEffect(() => {
@@ -114,30 +114,13 @@ function EditChangePage({ id }: { id: TransactionId }) {
   const t = transaction.data!
 
   const submit = () => {
-    const parsed = toMinor(Number(draft.amount), draft.currency)
-    const next: typeof errors = {}
     // An opening balance may be zero; a Change may not.
-    if (draft.amount.trim() === "" || Either.isLeft(parsed) || (parsed.right === 0 && t.type !== "init")) {
-      next.amount = Either.isLeft(parsed) ? parsed.left : "Enter an amount"
-    }
-    if (draft.walletId === "") next.wallet = `Create a ${draft.currency} wallet first`
-    setErrors(next)
-    if (Object.keys(next).length > 0 || Either.isLeft(parsed)) return
-    const amountMinor = ((draft.sign === "-" ? -1 : 1) * parsed.right) as MinorAmount
+    const read = readChangeDraft(draft, { allowZero: t.type === "init" })
+    if (Either.isLeft(read)) return setErrors(read.left)
+    setErrors({})
+    const { walletId: _wallet, currency: _currency, categoryId: _category, ...init } = read.right
     // An Init keeps its Wallet and currency; sending them, even unchanged, is refused by the api.
-    const payload =
-      t.type === "init"
-        ? { amountMinor, occurredOn: draft.date as LocalDate, description: draft.description.trim(), tags: draft.tags as never, hiddenFromAnalysis: draft.hidden }
-        : {
-            walletId: draft.walletId as WalletId,
-            amountMinor,
-            currency: draft.currency as never,
-            occurredOn: draft.date as LocalDate,
-            description: draft.description.trim(),
-            tags: draft.tags as never,
-            categoryId: draft.categoryId === "" ? null : (draft.categoryId as CategoryId),
-            hiddenFromAnalysis: draft.hidden
-          }
+    const payload = t.type === "init" ? init : read.right
     update.mutate({ id: t.id, payload }, { onSuccess: () => navigate("/transactions") })
   }
 

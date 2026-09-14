@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router"
 import { useDeleteLoan, useLoan, useUpdateLoan } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { StickyBar } from "../../layout/StickyBar"
-import { formatLongDate } from "../../lib/period"
+import { formatLongDate, fromEpochMillis } from "../../lib/period"
 import { Button, Dialog, Display, ErrorNotice, IconButton, Loading, Menu } from "../../ui"
 import { LoanCard } from "./LoanCard"
 
@@ -19,7 +19,7 @@ export function LoanPage() {
   const [confirm, setConfirm] = useState(false)
   const l = loan.data
   const who = l?.description || "this loan"
-  const since = (d: { epochMillis: number }) => formatLongDate(new Date(d.epochMillis).toISOString().slice(0, 10) as never)
+  const since = (d: { epochMillis: number }) => formatLongDate(fromEpochMillis(d.epochMillis))
 
   return (
     <AppShell width="form">

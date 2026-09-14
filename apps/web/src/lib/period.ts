@@ -14,6 +14,9 @@ export const toLocalDate = (d: Date): LocalDate => `${d.getFullYear()}-${pad(d.g
 /** Today in the browser's zone. */
 export const todayLocal = (): LocalDate => toLocalDate(new Date())
 
+/** The day an instant falls on in the browser's zone: what a server timestamp reads as here. */
+export const fromEpochMillis = (ms: number): LocalDate => toLocalDate(new Date(ms))
+
 export const parseLocalDate = (s: string): Date => {
   const [y, m, d] = s.split("-").map(Number)
   return new Date(y!, m! - 1, d!)
@@ -54,9 +57,10 @@ export const shiftPeriod = (p: Period, direction: -1 | 1): Period => {
 }
 
 const monthYear = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" })
-const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+/** Three-letter months, spelled here because Intl's en-GB says "Sept". */
+export const SHORT_MONTHS: ReadonlyArray<string> = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
-/** "12 Sep": day first, three-letter month (Intl's en-GB says "Sept", so it is spelled here). */
+/** "12 Sep": day first, three-letter month. */
 export const dayMonth = (d: Date): string => `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`
 /** "12 Sep 2026" */
 export const dayMonthYear = (d: Date): string => `${dayMonth(d)} ${d.getFullYear()}`

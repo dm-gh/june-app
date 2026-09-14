@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useCategories, useTags, useWallets } from "../api/queries"
 import { FilterSheet } from "../components/transactions/FilterSheet"
 import { type ChipSummary, KINDS, kindLabel, summarise, UNCATEGORISED, useFilter, walletOptions } from "../lib/filter"
-import { hueColor } from "../lib/format"
+import { categoryLabel, hueColor } from "../lib/format"
 import { cn } from "../ui"
 
 const kindColor: Record<string, string> = { expense: "var(--color-coral)", income: "var(--color-green)", exchange: "var(--color-lavender)" }
@@ -136,7 +136,7 @@ export function FilterRow() {
     )
     const category = summarise(
       [
-        ...(categories.data ?? []).map((c) => ({ key: c.slug as string, label: `${c.emoji ? `${c.emoji} ` : ""}${c.name}`, color: hueColor(c.hue) })),
+        ...(categories.data ?? []).map((c) => ({ key: c.slug as string, label: categoryLabel(c), color: hueColor(c.hue) })),
         { key: UNCATEGORISED, label: "Uncategorised", color: "var(--color-grey)" }
       ],
       filter.categories
