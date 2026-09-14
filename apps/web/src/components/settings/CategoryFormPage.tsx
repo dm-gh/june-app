@@ -1,11 +1,11 @@
-import { type CategoryId, type CategoryType, type Hue, type Slug, slugify } from "@june/shared"
-import { lazy, Suspense, useEffect, useState } from "react"
+import { type Category, type CategoryId, type CategoryType, type Hue, type Slug, slugify } from "@june/shared"
+import { lazy, Suspense, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
 import { useDeleteConfirm } from "../../layout/useDeleteConfirm"
 import { categoryLabel, hueColor } from "../../lib/format"
-import { Field, HueSlider, Input, Loading, Segmented, Sheet } from "../../ui"
+import { Field, HueSlider, Input, Loading, Segmented, Sheet, useDraft } from "../../ui"
 import { FitText } from "../../ui/FitText"
 
 const EmojiPicker = lazy(() => import("emoji-picker-react"))
@@ -18,6 +18,8 @@ interface Draft {
   name: string
   hue: number
 }
+
+const draftFromCategory = (c: Category): Draft => ({ type: c.type, emoji: c.emoji ?? "", name: c.name, hue: c.hue })
 
 const segmenter = new Intl.Segmenter()
 /** Exactly one grapheme, and a pictographic one: "🚌" yes, "ab" or "🚌🚌" no. */
@@ -131,7 +133,7 @@ export function EditCategoryPage() {
   const update = useUpdateCategory()
   const remove = useDeleteCategory()
   const category = categories.data?.find((c) => c.id === id)
-  const [draft, setDraft] = useState<Draft | null>(null)
+  const [draft, setDraft] = useDraft(category, draftFromCategory)
   const confirmDelete = useDeleteConfirm({
     remove,
     id: category ? (category.id as CategoryId) : undefined,
@@ -139,10 +141,6 @@ export function EditCategoryPage() {
     body: "Its transactions stay and become Uncategorised. A Shortcut still sending this slug records Uncategorised too.",
     after: () => navigate("/settings")
   })
-
-  useEffect(() => {
-    if (category && draft === null) setDraft({ type: category.type, emoji: category.emoji ?? "", name: category.name, hue: category.hue })
-  }, [category, draft])
 
   if (!category || draft === null) {
     return (
