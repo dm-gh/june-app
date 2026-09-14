@@ -46,10 +46,15 @@ pnpm --filter @june/api db:migrate
 pnpm dev                           # api on :3000, web on Vite with /api proxied
 ```
 
-Tests run the real API in-process against a throwaway database:
+Tests: the api suite runs the real API in-process against a throwaway database; the shared and
+web suites cover the pure modules (dates, money, filters, analysis, schedules, CSV) in Node; the
+web browser suite renders the list cards in headless Chromium and compares screenshots with the
+references in `__screenshots__` (`pnpm --filter @june/web test:update` after an intended visual change).
 
 ```sh
+pnpm test                          # every package
 pnpm --filter @june/api test
+pnpm --filter @june/web test       # unit + browser projects
 ```
 
 The full setup, including the Railway deploy, is in [docs/dev.md](docs/dev.md).

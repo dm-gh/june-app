@@ -12,7 +12,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "peerDependencies": {
     "@effect/platform": "^0.97.2",
@@ -21,7 +22,8 @@
   "devDependencies": {
     "@effect/platform": "0.97.2",
     "effect": "3.22.2",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "5.0.0"
   },
   "dependencies": {
     "slugify": "^1.6.9"

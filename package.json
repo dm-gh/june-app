@@ -9,7 +9,8 @@
     "dev": "pnpm -r --parallel run dev",
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
-    "start": "pnpm --filter @june/api start"
+    "start": "pnpm --filter @june/api start",
+    "test": "pnpm -r run test"
   },
   "devDependencies": {
     "typescript": "5.9.3"
