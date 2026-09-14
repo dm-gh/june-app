@@ -41,9 +41,19 @@ Railway setup, once per project: a Postgres service (Railway injects `DATABASE_U
 
 ## Tests
 ```sh
+pnpm test                          # every package
 pnpm --filter @june/api test
+pnpm --filter @june/shared test
+pnpm --filter @june/web test       # unit and browser projects
+pnpm --filter @june/web test:update   # rewrite screenshot references after an intended visual change
 ```
-Tests use the compose Postgres only (`TEST_DATABASE_URL`, default `postgres://june:june@localhost:5432/june`).
+The api tests use the compose Postgres only (`TEST_DATABASE_URL`, default `postgres://june:june@localhost:5432/june`).
 Each test creates a `june_test_<random>` database from the migrations, runs the real api in-process through a typed
-client with the session middleware replaced by a fixed User and the Rate Provider stubbed, and drops the database
-afterwards. `DATABASE_URL` is never read by tests.
+client, through the same `ApiLive` and `ServicesLive` that `main.ts` serves, with the session middleware replaced by
+a fixed User and the Rate Provider stubbed, and drops the database afterwards. `DATABASE_URL` is never read by tests.
+
+The shared and web unit tests are plain Node: dates, money, filters, analysis buckets, list items, schedules, CSV,
+the draft readers behind the forms, the query keys and the route builders. The web browser project renders cards,
+forms and whole pages (with a seeded QueryClient, nothing fetched) in headless Chromium and compares them with the
+PNG references committed under `__screenshots__` next to each test; a new screenshot's first run writes the
+reference and fails on purpose so it gets looked at. Chromium comes from `npx playwright install chromium` once.
