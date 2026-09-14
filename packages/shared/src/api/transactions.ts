@@ -3,9 +3,10 @@ import { Schema } from "effect"
 import { CurrencyCode } from "../currency.js"
 import { CategoryId, ExchangeId, LocalDate, MinorAmount, Tag, Transaction, TransactionId, WalletId } from "../domain.js"
 import { Authentication } from "./auth.js"
+import { partialFields, pathOf } from "./compose.js"
 import { RateUnavailable, RuleViolation } from "./errors.js"
 
-const TransactionPath = Schema.Struct({ id: TransactionId })
+const TransactionPath = pathOf(TransactionId)
 const ExchangePath = Schema.Struct({ exchangeId: ExchangeId })
 
 /** Period bounds, inclusive. */
@@ -40,29 +41,16 @@ export class CreateExchange extends Schema.Class<CreateExchange>("CreateExchange
 }) {}
 
 /** An Exchange is edited as a whole: both legs are rewritten from the same fields that created it. */
-export class UpdateExchange extends Schema.Class<UpdateExchange>("UpdateExchange")({
-  sourceWalletId: WalletId,
-  sourceMinor: MinorAmount.pipe(Schema.positive()),
-  targetWalletId: WalletId,
-  targetMinor: MinorAmount.pipe(Schema.positive()),
-  occurredOn: LocalDate,
-  description: Schema.optional(Schema.String),
-  tags: Schema.optional(Schema.Array(Tag))
-}) {}
+export class UpdateExchange extends Schema.Class<UpdateExchange>("UpdateExchange")(CreateExchange.fields) {}
 
 /**
- * Fields a single edit may change. Transaction Type never changes. Exchange legs are refused here:
- * an Exchange is edited as a whole through updateExchange.
+ * Fields a single edit may change: any field of a Change, plus the currency of an Unassigned
+ * one. Transaction Type never changes. Exchange legs are refused here: an Exchange is edited
+ * as a whole through updateExchange.
  */
 export class UpdateTransaction extends Schema.Class<UpdateTransaction>("UpdateTransaction")({
-  walletId: Schema.optional(WalletId),
-  amountMinor: Schema.optional(MinorAmount),
-  currency: Schema.optional(CurrencyCode),
-  occurredOn: Schema.optional(LocalDate),
-  description: Schema.optional(Schema.String),
-  tags: Schema.optional(Schema.Array(Tag)),
-  categoryId: Schema.optional(Schema.NullOr(CategoryId)),
-  hiddenFromAnalysis: Schema.optional(Schema.Boolean)
+  ...partialFields(CreateChange.fields),
+  currency: Schema.optional(CurrencyCode)
 }) {}
 
 /** Bulk edit: only Wallet, Category and Tags. Omitted fields are left alone. */

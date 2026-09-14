@@ -20,7 +20,8 @@ export const CronExpression = Schema.String.pipe(
 )
 export type CronExpression = typeof CronExpression.Type
 
-const toLocalDate = (d: Date): LocalDate => d.toISOString().slice(0, 10) as LocalDate
+/** The UTC calendar date of an instant, as YYYY-MM-DD. */
+export const toLocalDate = (d: Date): LocalDate => d.toISOString().slice(0, 10) as LocalDate
 
 const startOf = (date: LocalDate): Date => new Date(`${date}T00:00:00Z`)
 

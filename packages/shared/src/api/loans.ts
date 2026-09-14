@@ -1,25 +1,25 @@
 import { HttpApiEndpoint, HttpApiError, HttpApiGroup, HttpApiSchema } from "@effect/platform"
 import { Schema } from "effect"
 import { CurrencyCode } from "../currency.js"
-import { Loan, LoanId, MinorAmount } from "../domain.js"
+import { Loan, LoanId, MinorAmount, NonZeroMinorAmount } from "../domain.js"
 import { Authentication } from "./auth.js"
+import { partialFields, pathOf } from "./compose.js"
 import { RuleViolation } from "./errors.js"
 import { CreateChange } from "./transactions.js"
 
-const LoanPath = Schema.Struct({ id: LoanId })
+const LoanPath = pathOf(LoanId)
 
 /** Positive is Lent, negative is Borrowed. A Loan cannot start at zero. */
 export class CreateLoan extends Schema.Class<CreateLoan>("CreateLoan")({
-  amountMinor: MinorAmount.pipe(Schema.filter((n) => n !== 0, { message: () => "amount cannot be zero" })),
+  amountMinor: NonZeroMinorAmount,
   currency: CurrencyCode,
   description: Schema.optional(Schema.String)
 }) {}
 
-/** Any value goes, zero included; `archived` sets the Loan aside or brings it back. */
+/** The Create fields, but any amount goes, zero included; `archived` sets the Loan aside or brings it back. */
 export class UpdateLoan extends Schema.Class<UpdateLoan>("UpdateLoan")({
+  ...partialFields(CreateLoan.fields),
   amountMinor: Schema.optional(MinorAmount),
-  currency: Schema.optional(CurrencyCode),
-  description: Schema.optional(Schema.String),
   archived: Schema.optional(Schema.Boolean)
 }) {}
 

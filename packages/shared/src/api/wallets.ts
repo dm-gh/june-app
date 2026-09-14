@@ -3,9 +3,10 @@ import { Schema } from "effect"
 import { CurrencyCode } from "../currency.js"
 import { LocalDate, MinorAmount, Wallet, WalletId } from "../domain.js"
 import { Authentication } from "./auth.js"
+import { partialFields, pathOf } from "./compose.js"
 import { RateUnavailable, RuleViolation } from "./errors.js"
 
-const WalletPath = Schema.Struct({ id: WalletId })
+const WalletPath = pathOf(WalletId)
 
 export class WalletList extends Schema.Class<WalletList>("WalletList")({
   wallets: Schema.Array(Wallet),
@@ -22,10 +23,8 @@ export class CreateWallet extends Schema.Class<CreateWallet>("CreateWallet")({
   initOn: Schema.optional(LocalDate)
 }) {}
 
-export class UpdateWallet extends Schema.Class<UpdateWallet>("UpdateWallet")({
-  name: Schema.optional(Schema.NonEmptyTrimmedString),
-  initMinor: Schema.optional(MinorAmount)
-}) {}
+/** A Wallet's currency is fixed for its lifetime; the name and the Init amount can change. */
+export class UpdateWallet extends Schema.Class<UpdateWallet>("UpdateWallet")(partialFields(Schema.Struct(CreateWallet.fields).pick("name", "initMinor").fields)) {}
 
 export class WalletOrder extends Schema.Class<WalletOrder>("WalletOrder")({
   /** Every Wallet of the User, first to last. */

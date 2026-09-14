@@ -1,14 +1,13 @@
 import { HttpApiEndpoint, HttpApiError, HttpApiGroup, HttpApiSchema } from "@effect/platform"
 import { Schema } from "effect"
-import { CategoryId, LocalDate, MinorAmount, Recurring, RecurringId, Tag, Transaction, WalletId } from "../domain.js"
+import { CategoryId, LocalDate, NonZeroMinorAmount, Recurring, RecurringId, Tag, Transaction, WalletId } from "../domain.js"
 import { CronExpression } from "../schedule.js"
 import { Authentication } from "./auth.js"
+import { partialFields, pathOf } from "./compose.js"
 import { RateUnavailable, RuleViolation } from "./errors.js"
 import { CreateChange } from "./transactions.js"
 
-const RecurringPath = Schema.Struct({ id: RecurringId })
-
-const NonZero = MinorAmount.pipe(Schema.filter((n) => n !== 0, { message: () => "amount cannot be zero" }))
+const RecurringPath = pathOf(RecurringId)
 
 /**
  * A new Recurring. The currency comes from the Wallet. The Schedule is `cron` (repeating) or
@@ -18,7 +17,7 @@ const NonZero = MinorAmount.pipe(Schema.filter((n) => n !== 0, { message: () => 
 export class CreateRecurring extends Schema.Class<CreateRecurring>("CreateRecurring")({
   name: Schema.Trim.pipe(Schema.nonEmptyString()),
   walletId: WalletId,
-  amountMinor: NonZero,
+  amountMinor: NonZeroMinorAmount,
   categoryId: Schema.optional(Schema.NullOr(CategoryId)),
   description: Schema.optional(Schema.String),
   tags: Schema.optional(Schema.Array(Tag)),
@@ -28,17 +27,7 @@ export class CreateRecurring extends Schema.Class<CreateRecurring>("CreateRecurr
 }) {}
 
 /** Omitted fields are left alone. Sending `cron`, `nextOn` or `auto` recomputes the next due date from today. */
-export class UpdateRecurring extends Schema.Class<UpdateRecurring>("UpdateRecurring")({
-  name: Schema.optional(Schema.Trim.pipe(Schema.nonEmptyString())),
-  walletId: Schema.optional(WalletId),
-  amountMinor: Schema.optional(NonZero),
-  categoryId: Schema.optional(Schema.NullOr(CategoryId)),
-  description: Schema.optional(Schema.String),
-  tags: Schema.optional(Schema.Array(Tag)),
-  auto: Schema.optional(Schema.Boolean),
-  cron: Schema.optional(Schema.NullOr(CronExpression)),
-  nextOn: Schema.optional(Schema.NullOr(LocalDate))
-}) {}
+export class UpdateRecurring extends Schema.Class<UpdateRecurring>("UpdateRecurring")(partialFields(CreateRecurring.fields)) {}
 
 /**
  * Fire by hand. With no `change`, the Change is built from the Recurring and dated its due date

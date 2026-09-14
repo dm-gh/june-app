@@ -1,29 +1,32 @@
 import { Schema } from "effect"
 import slugifyLib from "slugify"
 import { CurrencyCode } from "./currency.js"
-import { CronExpression } from "./schedule.js"
+import { CronExpression, toLocalDate } from "./schedule.js"
 
 /** Domain schemas shared by api and web. Terminology follows CONTEXT.md. */
 
-export const UserId = Schema.UUID.pipe(Schema.brand("UserId"))
+/** Every id is a UUID branded with the name of what it identifies, so a WalletId never passes as a CategoryId. */
+const brandedId = <B extends string>(brand: B) => Schema.UUID.pipe(Schema.brand(brand))
+
+export const UserId = brandedId("UserId")
 export type UserId = typeof UserId.Type
 
-export const WalletId = Schema.UUID.pipe(Schema.brand("WalletId"))
+export const WalletId = brandedId("WalletId")
 export type WalletId = typeof WalletId.Type
 
-export const CategoryId = Schema.UUID.pipe(Schema.brand("CategoryId"))
+export const CategoryId = brandedId("CategoryId")
 export type CategoryId = typeof CategoryId.Type
 
-export const TransactionId = Schema.UUID.pipe(Schema.brand("TransactionId"))
+export const TransactionId = brandedId("TransactionId")
 export type TransactionId = typeof TransactionId.Type
 
-export const ExchangeId = Schema.UUID.pipe(Schema.brand("ExchangeId"))
+export const ExchangeId = brandedId("ExchangeId")
 export type ExchangeId = typeof ExchangeId.Type
 
-export const RecurringId = Schema.UUID.pipe(Schema.brand("RecurringId"))
+export const RecurringId = brandedId("RecurringId")
 export type RecurringId = typeof RecurringId.Type
 
-export const LoanId = Schema.UUID.pipe(Schema.brand("LoanId"))
+export const LoanId = brandedId("LoanId")
 export type LoanId = typeof LoanId.Type
 
 /** A calendar date with no time and no zone, as YYYY-MM-DD. */
@@ -35,11 +38,15 @@ export const LocalDate = Schema.String.pipe(
 export type LocalDate = typeof LocalDate.Type
 
 /** Today's date in UTC, the fallback when a capture carries no date. */
-export const todayUtc = (): LocalDate => new Date().toISOString().slice(0, 10) as LocalDate
+export const todayUtc = (): LocalDate => toLocalDate(new Date())
 
 /** Signed amount in minor units. Negative is money leaving, positive is money arriving. */
 export const MinorAmount = Schema.Number.pipe(Schema.int(), Schema.brand("MinorAmount"))
 export type MinorAmount = typeof MinorAmount.Type
+
+/** A MinorAmount that is not zero: what a Change, a Recurring and a new Loan carry. */
+export const NonZeroMinorAmount = MinorAmount.pipe(Schema.filter((n) => n !== 0, { message: () => "amount cannot be zero" }))
+export type NonZeroMinorAmount = typeof NonZeroMinorAmount.Type
 
 /** A Tag is a single lower-case word with no whitespace. Input is lower-cased before validation. */
 export const Tag = Schema.transform(Schema.String, Schema.String, {

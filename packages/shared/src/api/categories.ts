@@ -2,9 +2,10 @@ import { HttpApiEndpoint, HttpApiError, HttpApiGroup, HttpApiSchema } from "@eff
 import { Schema } from "effect"
 import { Category, CategoryId, CategoryType, Hue, Slug } from "../domain.js"
 import { Authentication } from "./auth.js"
+import { partialFields, pathOf } from "./compose.js"
 import { RuleViolation } from "./errors.js"
 
-const CategoryPath = Schema.Struct({ id: CategoryId })
+const CategoryPath = pathOf(CategoryId)
 
 /** A Category name is at most 25 characters: it must fit a card badge next to an amount on a phone. */
 export const CategoryName = Schema.NonEmptyTrimmedString.pipe(Schema.maxLength(25))
@@ -19,12 +20,7 @@ export class CreateCategory extends Schema.Class<CreateCategory>("CreateCategory
 }) {}
 
 /** Category Type is fixed: changing it would orphan every Transaction of the other sign. */
-export class UpdateCategory extends Schema.Class<UpdateCategory>("UpdateCategory")({
-  name: Schema.optional(CategoryName),
-  slug: Schema.optional(Slug),
-  emoji: Schema.optional(Schema.NullOr(Schema.String)),
-  hue: Schema.optional(Hue)
-}) {}
+export class UpdateCategory extends Schema.Class<UpdateCategory>("UpdateCategory")(partialFields(Schema.Struct(CreateCategory.fields).omit("type").fields)) {}
 
 export class CategoriesGroup extends HttpApiGroup.make("categories")
   .add(HttpApiEndpoint.get("list", "/categories").addSuccess(Schema.Array(Category)))
