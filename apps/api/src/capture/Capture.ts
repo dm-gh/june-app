@@ -1,6 +1,7 @@
-import { HttpApiBuilder, HttpApiError } from "@effect/platform"
+import { HttpApiBuilder } from "@effect/platform"
 import { type CaptureResult, currencyExponent, fromMinor, JuneApi } from "@june/shared"
 import { Effect, Either, Option } from "effect"
+import { orNotFound } from "../http/errors.js"
 import { readChange } from "../transactions/readChange.js"
 import { RecordChange } from "../transactions/RecordChange.js"
 import { CaptureTokens } from "./CaptureTokens.js"
@@ -23,9 +24,7 @@ export const CaptureHandlersLive = HttpApiBuilder.group(JuneApi, "capture", (han
 
     return handlers.handle("capture", ({ path, payload }) =>
       Effect.gen(function* () {
-        const userId = yield* tokens.resolveUser(path.token).pipe(
-          Effect.flatMap(Option.match({ onNone: () => new HttpApiError.NotFound(), onSome: Effect.succeed }))
-        )
+        const userId = yield* orNotFound(tokens.resolveUser(path.token))
         const read = readChange({ amount: payload.amount, currency: payload.currency, date: payload.date ?? "" })
         if (Either.isLeft(read)) return refuse(read.left)
         const { amountMinor, currency, occurredOn } = read.right

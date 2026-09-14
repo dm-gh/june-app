@@ -1,6 +1,6 @@
 import { HttpApiBuilder } from "@effect/platform"
 import { SqlClient } from "@effect/sql"
-import { CurrentUser, type CurrentUserShape, JuneApi, type Me } from "@june/shared"
+import { CurrentUser, type CurrentUserShape, JuneApi, Me } from "@june/shared"
 import { Effect } from "effect"
 import { CaptureTokens } from "../capture/CaptureTokens.js"
 import { AppConfig } from "../config.js"
@@ -16,7 +16,7 @@ export const SettingsHandlersLive = HttpApiBuilder.group(JuneApi, "settings", (h
     const transactions = yield* TransactionsRepo
 
     const me = (user: CurrentUserShape) =>
-      tokens.exists(user.id).pipe(Effect.map((hasCaptureToken): Me => ({ ...user, hasCaptureToken }) as Me))
+      tokens.exists(user.id).pipe(Effect.map((hasCaptureToken) => new Me({ ...user, hasCaptureToken })))
 
     return handlers
       .handle("me", () => CurrentUser.pipe(Effect.flatMap(me)))
