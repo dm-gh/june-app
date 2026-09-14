@@ -1,6 +1,6 @@
 import { FetchHttpClient, HttpApiClient } from "@effect/platform"
-import { JuneApi } from "@june/shared"
-import { Cause, Effect, Exit, ManagedRuntime } from "effect"
+import { JuneApi, RateUnavailable, RuleViolation } from "@june/shared"
+import { Cause, Effect, Exit, ManagedRuntime, Schema } from "effect"
 
 /**
  * The typed June client, derived from the shared contract. Same origin as the page, so the
@@ -20,18 +20,17 @@ export class ApiError extends Error {
   }
 }
 
+/** The contract's own errors are matched by class, so renaming one breaks the build here; the platform's by their tag. */
 const toApiError = (error: unknown): ApiError => {
+  if (Schema.is(RuleViolation)(error)) return new ApiError("rule", error.message)
+  if (Schema.is(RateUnavailable)(error)) return new ApiError("rates", error.message)
   if (typeof error === "object" && error !== null && "_tag" in error) {
     const tagged = error as { _tag: string; message?: string }
     switch (tagged._tag) {
-      case "RuleViolation":
-        return new ApiError("rule", tagged.message ?? "That is not allowed")
       case "Unauthorized":
         return new ApiError("unauthorized", "Please sign in again")
       case "NotFound":
         return new ApiError("not-found", "Not found")
-      case "RateUnavailable":
-        return new ApiError("rates", tagged.message ?? "Exchange rates are unavailable right now")
       case "HttpApiDecodeError":
         return new ApiError("unknown", tagged.message ?? "The request was rejected")
       case "RequestError":
