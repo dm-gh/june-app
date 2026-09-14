@@ -1,6 +1,6 @@
 import type { LocalDate } from "@june/shared"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { balanceMoney, dayHeading, hueColor, moneyCode, signedMoney } from "./format"
+import { balanceMoney, categoryLabel, dayHeading, hueColor, moneyCode, signedMoney } from "./format"
 
 const MINUS = "−"
 
@@ -67,5 +67,12 @@ describe("hueColor", () => {
   it("fixes saturation and lightness so only the Hue varies", () => {
     expect(hueColor(120)).toBe("hsl(120 100% 70%)")
     expect(hueColor(0)).toBe("hsl(0 100% 70%)")
+  })
+})
+
+describe("categoryLabel", () => {
+  it("puts the emoji before the name and leaves a Category without one as its name", () => {
+    expect(categoryLabel({ name: "Groceries", emoji: "🥕" })).toBe("🥕 Groceries")
+    expect(categoryLabel({ name: "Salary", emoji: null })).toBe("Salary")
   })
 })

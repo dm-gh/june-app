@@ -1,7 +1,7 @@
 import type { Category } from "@june/shared"
 import { Check } from "@phosphor-icons/react"
 import { type CSSProperties, type MouseEvent, type ReactNode, useRef } from "react"
-import { hueColor, moneyCode, signedMoney } from "../lib/format"
+import { categoryLabel, hueColor, moneyCode, signedMoney } from "../lib/format"
 import { Badge } from "./Badge"
 import type { Accent } from "./Card"
 import { cn } from "./cn"
@@ -178,7 +178,7 @@ export function ListAmount({ minor, currency, signed = true, className }: ListAm
 
 /** A Category as a corner tag: its emoji and name on its Hue. */
 export const categoryCorner = (category: Pick<Category, "name" | "emoji" | "hue">, muted?: boolean): ListCardCorner => ({
-  label: `${category.emoji ? `${category.emoji} ` : ""}${category.name}`,
+  label: categoryLabel(category),
   style: { background: hueColor(category.hue) },
   muted
 })

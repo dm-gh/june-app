@@ -32,3 +32,7 @@ export const dayHeading = (date: LocalDate): string => {
 
 /** Category colour: the User picks only the hue. */
 export const hueColor = (hue: number): string => `hsl(${hue} 100% 70%)`
+
+/** A Category as it reads everywhere: "🥕 Groceries", or just the name when it has no emoji. */
+export const categoryLabel = (category: { readonly name: string; readonly emoji: string | null }): string =>
+  `${category.emoji ? `${category.emoji} ` : ""}${category.name}`
