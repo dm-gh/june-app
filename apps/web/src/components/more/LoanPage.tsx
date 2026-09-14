@@ -1,12 +1,11 @@
 import type { LoanId } from "@june/shared"
-import { Archive, ArrowCounterClockwise, ArrowLeft, PencilSimple, Trash } from "@phosphor-icons/react"
+import { Archive, ArrowCounterClockwise, PencilSimple, Trash } from "@phosphor-icons/react"
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useDeleteLoan, useLoan, useUpdateLoan } from "../../api/queries"
-import { AppShell } from "../../layout/AppShell"
-import { StickyBar } from "../../layout/StickyBar"
+import { Page } from "../../layout/Page"
 import { formatLongDate, fromEpochMillis } from "../../lib/period"
-import { Button, Dialog, Display, ErrorNotice, IconButton, Loading, Menu } from "../../ui"
+import { Button, Dialog, ErrorNotice, Loading } from "../../ui"
 import { LoanCard } from "./LoanCard"
 
 /** A Loan's page: the same card as the list, and Settle. Edit, Archive and Delete sit behind the menu. */
@@ -22,29 +21,25 @@ export function LoanPage() {
   const since = (d: { epochMillis: number }) => formatLongDate(fromEpochMillis(d.epochMillis))
 
   return (
-    <AppShell width="form">
-      <StickyBar className="pb-2">
-        <div className="-ml-2.5 flex items-center justify-between">
-          <IconButton icon={ArrowLeft} label="Back" onClick={() => navigate(l?.archived ? "/more/loans/archive" : "/more")} />
-          {l ? (
-            <Menu
-              items={[
-                { label: "Edit", icon: PencilSimple, onSelect: () => navigate(`/more/loans/${l.id}/edit`) },
-                {
-                  label: l.archived ? "Unarchive" : "Archive",
-                  icon: l.archived ? ArrowCounterClockwise : Archive,
-                  disabled: update.isPending,
-                  onSelect: () => update.mutate({ id: l.id, payload: { archived: !l.archived } })
-                },
-                { label: "Delete", icon: Trash, danger: true, onSelect: () => setConfirm(true) }
-              ]}
-            />
-          ) : null}
-        </div>
-      </StickyBar>
-      <Display size="sm" className="mt-2 mb-5">
-        {l ? l.description || "Loan" : "Loan"}
-      </Display>
+    <Page
+      title={l ? l.description || "Loan" : "Loan"}
+      backTo={l?.archived ? "/more/loans/archive" : "/more"}
+      menu={
+        l
+          ? [
+              { label: "Edit", icon: PencilSimple, onSelect: () => navigate(`/more/loans/${l.id}/edit`) },
+              {
+                label: l.archived ? "Unarchive" : "Archive",
+                icon: l.archived ? ArrowCounterClockwise : Archive,
+                disabled: update.isPending,
+                onSelect: () => update.mutate({ id: l.id, payload: { archived: !l.archived } })
+              },
+              { label: "Delete", icon: Trash, danger: true, onSelect: () => setConfirm(true) }
+            ]
+          : undefined
+      }
+      error={update.error?.message ?? remove.error?.message ?? null}
+    >
       {loan.isError ? <ErrorNotice message={loan.error.message} /> : null}
       {loan.isPending ? <Loading /> : null}
       {l ? (
@@ -53,8 +48,6 @@ export function LoanPage() {
           <Button size="lg" onClick={() => navigate(`/transactions/new?loan=${l.id}`)}>
             Settle
           </Button>
-          {update.error ? <ErrorNotice message={update.error.message} /> : null}
-          {remove.error ? <ErrorNotice message={remove.error.message} /> : null}
         </div>
       ) : null}
       <Dialog
@@ -67,6 +60,6 @@ export function LoanPage() {
         onConfirm={() => l && remove.mutate(l.id, { onSuccess: () => navigate("/more") })}
         onCancel={() => setConfirm(false)}
       />
-    </AppShell>
+    </Page>
   )
 }

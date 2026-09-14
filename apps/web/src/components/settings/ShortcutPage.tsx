@@ -1,11 +1,8 @@
 import type { CaptureTokenIssued } from "@june/shared"
-import { ArrowLeft } from "@phosphor-icons/react"
 import { type ReactNode, useMemo, useState } from "react"
-import { useNavigate } from "react-router"
 import { useCategories, useMe, useRegenerateCaptureToken, useWallets } from "../../api/queries"
-import { AppShell } from "../../layout/AppShell"
-import { StickyBar } from "../../layout/StickyBar"
-import { Button, Card, cn, CopyButton, Dialog, Display, ErrorNotice, Heading, IconButton, Label, Notice, Text } from "../../ui"
+import { Page } from "../../layout/Page"
+import { Button, Card, cn, CopyButton, Dialog, ErrorNotice, Heading, Label, Notice, Text } from "../../ui"
 
 /** The plain token is shown once by the api; the tab remembers it so a reload mid-setup does not lose it. */
 const STORAGE_KEY = "june.capture-url"
@@ -89,7 +86,6 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
  * Shortcuts app, every action shown with the User's own capture URL, currencies and Category slugs.
  */
 export function ShortcutPage() {
-  const navigate = useNavigate()
   const me = useMe()
   const wallets = useWallets()
   const categories = useCategories()
@@ -119,15 +115,7 @@ export function ShortcutPage() {
   const provided = <Variable name="Provided Input" />
 
   return (
-    <AppShell tabs={false} width="form">
-      <StickyBar className="pb-2">
-        <div className="-ml-2.5 flex items-center">
-          <IconButton icon={ArrowLeft} label="Back" onClick={() => navigate("/settings")} />
-        </div>
-      </StickyBar>
-      <Display size="sm" className="mt-2 mb-4">
-        Shortcut
-      </Display>
+    <Page title="Shortcut" backTo="/settings" tabs={false}>
       <Text>
         Build it once in the Shortcuts app on your iPhone and put it on the home screen. From then on a capture is one tap: amount, category, currency, done.
         Every action below is shown with your own values filled in.
@@ -287,6 +275,6 @@ export function ShortcutPage() {
         onConfirm={generate}
         onCancel={() => setConfirm(false)}
       />
-    </AppShell>
+    </Page>
   )
 }

@@ -2,9 +2,8 @@ import type { Recurring } from "@june/shared"
 import { useState } from "react"
 import { Link, useNavigate } from "react-router"
 import { useCategoryIndex, useLoans, useRecurrings, useWalletIndex } from "../../api/queries"
-import { AppShell } from "../../layout/AppShell"
-import { StickyBar } from "../../layout/StickyBar"
-import { Button, Display, Empty, ErrorNotice, Heading, Loading } from "../../ui"
+import { ListPage } from "../../layout/Page"
+import { Button, Empty, ErrorNotice, Heading, Loading } from "../../ui"
 import { LoanCard } from "./LoanCard"
 import { RecurringCard } from "./RecurringCard"
 import { SubmitDialog } from "./SubmitDialog"
@@ -21,13 +20,7 @@ export function MorePage() {
   const archived = (loans.data ?? []).filter((l) => l.archived)
 
   return (
-    <AppShell>
-      <StickyBar>
-        <header className="pb-3">
-          <Display size="sm">More</Display>
-        </header>
-      </StickyBar>
-
+    <ListPage title="More">
       <div className="mt-2 flex items-center justify-between">
         <Heading as="h2">Recurring</Heading>
         <Button variant="secondary" size="sm" onClick={() => navigate("/more/recurrings/new")}>
@@ -72,6 +65,6 @@ export function MorePage() {
       ) : null}
 
       {submitting ? <SubmitDialog recurring={submitting} onClose={() => setSubmitting(null)} /> : null}
-    </AppShell>
+    </ListPage>
   )
 }
