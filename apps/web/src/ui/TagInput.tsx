@@ -15,6 +15,29 @@ export interface TagInputProps {
   placeholder?: string
 }
 
+export interface TagChipProps {
+  tag: string
+  /** With a handler the chip carries a remove button; without, it is read-only. */
+  onRemove?: (() => void) | undefined
+  removeLabel?: string | undefined
+  /** Greyed and struck through: a Tag about to be taken away. */
+  muted?: boolean | undefined
+}
+
+/** One Tag as a "#tag" chip, the same in the input and wherever Tags are picked over. */
+export function TagChip({ tag, onRemove, removeLabel = `Remove ${tag}`, muted = false }: TagChipProps) {
+  return (
+    <Badge prefix="#" accent={muted ? "grey" : "paper"} className="gap-1.5 pr-1">
+      <span className={muted ? "line-through" : undefined}>{tag}</span>
+      {onRemove ? (
+        <button type="button" aria-label={removeLabel} onClick={onRemove} className="ml-0.5 inline-flex size-5 items-center justify-center hover:bg-ink/10">
+          <X size={12} weight="bold" />
+        </button>
+      ) : null}
+    </Badge>
+  )
+}
+
 /**
  * Space-separated: typing a space or pressing Enter turns the word into a chip; Backspace on an
  * empty field removes the last chip. Suggestions come through a native datalist.
@@ -34,19 +57,7 @@ export function TagInput({ id, value, onChange, suggestions, disabled, placehold
       {value.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {value.map((tag) => (
-            <Badge key={tag} prefix="#" className="gap-1.5 pr-1">
-              {tag}
-              {!disabled ? (
-                <button
-                  type="button"
-                  aria-label={`Remove ${tag}`}
-                  onClick={() => onChange(value.filter((t) => t !== tag))}
-                  className="ml-0.5 inline-flex size-5 items-center justify-center hover:bg-ink/10"
-                >
-                  <X size={12} weight="bold" />
-                </button>
-              ) : null}
-            </Badge>
+            <TagChip key={tag} tag={tag} onRemove={disabled ? undefined : () => onChange(value.filter((t) => t !== tag))} />
           ))}
         </div>
       ) : null}

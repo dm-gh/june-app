@@ -1,8 +1,7 @@
-import type { Category, CategoryId, Transaction, Wallet, WalletId } from "@june/shared"
-import { useMemo } from "react"
-import { Checkbox, DateInput, Field, Input, Select, TagInput } from "../../ui"
-import { AmountInput } from "../../ui/AmountInput"
-import type { ChangeDraft } from "./changeDraft"
+import type { Category, Transaction, Wallet } from "@june/shared"
+import { Checkbox, DateInput, Field, Input, TagsField } from "../../ui"
+import type { ChangeDraft, ChangeErrors } from "./changeDraft"
+import { ChangeFields } from "./ChangeFields"
 
 export interface TransactionFormProps {
   draft: ChangeDraft
@@ -12,103 +11,42 @@ export interface TransactionFormProps {
   tagSuggestions: ReadonlyArray<string>
   mode: "add" | "edit"
   transactionType?: Transaction["type"]
-  errors?: Partial<Record<"amount" | "wallet", string>>
+  errors?: ChangeErrors
+}
+
+const amountHints: Record<Transaction["type"], string | undefined> = {
+  change: "Tap the sign to switch between expense and income",
+  init: "Tap the sign for a balance below zero",
+  exchange: undefined
 }
 
 /** The shared body of Add transaction, Edit transaction and the read-only Transaction view. */
-export function TransactionForm({ draft, onChange, wallets, categories, tagSuggestions, mode, transactionType = "change", errors }: TransactionFormProps) {
-  const disabled = false
+export function TransactionForm({ draft, onChange, wallets, categories, tagSuggestions, transactionType = "change", errors }: TransactionFormProps) {
   const isChange = transactionType === "change"
-  // A Change flips between expense and income; an Init flips below zero; an Exchange leg has a fixed side.
-  const signToggles = transactionType !== "exchange"
   const set = <K extends keyof ChangeDraft>(key: K, value: ChangeDraft[K]) => onChange({ ...draft, [key]: value })
-
-  // Only currencies a Wallet holds can be chosen: a Transaction entered by hand always has a Wallet.
-  const currencies = useMemo(() => {
-    const set = new Set<string>(wallets.map((w) => w.currency))
-    if (draft.currency) set.add(draft.currency)
-    return [...set].sort()
-  }, [wallets, draft.currency])
-  const walletsInCurrency = wallets.filter((w) => w.currency === draft.currency)
-  const categoriesForSign = categories.filter((c) => (draft.sign === "-" ? c.type === "expense" : c.type === "income"))
 
   return (
     <>
-      <Field
-        label="Amount"
-        htmlFor="amount"
-        error={errors?.amount}
-        hint={isChange ? "Tap the sign to switch between expense and income" : transactionType === "init" ? "Tap the sign for a balance below zero" : undefined}
-      >
-        <AmountInput
-          id="amount"
-          value={draft.amount}
-          onChange={(amount) => set("amount", amount)}
-          sign={draft.sign}
-          onSignChange={signToggles ? (sign) => onChange({ ...draft, sign, categoryId: "" }) : undefined}
-          disabled={disabled}
-          invalid={errors?.amount !== undefined}
-        />
-      </Field>
-      <Field label="Currency" htmlFor="currency">
-        <Select
-          id="currency"
-          value={draft.currency}
-          disabled={disabled || transactionType === "init"}
-          onChange={(e) => {
-            const currency = e.target.value
-            const first = wallets.find((w) => w.currency === currency)
-            onChange({ ...draft, currency, walletId: first?.id ?? "" })
-          }}
-        >
-          {currencies.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </Select>
-      </Field>
-      <Field label="Wallet" htmlFor="wallet" error={errors?.wallet}>
-        <Select
-          id="wallet"
-          value={draft.walletId}
-          disabled={disabled || transactionType === "init"}
-          invalid={errors?.wallet !== undefined}
-          onChange={(e) => set("walletId", e.target.value as WalletId)}
-        >
-          {walletsInCurrency.length === 0 ? <option value="">No wallet in {draft.currency}</option> : null}
-          {walletsInCurrency.map((w) => (
-            <option key={w.id} value={w.id}>
-              {w.name} · {w.currency}
-            </option>
-          ))}
-        </Select>
-      </Field>
-      {isChange ? (
-        <Field label="Category" htmlFor="category">
-          <Select id="category" value={draft.categoryId} disabled={disabled} onChange={(e) => set("categoryId", e.target.value as CategoryId)}>
-            <option value="">Uncategorised</option>
-            {categoriesForSign.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.emoji ? `${c.emoji} ` : ""}
-                {c.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
-      ) : null}
+      <ChangeFields
+        draft={draft}
+        onChange={(patch) => onChange({ ...draft, ...patch })}
+        wallets={wallets}
+        categories={categories}
+        errors={errors}
+        amountHint={amountHints[transactionType]}
+        // A Change flips between expense and income; an Init flips below zero; an Exchange leg has a fixed side.
+        signToggles={transactionType !== "exchange"}
+        walletFixed={transactionType === "init"}
+        showCategory={isChange}
+      />
       <Field label="Date" htmlFor="date">
-        <DateInput id="date" value={draft.date} disabled={disabled} onChange={(d) => set("date", d)} />
+        <DateInput id="date" value={draft.date} onChange={(d) => set("date", d)} />
       </Field>
       <Field label="Description" htmlFor="description">
-        <Input id="description" value={draft.description} disabled={disabled} onChange={(e) => set("description", e.target.value)} placeholder="What was it?" />
+        <Input id="description" value={draft.description} onChange={(e) => set("description", e.target.value)} placeholder="What was it?" />
       </Field>
-      <Field label="Tags" htmlFor="tags" hint="Space-separated, e.g. vacation-2026">
-        <TagInput id="tags" value={draft.tags} onChange={(tags) => set("tags", tags)} suggestions={tagSuggestions} disabled={disabled} />
-      </Field>
-      {isChange ? (
-        <Checkbox label="Hide from analysis" checked={draft.hidden} disabled={disabled} onChange={(e) => set("hidden", e.target.checked)} />
-      ) : null}
+      <TagsField value={draft.tags} onChange={(tags) => set("tags", tags)} suggestions={tagSuggestions} />
+      {isChange ? <Checkbox label="Hide from analysis" checked={draft.hidden} onChange={(e) => set("hidden", e.target.checked)} /> : null}
     </>
   )
 }
