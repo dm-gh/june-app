@@ -1,12 +1,14 @@
 import { page } from "vitest/browser"
-import { expect, test } from "vitest"
+import { expect, test, vi } from "vitest"
 import { render } from "vitest-browser-react"
-import { MemoryRouter } from "react-router"
+import { MemoryRouter, Route, Routes } from "react-router"
 import { useState } from "react"
 import { Either } from "effect"
 import { MinorAmount } from "@june/shared"
+import { endpoint } from "../../test/client.mock"
 import { loan } from "../../test/fixtures"
-import { draftFromLoan, type LoanDraft, LoanFields, readLoanDraft } from "./LoanFormPage"
+import { mockQueries, Where } from "../../test/queries.mock"
+import { draftFromLoan, EditLoanPage, type LoanDraft, LoanFields, readLoanDraft } from "./LoanFormPage"
 
 function Harness({ initial }: { initial: LoanDraft }) {
   const [draft, setDraft] = useState(initial)
@@ -64,4 +66,27 @@ test("the currency select offers every ISO currency with its name", async () => 
   await form()
   await expect.element(page.getByRole("option", { name: "USD · US Dollar" })).toBeInTheDocument()
   await expect.element(page.getByRole("option", { name: "JPY · Japanese Yen" })).toBeInTheDocument()
+})
+
+vi.mock("../../api/client", async () => (await import("../../test/client.mock")).clientMock())
+
+test("editing: Delete behind the menu asks first, then deletes the Loan and returns to More", async () => {
+  const lent = loan()
+  const { wrap } = mockQueries()
+  await render(
+    wrap(
+      <Routes>
+        <Route path="/more/loans/:id/edit" element={<EditLoanPage />} />
+        <Route path="*" element={<Where />} />
+      </Routes>,
+      [`/more/loans/${lent.id}/edit`]
+    )
+  )
+  await expect.element(page.getByLabelText("Description")).toHaveValue("Alex · laptop")
+  await page.getByRole("button", { name: "Options" }).click()
+  await page.getByRole("menuitem", { name: "Delete" }).click()
+  await expect.element(page.getByRole("heading", { name: "Delete Alex · laptop?" })).toBeVisible()
+  await page.getByRole("button", { name: "Delete" }).click()
+  await expect.element(page.getByTestId("where")).toHaveTextContent("/more")
+  expect(endpoint("loans", "delete")).toHaveBeenCalledWith({ path: { id: lent.id } })
 })

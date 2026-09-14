@@ -1,7 +1,7 @@
 import { type Attention, type Category, type Loan, type Me, MinorAmount, type Recurring, Tag, type Transaction, type WalletList } from "@june/shared"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { createElement, type ReactNode } from "react"
-import { MemoryRouter } from "react-router"
+import { MemoryRouter, useLocation } from "react-router"
 import { keys } from "../api/queries"
 import { emptyFilter, type Filter, FilterContext } from "../lib/filter"
 import { type Period, PeriodContext } from "../lib/period"
@@ -77,4 +77,10 @@ export const mockQueries = (overrides: Partial<Seed> = {}): MockedQueries => {
       )
     )
   return { client, seed, wrap }
+}
+
+/** Where the router is now, for a test that expects a page to navigate away: renders the pathname and search under `data-testid="where"`. */
+export function Where() {
+  const { pathname, search } = useLocation()
+  return createElement("div", { "data-testid": "where" }, pathname + search)
 }
