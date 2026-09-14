@@ -45,8 +45,7 @@ it.scoped("updating a Category changes its name, hue and emoji, keeps its slug u
     expect(untouched).toEqual(reslugged)
 
     const taken = yield* h.client.categories.update({ path: { id: food.id }, payload: { slug: "rent" as Slug } }).pipe(Effect.flip)
-    expect(taken._tag).toBe("RuleViolation")
-    expect(taken.message).toBe("A Category with this slug already exists")
+    expect(taken).toMatchObject({ _tag: "RuleViolation", message: "A Category with this slug already exists" })
 
     const duplicate = yield* h.client.categories.create({ payload: { type: income, name: "Rent", hue: hue(1) } }).pipe(Effect.flip)
     expect(duplicate._tag).toBe("RuleViolation")
