@@ -2,17 +2,6 @@ import { page } from "vitest/browser"
 import { expect, test } from "vitest"
 import { render } from "vitest-browser-react"
 
-/**
- * The setup file appends the Google stylesheet, but the first test of a file can run before it is parsed,
- * when `fonts.load` finds no face at all; so poll until the faces the form shows are really loaded.
- */
-const fonts = async () => {
-  for (let attempt = 0; attempt < 50; attempt++) {
-    const faces = await Promise.all([document.fonts.load('bold 12px "Space Grotesk"'), document.fonts.load('16px Inter'), document.fonts.load('bold 20px "Space Mono"')])
-    if (faces.every((f) => f.length > 0)) return
-    await new Promise((resolve) => setTimeout(resolve, 100))
-  }
-}
 import { MemoryRouter } from "react-router"
 import { useState } from "react"
 import { Either } from "effect"
@@ -50,14 +39,12 @@ test("readWalletDraft asks for a name first, then passes toMinor's message throu
 
 test("adding: a placeholder name, a free currency and the balance hint", async () => {
   await render(<Harness initial={{ name: "", currency: "USD", sign: "+", opening: "0" }} mode="add" />)
-  await fonts()
   await expect.element(page.getByLabelText("Currency")).toBeEnabled()
   await expect.element(page.getByTestId("form")).toMatchScreenshot("add")
 })
 
 test("editing: the currency is fixed and the balance is named as the Init", async () => {
   await render(<Harness initial={card} mode="edit" />)
-  await fonts()
   await expect.element(page.getByLabelText("Currency")).toBeDisabled()
   await expect.element(page.getByTestId("form")).toMatchScreenshot("edit")
 })
