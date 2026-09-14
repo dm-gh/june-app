@@ -1,3 +1,5 @@
+import { page } from "vitest/browser"
+import { beforeEach } from "vitest"
 import "../index.css"
 
 /**
@@ -22,3 +24,9 @@ await Promise.all(
   )
 )
 await document.fonts.ready
+
+/**
+ * Every test file shares one browser pointer, and a click leaves it where it landed: a card or a
+ * button under it in the next test would render hovered. Park it in the corner before each test.
+ */
+beforeEach(() => page.elementLocator(document.body).hover({ position: { x: 1, y: 1 } }))
