@@ -1,4 +1,4 @@
-import type { Category, Loan, Recurring, Transaction, Wallet } from "@june/shared"
+import type { Attention, Category, Loan, Me, Recurring, Transaction, Wallet } from "@june/shared"
 import { DateTime } from "effect"
 
 /** Stable sample data for unit and screenshot tests. Every id is a fixed UUID so snapshots never move. */
@@ -64,3 +64,15 @@ export const loan = (over: Partial<Loan> = {}): Loan =>
     updatedAt: at,
     ...over
   })
+
+export const me = cast<Me>({
+  id: "88888888-8888-4888-8888-888888888888",
+  email: "june@example.com",
+  name: "June",
+  image: null,
+  defaultCurrency: "USD",
+  hasCaptureToken: true
+})
+
+/** Nothing needs attention: no banner in a page screenshot unless a test asks for one. */
+export const attention = cast<Attention>({ recurringsWithoutWallet: 0, unassignedTransactions: 0 })
