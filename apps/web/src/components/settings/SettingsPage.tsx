@@ -1,7 +1,7 @@
 import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { allCurrencies, type Category, type CurrencyCode, type Wallet, type WalletId } from "@june/shared"
+import type { Category, CurrencyCode, Wallet, WalletId } from "@june/shared"
 import { DotsSixVertical } from "@phosphor-icons/react"
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router"
@@ -9,9 +9,7 @@ import { signOut } from "../../api/auth"
 import { useCategories, useMe, useReorderWallets, useSetDefaultCurrency, useWallets } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { balanceMoney, hueColor } from "../../lib/format"
-import { Button, Card, cn, Display, ErrorNotice, Field, Heading, Label, Loading, Select, Text } from "../../ui"
-
-const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" })
+import { Button, Card, cn, CurrencySelect, Display, ErrorNotice, Field, Heading, Label, Loading, Text } from "../../ui"
 
 function WalletRow({ wallet, index }: { wallet: Wallet; index: number }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: wallet.id })
@@ -125,18 +123,12 @@ export function SettingsPage() {
       </div>
 
       <Field label="Default currency" htmlFor="default-currency" className="mt-8" hint="Everything in analysis is converted into this currency" error={setCurrency.error?.message}>
-        <Select
+        <CurrencySelect
           id="default-currency"
           value={me.data?.defaultCurrency ?? "USD"}
           disabled={me.isPending || setCurrency.isPending}
-          onChange={(e) => setCurrency.mutate(e.target.value as CurrencyCode)}
-        >
-          {allCurrencies.map((c) => (
-            <option key={c} value={c}>
-              {c} · {currencyNames.of(c) ?? c}
-            </option>
-          ))}
-        </Select>
+          onChange={(code) => setCurrency.mutate(code as CurrencyCode)}
+        />
       </Field>
 
       <Heading as="h2" className="mt-8 mb-3">

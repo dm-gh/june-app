@@ -1,60 +1,76 @@
-import { allCurrencies, type CurrencyCode, currencyExponent, type MinorAmount, toMinor, type WalletId } from "@june/shared"
+import { type CurrencyCode, type MinorAmount, toMajorFixed, type Wallet, type WalletId } from "@june/shared"
 import { Trash } from "@phosphor-icons/react"
 import { Either } from "effect"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCreateWallet, useDeleteWallet, useMe, useUpdateWallet, useWallets } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
-import { Dialog, Field, Input, Loading, Select } from "../../ui"
+import { CurrencySelect, Dialog, Field, Input, Loading, useDraft } from "../../ui"
 import { AmountInput } from "../../ui/AmountInput"
+import { readAmount, type Sign } from "../transactions/changeDraft"
 
-const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" })
+/** What the Wallet form edits: the opening balance as unsigned text and a sign, like every amount. */
+export interface WalletDraft {
+  name: string
+  currency: string
+  sign: Sign
+  opening: string
+}
 
-const CurrencyOptions = () => (
-  <>
-    {allCurrencies.map((c) => (
-      <option key={c} value={c}>
-        {c} · {currencyNames.of(c) ?? c}
-      </option>
-    ))}
-  </>
-)
+export const draftFromWallet = (w: Wallet): WalletDraft => ({
+  name: w.name,
+  currency: w.currency,
+  sign: w.initMinor < 0 ? "-" : "+",
+  opening: toMajorFixed(w.initMinor, w.currency)
+})
+
+/** The name and the opening balance, or the one message to show. Zero is fine, and a blank reads as zero. */
+export const readWalletDraft = (draft: WalletDraft): Either.Either<{ name: string; currency: CurrencyCode; initMinor: MinorAmount }, string> => {
+  if (draft.name.trim() === "") return Either.left("Give the wallet a name")
+  return Either.map(readAmount(draft.sign, draft.opening || "0", draft.currency, { allowZero: true }), (initMinor) => ({
+    name: draft.name.trim(),
+    currency: draft.currency as CurrencyCode,
+    initMinor
+  }))
+}
+
+/** Name, currency and opening balance. Once created, a Wallet's currency is fixed for its lifetime. */
+export function WalletFields({ draft, onChange, mode }: { draft: WalletDraft; onChange: (d: WalletDraft) => void; mode: "add" | "edit" }) {
+  const set = <K extends keyof WalletDraft>(key: K, value: WalletDraft[K]) => onChange({ ...draft, [key]: value })
+  const adding = mode === "add"
+  return (
+    <>
+      <Field label="Name" htmlFor="name">
+        <Input id="name" value={draft.name} onChange={(e) => set("name", e.target.value)} {...(adding ? { placeholder: "Cash", autoFocus: true } : {})} />
+      </Field>
+      <Field label="Currency" htmlFor="currency" hint={adding ? undefined : "Fixed for the wallet's lifetime"}>
+        <CurrencySelect id="currency" value={draft.currency} disabled={!adding} onChange={(currency) => set("currency", currency)} />
+      </Field>
+      <Field label="Opening balance" htmlFor="opening" hint={adding ? "Tap the sign for a balance below zero" : "The wallet's Init transaction. Tap the sign for a balance below zero"}>
+        <AmountInput id="opening" value={draft.opening} onChange={(opening) => set("opening", opening)} sign={draft.sign} onSignChange={(sign) => set("sign", sign)} />
+      </Field>
+    </>
+  )
+}
 
 export function AddWalletPage() {
   const navigate = useNavigate()
   const me = useMe()
   const create = useCreateWallet()
-  const [name, setName] = useState("")
-  const [currency, setCurrency] = useState<string>("")
-  const [opening, setOpening] = useState("0")
-  const [sign, setSign] = useState<"-" | "+">("+")
+  const [draft, setDraft] = useState<WalletDraft>({ name: "", currency: "", sign: "+", opening: "0" })
   const [error, setError] = useState<string | null>(null)
-  const effectiveCurrency = currency || me.data?.defaultCurrency || "USD"
+  const effective = { ...draft, currency: draft.currency || me.data?.defaultCurrency || "USD" }
 
   const submit = () => {
-    if (name.trim() === "") return setError("Give the wallet a name")
-    const minor = toMinor(Number(opening || "0"), effectiveCurrency)
-    if (Either.isLeft(minor)) return setError(minor.left)
+    const read = readWalletDraft(effective)
+    if (Either.isLeft(read)) return setError(read.left)
     setError(null)
-    create.mutate(
-      { name: name.trim(), currency: effectiveCurrency as CurrencyCode, initMinor: ((sign === "-" ? -1 : 1) * minor.right) as MinorAmount },
-      { onSuccess: () => navigate("/settings") }
-    )
+    create.mutate(read.right, { onSuccess: () => navigate("/settings") })
   }
 
   return (
     <FormPage title="Add wallet" backTo="/settings" submitLabel="Create wallet" onSubmit={submit} busy={create.isPending} error={error ?? create.error?.message ?? null}>
-      <Field label="Name" htmlFor="name">
-        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Cash" autoFocus />
-      </Field>
-      <Field label="Currency" htmlFor="currency">
-        <Select id="currency" value={effectiveCurrency} onChange={(e) => setCurrency(e.target.value)}>
-          <CurrencyOptions />
-        </Select>
-      </Field>
-      <Field label="Opening balance" htmlFor="opening" hint="Tap the sign for a balance below zero">
-        <AmountInput id="opening" value={opening} onChange={setOpening} sign={sign} onSignChange={setSign} />
-      </Field>
+      <WalletFields draft={effective} onChange={setDraft} mode="add" />
     </FormPage>
   )
 }
@@ -66,21 +82,11 @@ export function EditWalletPage() {
   const update = useUpdateWallet()
   const remove = useDeleteWallet()
   const wallet = wallets.data?.wallets.find((w) => w.id === id)
-  const [name, setName] = useState<string | null>(null)
-  const [opening, setOpening] = useState<string | null>(null)
-  const [sign, setSign] = useState<"-" | "+">("+")
+  const [draft, setDraft] = useDraft(wallet, draftFromWallet)
   const [confirm, setConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (wallet && name === null) {
-      setName(wallet.name)
-      setOpening((Math.abs(wallet.initMinor) / 10 ** currencyExponent(wallet.currency)).toFixed(currencyExponent(wallet.currency)))
-      setSign(wallet.initMinor < 0 ? "-" : "+")
-    }
-  }, [wallet, name])
-
-  if (!wallet || name === null || opening === null) {
+  if (!wallet || draft === null) {
     return (
       <FormPage title="Edit wallet" backTo="/settings">
         <Loading />
@@ -89,14 +95,11 @@ export function EditWalletPage() {
   }
 
   const submit = () => {
-    if (name.trim() === "") return setError("Give the wallet a name")
-    const minor = toMinor(Number(opening || "0"), wallet.currency)
-    if (Either.isLeft(minor)) return setError(minor.left)
+    const read = readWalletDraft(draft)
+    if (Either.isLeft(read)) return setError(read.left)
     setError(null)
-    update.mutate(
-      { id: wallet.id as WalletId, payload: { name: name.trim(), initMinor: ((sign === "-" ? -1 : 1) * minor.right) as MinorAmount } },
-      { onSuccess: () => navigate("/settings") }
-    )
+    const { name, initMinor } = read.right
+    update.mutate({ id: wallet.id as WalletId, payload: { name, initMinor } }, { onSuccess: () => navigate("/settings") })
   }
 
   return (
@@ -109,17 +112,7 @@ export function EditWalletPage() {
       error={error ?? update.error?.message ?? remove.error?.message ?? null}
       menu={[{ label: "Delete", icon: Trash, danger: true, onSelect: () => setConfirm(true) }]}
     >
-      <Field label="Name" htmlFor="name">
-        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-      </Field>
-      <Field label="Currency" htmlFor="currency" hint="Fixed for the wallet's lifetime">
-        <Select id="currency" value={wallet.currency} disabled>
-          <CurrencyOptions />
-        </Select>
-      </Field>
-      <Field label="Opening balance" htmlFor="opening" hint="The wallet's Init transaction. Tap the sign for a balance below zero">
-        <AmountInput id="opening" value={opening} onChange={setOpening} sign={sign} onSignChange={setSign} />
-      </Field>
+      <WalletFields draft={draft} onChange={setDraft} mode="edit" />
       <Dialog
         open={confirm}
         title={`Delete ${wallet.name}?`}

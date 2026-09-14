@@ -1,14 +1,13 @@
-import { allCurrencies, type CurrencyCode, currencyExponent, type Loan, type LoanId, type MinorAmount, toMinor } from "@june/shared"
+import { type CurrencyCode, type Loan, type LoanId, type MinorAmount, toMajorFixed } from "@june/shared"
 import { Trash } from "@phosphor-icons/react"
 import { Either } from "effect"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { useCreateLoan, useDeleteLoan, useLoan, useMe, useUpdateLoan } from "../../api/queries"
 import { FormPage } from "../../layout/FormPage"
-import { Dialog, Field, Input, Loading, Segmented, Select, Text } from "../../ui"
+import { CurrencySelect, Dialog, Field, Input, Loading, Segmented, Text, useDraft } from "../../ui"
 import { AmountInput } from "../../ui/AmountInput"
-
-const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" })
+import { readAmount } from "../transactions/changeDraft"
 
 export type Direction = "lent" | "borrowed"
 
@@ -21,21 +20,15 @@ export interface LoanDraft {
 
 export const draftFromLoan = (l: Loan): LoanDraft => ({
   direction: l.amountMinor < 0 ? "borrowed" : "lent",
-  amount: (Math.abs(l.amountMinor) / 10 ** currencyExponent(l.currency)).toFixed(currencyExponent(l.currency)),
+  amount: toMajorFixed(l.amountMinor, l.currency),
   currency: l.currency,
   description: l.description
 })
 
 /** Zero is allowed when editing (a settled Loan), not when creating. */
 export const readLoanDraft = (draft: LoanDraft, allowZero: boolean): Either.Either<{ amountMinor: MinorAmount; currency: CurrencyCode; description: string }, string> => {
-  const parsed = toMinor(Number(draft.amount || "0"), draft.currency)
-  if (Either.isLeft(parsed)) return Either.left(parsed.left)
-  if (parsed.right === 0 && !allowZero) return Either.left("Enter an amount")
-  return Either.right({
-    amountMinor: ((draft.direction === "borrowed" ? -1 : 1) * parsed.right) as MinorAmount,
-    currency: draft.currency as CurrencyCode,
-    description: draft.description.trim()
-  })
+  const amount = readAmount(draft.direction === "borrowed" ? "-" : "+", draft.amount || "0", draft.currency, { allowZero })
+  return Either.map(amount, (amountMinor) => ({ amountMinor, currency: draft.currency as CurrencyCode, description: draft.description.trim() }))
 }
 
 export function LoanFields({ draft, onChange }: { draft: LoanDraft; onChange: (d: LoanDraft) => void }) {
@@ -62,13 +55,7 @@ export function LoanFields({ draft, onChange }: { draft: LoanDraft; onChange: (d
         />
       </Field>
       <Field label="Currency" htmlFor="currency">
-        <Select id="currency" value={draft.currency} onChange={(e) => set("currency", e.target.value)}>
-          {allCurrencies.map((c) => (
-            <option key={c} value={c}>
-              {c} · {currencyNames.of(c) ?? c}
-            </option>
-          ))}
-        </Select>
+        <CurrencySelect id="currency" value={draft.currency} onChange={(currency) => set("currency", currency)} />
       </Field>
       <Field label="Description" htmlFor="description">
         <Input id="description" value={draft.description} onChange={(e) => set("description", e.target.value)} placeholder="Alex · laptop" autoFocus />
@@ -104,13 +91,9 @@ export function EditLoanPage() {
   const loan = useLoan(id as LoanId)
   const update = useUpdateLoan()
   const remove = useDeleteLoan()
-  const [draft, setDraft] = useState<LoanDraft | null>(null)
+  const [draft, setDraft] = useDraft(loan.data, draftFromLoan)
   const [error, setError] = useState<string | null>(null)
   const [confirm, setConfirm] = useState(false)
-
-  useEffect(() => {
-    if (loan.data && draft === null) setDraft(draftFromLoan(loan.data))
-  }, [loan.data, draft])
 
   if (loan.isPending || draft === null) {
     return (
