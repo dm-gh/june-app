@@ -10,16 +10,16 @@ import { AmountInput } from "../../ui/AmountInput"
 
 const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" })
 
-type Direction = "lent" | "borrowed"
+export type Direction = "lent" | "borrowed"
 
-interface Draft {
+export interface LoanDraft {
   direction: Direction
   amount: string
   currency: string
   description: string
 }
 
-const draftFromLoan = (l: Loan): Draft => ({
+export const draftFromLoan = (l: Loan): LoanDraft => ({
   direction: l.amountMinor < 0 ? "borrowed" : "lent",
   amount: (Math.abs(l.amountMinor) / 10 ** currencyExponent(l.currency)).toFixed(currencyExponent(l.currency)),
   currency: l.currency,
@@ -27,7 +27,7 @@ const draftFromLoan = (l: Loan): Draft => ({
 })
 
 /** Zero is allowed when editing (a settled Loan), not when creating. */
-const readDraft = (draft: Draft, allowZero: boolean): Either.Either<{ amountMinor: MinorAmount; currency: CurrencyCode; description: string }, string> => {
+export const readLoanDraft = (draft: LoanDraft, allowZero: boolean): Either.Either<{ amountMinor: MinorAmount; currency: CurrencyCode; description: string }, string> => {
   const parsed = toMinor(Number(draft.amount || "0"), draft.currency)
   if (Either.isLeft(parsed)) return Either.left(parsed.left)
   if (parsed.right === 0 && !allowZero) return Either.left("Enter an amount")
@@ -38,8 +38,8 @@ const readDraft = (draft: Draft, allowZero: boolean): Either.Either<{ amountMino
   })
 }
 
-function LoanFields({ draft, onChange }: { draft: Draft; onChange: (d: Draft) => void }) {
-  const set = <K extends keyof Draft>(key: K, value: Draft[K]) => onChange({ ...draft, [key]: value })
+export function LoanFields({ draft, onChange }: { draft: LoanDraft; onChange: (d: LoanDraft) => void }) {
+  const set = <K extends keyof LoanDraft>(key: K, value: LoanDraft[K]) => onChange({ ...draft, [key]: value })
   return (
     <>
       <Field label="Direction" hint="Lent: they owe you. Borrowed: you owe them.">
@@ -81,12 +81,12 @@ export function AddLoanPage() {
   const navigate = useNavigate()
   const me = useMe()
   const create = useCreateLoan()
-  const [draft, setDraft] = useState<Draft>({ direction: "lent", amount: "", currency: "", description: "" })
+  const [draft, setDraft] = useState<LoanDraft>({ direction: "lent", amount: "", currency: "", description: "" })
   const [error, setError] = useState<string | null>(null)
   const effective = { ...draft, currency: draft.currency || me.data?.defaultCurrency || "USD" }
 
   const submit = () => {
-    const read = readDraft(effective, false)
+    const read = readLoanDraft(effective, false)
     if (Either.isLeft(read)) return setError(read.left)
     setError(null)
     create.mutate(read.right, { onSuccess: () => navigate("/more") })
@@ -104,7 +104,7 @@ export function EditLoanPage() {
   const loan = useLoan(id as LoanId)
   const update = useUpdateLoan()
   const remove = useDeleteLoan()
-  const [draft, setDraft] = useState<Draft | null>(null)
+  const [draft, setDraft] = useState<LoanDraft | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirm, setConfirm] = useState(false)
 
@@ -121,7 +121,7 @@ export function EditLoanPage() {
   }
   const l = loan.data!
   const submit = () => {
-    const read = readDraft(draft, true)
+    const read = readLoanDraft(draft, true)
     if (Either.isLeft(read)) return setError(read.left)
     setError(null)
     update.mutate({ id: l.id, payload: read.right }, { onSuccess: () => navigate(`/more/loans/${l.id}`) })

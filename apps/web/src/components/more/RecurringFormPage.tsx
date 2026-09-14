@@ -9,7 +9,7 @@ import { Checkbox, Dialog, Field, Input, Loading, Notice, Select, TagInput, Text
 import { AmountInput } from "../../ui/AmountInput"
 import { emptySchedule, type ScheduleDraft, scheduleFromRecurring, schedulePayload, SchedulePicker } from "./SchedulePicker"
 
-interface Draft {
+export interface RecurringDraft {
   name: string
   sign: "-" | "+"
   amount: string
@@ -22,9 +22,9 @@ interface Draft {
   schedule: ScheduleDraft
 }
 
-type Errors = Partial<Record<"name" | "amount" | "wallet" | "schedule", string>>
+export type RecurringErrors = Partial<Record<"name" | "amount" | "wallet" | "schedule", string>>
 
-const draftFromRecurring = (r: Recurring): Draft => ({
+export const draftFromRecurring = (r: Recurring): RecurringDraft => ({
   name: r.name,
   sign: r.amountMinor < 0 ? "-" : "+",
   amount: (Math.abs(r.amountMinor) / 10 ** currencyExponent(r.currency)).toFixed(currencyExponent(r.currency)),
@@ -41,8 +41,8 @@ type Wallets = NonNullable<ReturnType<typeof useWallets>["data"]>["wallets"]
 type Categories = NonNullable<ReturnType<typeof useCategories>["data"]>
 
 /** The fields of a Recurring: every field of a Change but the date, plus a name, Auto and the Schedule. */
-function RecurringFields({ draft, onChange, wallets, categories, tagSuggestions, errors }: { draft: Draft; onChange: (d: Draft) => void; wallets: Wallets; categories: Categories; tagSuggestions: ReadonlyArray<string>; errors: Errors }) {
-  const set = <K extends keyof Draft>(key: K, value: Draft[K]) => onChange({ ...draft, [key]: value })
+export function RecurringFields({ draft, onChange, wallets, categories, tagSuggestions, errors }: { draft: RecurringDraft; onChange: (d: RecurringDraft) => void; wallets: Wallets; categories: Categories; tagSuggestions: ReadonlyArray<string>; errors: RecurringErrors }) {
+  const set = <K extends keyof RecurringDraft>(key: K, value: RecurringDraft[K]) => onChange({ ...draft, [key]: value })
   const currencies = useMemo(() => {
     const set = new Set<string>(wallets.map((w) => w.currency))
     if (draft.currency) set.add(draft.currency)
@@ -118,8 +118,8 @@ function RecurringFields({ draft, onChange, wallets, categories, tagSuggestions,
 }
 
 /** Reads the draft into a payload, or the errors to show. */
-const readDraft = (draft: Draft) => {
-  const errors: Errors = {}
+export const readRecurringDraft = (draft: RecurringDraft) => {
+  const errors: RecurringErrors = {}
   if (draft.name.trim() === "") errors.name = "Give it a name"
   const parsed = toMinor(Number(draft.amount), draft.currency)
   if (draft.amount.trim() === "" || Either.isLeft(parsed) || parsed.right === 0) errors.amount = Either.isLeft(parsed) ? parsed.left : "Enter an amount"
@@ -147,8 +147,8 @@ export function AddRecurringPage() {
   const categories = useCategories()
   const tags = useTags()
   const create = useCreateRecurring()
-  const [draft, setDraft] = useState<Draft | null>(null)
-  const [errors, setErrors] = useState<Errors>({})
+  const [draft, setDraft] = useState<RecurringDraft | null>(null)
+  const [errors, setErrors] = useState<RecurringErrors>({})
 
   useEffect(() => {
     const first = wallets.data?.wallets[0]
@@ -174,7 +174,7 @@ export function AddRecurringPage() {
     )
   }
   const submit = () => {
-    const read = readDraft(draft)
+    const read = readRecurringDraft(draft)
     if (Either.isLeft(read)) return setErrors(read.left)
     setErrors({})
     create.mutate(read.right, { onSuccess: () => navigate("/more") })
@@ -195,8 +195,8 @@ export function EditRecurringPage() {
   const tags = useTags()
   const update = useUpdateRecurring()
   const remove = useDeleteRecurring()
-  const [draft, setDraft] = useState<Draft | null>(null)
-  const [errors, setErrors] = useState<Errors>({})
+  const [draft, setDraft] = useState<RecurringDraft | null>(null)
+  const [errors, setErrors] = useState<RecurringErrors>({})
   const [confirm, setConfirm] = useState(false)
 
   useEffect(() => {
@@ -212,7 +212,7 @@ export function EditRecurringPage() {
   }
   const r = recurring.data!
   const submit = () => {
-    const read = readDraft(draft)
+    const read = readRecurringDraft(draft)
     if (Either.isLeft(read)) return setErrors(read.left)
     setErrors({})
     const p = read.right
