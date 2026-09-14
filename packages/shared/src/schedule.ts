@@ -3,7 +3,7 @@ import type { LocalDate } from "./domain.js"
 
 /**
  * A Recurring's Schedule (CONTEXT.md): stored as a standard five-field cron expression that the
- * User never sees, built by the generator below from one of three shapes, or absent for a once
+ * User never sees, built by the generator below from one of four shapes, or absent for a once
  * date. Days are calendar days in UTC; the time fields are always "0 0".
  */
 
@@ -35,6 +35,7 @@ export const nextAfter = (cron: Cron.Cron, date: LocalDate): LocalDate => toLoca
 
 /** What the form lets the User pick. `once` is not a cron shape: it becomes a date with no expression. */
 export type ScheduleShape =
+  | { readonly kind: "daily" }
   | { readonly kind: "weekly"; readonly weekdays: ReadonlyArray<number> }
   | { readonly kind: "monthly"; readonly days: ReadonlyArray<number> }
   | { readonly kind: "yearly"; readonly day: number; readonly month: number }
@@ -44,6 +45,8 @@ const list = (ns: ReadonlyArray<number>): string => [...new Set(ns)].sort((a, b)
 /** The expression for a shape, or a message when nothing is selected. */
 export const buildCron = (shape: ScheduleShape): Either.Either<CronExpression, string> => {
   switch (shape.kind) {
+    case "daily":
+      return Either.right("0 0 * * *" as CronExpression)
     case "weekly":
       return shape.weekdays.length === 0 ? Either.left("Pick at least one weekday") : Either.right(`0 0 * * ${list(shape.weekdays)}` as CronExpression)
     case "monthly":
@@ -59,6 +62,7 @@ export const readCron = (expression: string): ScheduleShape | null => {
   if (!m) return null
   const [, day, month, weekday] = m as unknown as [string, string, string, string]
   const nums = (s: string) => s.split(",").map(Number)
+  if (day === "*" && month === "*" && weekday === "*") return { kind: "daily" }
   if (day === "*" && month === "*" && weekday !== "*") return { kind: "weekly", weekdays: nums(weekday) }
   if (month === "*" && weekday === "*" && day !== "*") return { kind: "monthly", days: nums(day) }
   if (weekday === "*" && day !== "*" && month !== "*" && !day.includes(",") && !month.includes(",")) {
@@ -79,9 +83,11 @@ export const ordinal = (n: number): string => {
 const joinWords = (xs: ReadonlyArray<string>): string =>
   xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`
 
-/** "Weekly on Monday and Friday", "Monthly on the 5th and 20th", "Yearly on 14 March". */
+/** "Daily", "Weekly on Monday and Friday", "Monthly on the 5th and 20th", "Yearly on 14 March". */
 export const describeShape = (shape: ScheduleShape): string => {
   switch (shape.kind) {
+    case "daily":
+      return "Daily"
     case "weekly":
       return `Weekly on ${joinWords([...shape.weekdays].sort((a, b) => a - b).map((d) => WEEKDAYS[d % 7]!))}`
     case "monthly":

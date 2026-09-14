@@ -1,7 +1,7 @@
 import type { Category, Recurring } from "@june/shared"
 import { useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router"
-import { useCategories, useLoans, useRecurrings } from "../../api/queries"
+import { useCategories, useLoans, useRecurrings, useWallets } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { StickyBar } from "../../layout/StickyBar"
 import { Button, Display, Empty, ErrorNotice, Heading, Loading } from "../../ui"
@@ -15,8 +15,10 @@ export function MorePage() {
   const recurrings = useRecurrings()
   const loans = useLoans()
   const categories = useCategories()
+  const wallets = useWallets()
   const [submitting, setSubmitting] = useState<Recurring | null>(null)
   const categoryById = useMemo(() => new Map<string, Category>((categories.data ?? []).map((c) => [c.id, c])), [categories.data])
+  const walletNames = useMemo(() => new Map((wallets.data?.wallets ?? []).map((w) => [w.id, w.name])), [wallets.data])
   const live = (loans.data ?? []).filter((l) => !l.archived)
   const archived = (loans.data ?? []).filter((l) => l.archived)
 
@@ -39,7 +41,13 @@ export function MorePage() {
       {recurrings.data && recurrings.data.length === 0 ? <Empty>Nothing repeats yet. Add rent, a salary or a subscription.</Empty> : null}
       <div className="mt-3 flex flex-col gap-3">
         {(recurrings.data ?? []).map((r) => (
-          <RecurringCard key={r.id} recurring={r} category={r.categoryId ? categoryById.get(r.categoryId) : undefined} onSubmit={r.auto ? undefined : () => setSubmitting(r)} />
+          <RecurringCard
+            key={r.id}
+            recurring={r}
+            category={r.categoryId ? categoryById.get(r.categoryId) : undefined}
+            walletName={r.walletId ? (walletNames.get(r.walletId) ?? null) : null}
+            onSubmit={r.auto ? undefined : () => setSubmitting(r)}
+          />
         ))}
       </div>
 

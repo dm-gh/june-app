@@ -103,7 +103,7 @@ export function BreakdownPage({ dimension, side = "expense" }: { dimension: Dime
           currency={currency}
           showNative={dimension === "wallets"}
           detail={dimension === "wallets" ? walletBalance(walletById, currency) : undefined}
-          hideEmptySide={dimension === "tags"}
+          hideEmptySide
           sides={sides}
         />
       ) : (

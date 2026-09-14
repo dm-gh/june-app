@@ -5,7 +5,7 @@ import { Button, cn, DateInput, Field, Label, Segmented, Select, Text } from "..
 
 /** What the picker holds; `kind: "none"` is no Schedule (only allowed with Auto off). */
 export interface ScheduleDraft {
-  kind: "none" | "weekly" | "monthly" | "yearly" | "once"
+  kind: "none" | "once" | "daily" | "weekly" | "monthly" | "yearly"
   weekdays: ReadonlyArray<number>
   days: ReadonlyArray<number>
   day: number
@@ -25,6 +25,8 @@ export const scheduleFromRecurring = (r: { cron: string | null; nextOn: LocalDat
   const shape = readCron(r.cron)
   if (shape === null) return base
   switch (shape.kind) {
+    case "daily":
+      return { ...base, kind: "daily" }
     case "weekly":
       return { ...base, kind: "weekly", weekdays: shape.weekdays }
     case "monthly":
@@ -36,6 +38,8 @@ export const scheduleFromRecurring = (r: { cron: string | null; nextOn: LocalDat
 
 const toShape = (d: ScheduleDraft): ScheduleShape | null => {
   switch (d.kind) {
+    case "daily":
+      return { kind: "daily" }
     case "weekly":
       return { kind: "weekly", weekdays: d.weekdays }
     case "monthly":
@@ -58,7 +62,7 @@ export const schedulePayload = (d: ScheduleDraft): Either.Either<{ cron: CronExp
 /** "Monthly on the 5th and 20th · Next fires 20 Sep 2026", or the reason nothing fires yet. */
 export const schedulePreview = (d: ScheduleDraft): string => {
   if (d.kind === "none") return "No schedule: fire it by hand from its page."
-  if (d.kind === "once") return `Once on ${formatLongDate(d.once)}`
+  if (d.kind === "once") return d.once < todayLocal() ? `This will never happen: ${formatLongDate(d.once)} has already passed.` : `Once on ${formatLongDate(d.once)}`
   const shape = toShape(d)!
   const cron = buildCron(shape)
   if (Either.isLeft(cron)) return cron.left
@@ -104,16 +108,17 @@ export interface SchedulePickerProps {
 }
 
 /**
- * The generator behind a Schedule. Weekly and Monthly take several days, Yearly one day of one
- * month, Once a date. The cron expression it produces is never shown.
+ * The generator behind a Schedule. Daily is every day, Weekly and Monthly take several days,
+ * Yearly one day of one month, Once a date. The cron expression it produces is never shown.
  */
 export function SchedulePicker({ value: d, onChange, required, error }: SchedulePickerProps) {
   const set = <K extends keyof ScheduleDraft>(key: K, v: ScheduleDraft[K]) => onChange({ ...d, [key]: v })
   const kinds = [
+    { value: "once" as const, label: "Once" },
+    { value: "daily" as const, label: "Daily" },
     { value: "weekly" as const, label: "Weekly" },
     { value: "monthly" as const, label: "Monthly" },
-    { value: "yearly" as const, label: "Yearly" },
-    { value: "once" as const, label: "Once" }
+    { value: "yearly" as const, label: "Yearly" }
   ]
   return (
     <div className="flex flex-col gap-3">
@@ -146,7 +151,6 @@ export function SchedulePicker({ value: d, onChange, required, error }: Schedule
               </Chip>
             ))}
           </div>
-          {d.days.some((n) => n > 28) ? <Text className="mt-2 text-sm text-grey-ink">Days 29–31 skip months without that day.</Text> : null}
         </div>
       ) : null}
       {d.kind === "yearly" ? (
@@ -177,7 +181,7 @@ export function SchedulePicker({ value: d, onChange, required, error }: Schedule
         </Field>
       ) : null}
       <div className="flex items-start justify-between gap-3">
-        <Text className="text-sm text-grey-ink">{schedulePreview(d)}</Text>
+        <Text className={cn("text-sm", d.kind === "once" && d.once < todayLocal() ? "text-coral-ink" : "text-grey-ink")}>{schedulePreview(d)}</Text>
         {d.kind !== "none" && !required ? (
           <Button variant="ghost" size="sm" onClick={() => set("kind", "none")}>
             Remove

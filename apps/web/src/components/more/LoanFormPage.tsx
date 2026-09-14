@@ -53,7 +53,13 @@ function LoanFields({ draft, onChange }: { draft: Draft; onChange: (d: Draft) =>
         />
       </Field>
       <Field label="Amount" htmlFor="amount">
-        <AmountInput id="amount" value={draft.amount} onChange={(amount) => set("amount", amount)} sign={draft.direction === "borrowed" ? "-" : "+"} />
+        <AmountInput
+          id="amount"
+          value={draft.amount}
+          onChange={(amount) => set("amount", amount)}
+          sign={draft.direction === "borrowed" ? "-" : "+"}
+          onSignChange={(sign) => set("direction", sign === "-" ? "borrowed" : "lent")}
+        />
       </Field>
       <Field label="Currency" htmlFor="currency">
         <Select id="currency" value={draft.currency} onChange={(e) => set("currency", e.target.value)}>
@@ -64,7 +70,7 @@ function LoanFields({ draft, onChange }: { draft: Draft; onChange: (d: Draft) =>
           ))}
         </Select>
       </Field>
-      <Field label="Description" htmlFor="description" hint="Who, and what for">
+      <Field label="Description" htmlFor="description">
         <Input id="description" value={draft.description} onChange={(e) => set("description", e.target.value)} placeholder="Alex · laptop" autoFocus />
       </Field>
     </>

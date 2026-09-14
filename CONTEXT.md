@@ -90,7 +90,7 @@ A User's template for a Change that repeats: a required name plus every field a 
 _Avoid_: recurring transaction, subscription, scheduled transaction, template
 
 **Schedule**:
-When a Recurring is due: weekly on one or more weekdays, monthly on one or more days of the month, yearly on a day of a month, or once on a date. The User never sees or types the expression behind it. A monthly Schedule on the 29th, 30th or 31st skips months without that day. A Recurring always knows its next due date; a Recurring that is due and unfired is Overdue.
+When a Recurring is due: daily, weekly on one or more weekdays, monthly on one or more days of the month, yearly on a day of a month, or once on a date. The User never sees or types the expression behind it. A monthly Schedule on the 29th, 30th or 31st skips months without that day. A Recurring always knows its next due date; a Recurring that is due and unfired is Overdue.
 _Avoid_: cron (that names the storage), frequency, period (already means the viewed date range)
 
 **Firing**:

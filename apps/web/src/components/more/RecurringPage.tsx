@@ -5,13 +5,13 @@ import { useNavigate, useParams } from "react-router"
 import { useCategories, useDeleteRecurring, useRecurring, useWallets } from "../../api/queries"
 import { AppShell } from "../../layout/AppShell"
 import { StickyBar } from "../../layout/StickyBar"
-import { hueColor, signedMoney } from "../../lib/format"
 import { formatLongDate } from "../../lib/period"
-import { Badge, Button, Card, cn, Dialog, Display, ErrorNotice, IconButton, Label, Loading, Menu, Text } from "../../ui"
+import { Badge, Button, Card, Dialog, Display, ErrorNotice, IconButton, Label, Loading, Menu } from "../../ui"
 import { dueState, scheduleWords } from "./recurring"
+import { RecurringCard } from "./RecurringCard"
 import { SubmitDialog } from "./SubmitDialog"
 
-/** A Recurring's page: what it records, its Schedule, and Submit. Edit and Delete sit behind the menu. */
+/** A Recurring's page: the same card as the list, its Schedule, and Submit. Edit and Delete sit behind the menu. */
 export function RecurringPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -51,30 +51,7 @@ export function RecurringPage() {
       {recurring.isPending ? <Loading /> : null}
       {r && due ? (
         <div className="flex flex-col gap-5">
-          <Card className="relative p-3 pt-4">
-            {category ? (
-              <Badge className="absolute -top-[3px] -right-[3px] h-5 border-t-0 border-r-0 px-1.5 text-[10px]" style={{ background: hueColor(category.hue) }}>
-                {category.emoji ? `${category.emoji} ` : ""}
-                {category.name}
-              </Badge>
-            ) : null}
-            <div className={cn("font-mono text-3xl font-bold tabular-nums", r.amountMinor < 0 ? "text-coral-ink" : "text-green-ink")}>
-              {signedMoney(r.amountMinor, r.currency)}
-            </div>
-            {r.description ? <Text className="mt-1">{r.description}</Text> : null}
-            <div className={cn("mt-1 font-mono text-xs", wallet ? "text-grey-ink" : "text-coral-ink")}>
-              {wallet ? `${wallet.name} · ${wallet.currency}` : `Needs a wallet · fires unassigned in ${r.currency}`}
-            </div>
-            {r.tags.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {r.tags.map((tag) => (
-                  <Badge key={tag} prefix="#" className="h-5 px-1.5 text-[10px]">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            ) : null}
-          </Card>
+          <RecurringCard recurring={r} category={category} walletName={wallet ? `${wallet.name} · ${wallet.currency}` : null} interactive={false} />
 
           <Card accent="sky" shadow="sm" className="p-3">
             <div className="flex items-center justify-between">
@@ -95,10 +72,6 @@ export function RecurringPage() {
               <span className="text-grey-ink">Last</span>
               <span className="text-grey-ink">{r.lastFiredOn ? formatLongDate(r.lastFiredOn) : "never"}</span>
             </div>
-            <Text className="mt-2 text-sm text-grey-ink">
-              {r.auto ? "Fires by itself on the due date. " : ""}
-              Submit records it now for the due date, or lets you edit first.
-            </Text>
           </Card>
 
           <Button size="lg" onClick={() => setSubmitting(true)}>

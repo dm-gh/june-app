@@ -108,7 +108,10 @@ function RecurringFields({ draft, onChange, wallets, categories, tagSuggestions,
       <Field label="Tags" htmlFor="tags" hint="Space-separated, e.g. vacation-2026">
         <TagInput id="tags" value={draft.tags} onChange={(tags) => set("tags", tags)} suggestions={tagSuggestions} />
       </Field>
-      <Checkbox label="Auto: fire by itself on the due date" checked={draft.auto} onChange={(e) => set("auto", e.target.checked)} />
+      <div>
+        <Checkbox label="Auto: fire by itself on the due date" checked={draft.auto} onChange={(e) => set("auto", e.target.checked)} />
+        <Text className="mt-1.5 text-sm text-grey-ink">Auto fires within the hour after 00:00 UTC on the due date, and the transaction is dated that day.</Text>
+      </div>
       <SchedulePicker value={draft.schedule} onChange={(schedule) => set("schedule", schedule)} required={draft.auto} error={errors.schedule} />
     </>
   )

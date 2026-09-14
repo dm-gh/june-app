@@ -8,12 +8,12 @@ export interface SegmentedProps<V extends string> {
   className?: string
 }
 
-const cols: Record<number, string> = { 1: "grid-cols-1", 2: "grid-cols-2", 3: "grid-cols-3", 4: "grid-cols-4" }
+const cols: Record<number, string> = { 1: "grid-cols-1", 2: "grid-cols-2", 3: "grid-cols-3", 4: "grid-cols-4", 5: "grid-cols-5" }
 
 /** Two or three bordered buttons; the active one is filled with the accent and lifted with a hard shadow. */
 export function Segmented<V extends string>({ options, value, onChange, disabled, className }: SegmentedProps<V>) {
   return (
-    <div role="radiogroup" className={cn("grid gap-3", cols[Math.min(options.length, 4)], className)}>
+    <div role="radiogroup" className={cn("grid gap-3", cols[Math.min(options.length, 5)], className)}>
       {options.map((o) => {
         const active = o.value === value
         return (
@@ -25,7 +25,7 @@ export function Segmented<V extends string>({ options, value, onChange, disabled
             disabled={disabled}
             onClick={() => onChange(o.value)}
             className={cn(
-              "h-10 border-3 border-ink font-heading text-sm font-bold",
+              "h-10 border-3 border-ink px-1 font-heading text-sm font-bold",
               active ? "bg-accent shadow-hard-sm" : "bg-paper hover:bg-ink/5",
               "disabled:cursor-not-allowed disabled:opacity-60"
             )}

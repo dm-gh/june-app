@@ -103,7 +103,7 @@ export interface FlowListProps {
   showNative?: boolean
   /** A line under the chip: a Wallet's Balance. */
   detail?: ((key: string) => ReactNode) | undefined
-  /** Leave out a side that has nothing, line and bar both; Wallets keep both sides. */
+  /** Leave out a side that has nothing, line and bar both. A Wallet with nothing moved shows only its Balance. */
   hideEmptySide?: boolean
   /** Which sides the Type filter leaves on. */
   sides?: Sides
