@@ -1,12 +1,12 @@
 import { Either } from "effect"
-import { MinorAmount, WalletId, type Transaction } from "@june/shared"
+import { MinorAmount, type Transaction, type Wallet, WalletId } from "@june/shared"
 import { describe, expect, it } from "vitest"
 import { transaction, wallets } from "../../test/fixtures"
 import { draftFromLegs, type ExchangeDraft, exchangePayload } from "./exchangeDraft"
 
 const legs = (over: { source?: Partial<Transaction>; target?: Partial<Transaction> } = {}): ReadonlyArray<Transaction> => [
-  transaction({ amountMinor: MinorAmount.make(-10000), walletId: wallets.card.id, currency: "USD" as never, description: "Cash for the trip", tags: ["trip"], categoryId: null, type: "exchange", ...over.source }),
-  transaction({ amountMinor: MinorAmount.make(9200), walletId: wallets.cash.id, currency: "EUR" as never, description: "Cash for the trip", tags: ["trip"], categoryId: null, type: "exchange", ...over.target })
+  transaction({ amountMinor: MinorAmount.make(-10000), walletId: wallets.card.id, currency: "USD" as never, description: "Cash for the trip", tags: ["trip"] as never, categoryId: null, type: "exchange", ...over.source }),
+  transaction({ amountMinor: MinorAmount.make(9200), walletId: wallets.cash.id, currency: "EUR" as never, description: "Cash for the trip", tags: ["trip"] as never, categoryId: null, type: "exchange", ...over.target })
 ]
 
 describe("draftFromLegs", () => {
@@ -56,7 +56,7 @@ describe("exchangePayload", () => {
   })
 
   it("copies the sent amount to the received side when both Wallets share a currency", () => {
-    const other = { ...wallets.cash, id: WalletId.make("99999999-9999-4999-8999-999999999999"), currency: "USD" }
+    const other = { ...wallets.cash, id: WalletId.make("99999999-9999-4999-8999-999999999999"), currency: "USD" } as Wallet
     expect(exchangePayload(draft({ target: other.id, received: "" }), [...all, other])).toMatchObject(Either.right({ sourceMinor: 10000, targetMinor: 10000 }))
   })
 
