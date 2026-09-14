@@ -1,5 +1,5 @@
 import { it } from "@effect/vitest"
-import { type CategoryType, type CronExpression, type CurrencyCode, type Hue, type LocalDate, type MinorAmount, nextAfter, nextOnOrAfter, parseCron, todayUtc } from "@june/shared"
+import { type CategoryType, type CronExpression, type CurrencyCode, type Hue, type LocalDate, type MinorAmount, nextAfter, nextOnOrAfter, parseCron, type RecurringId, todayUtc } from "@june/shared"
 import { Context, Effect, Either } from "effect"
 import { expect } from "vitest"
 import { RecurringFiring } from "../src/recurrings/Firing.js"
@@ -175,5 +175,16 @@ it.scoped("a Recurring whose Category was deleted fires Uncategorised, and one w
     const unassigned = yield* h.client.recurrings.fire({ path: { id: gym.id }, payload: {} })
     expect(unassigned).toMatchObject({ walletId: null, amountMinor: -5000, currency: "USD", occurredOn: today })
     expect((yield* h.client.recurrings.get({ path: { id: gym.id } })).lastFiredOn).toBe(today)
+  })
+)
+
+it.scoped("a Recurring that does not exist is not found for get, update, fire and delete", () =>
+  Effect.gen(function* () {
+    const h = yield* makeHarness()
+    const ghost = "00000000-0000-4000-8000-00000000dead" as RecurringId
+    expect((yield* h.client.recurrings.get({ path: { id: ghost } }).pipe(Effect.flip))._tag).toBe("NotFound")
+    expect((yield* h.client.recurrings.update({ path: { id: ghost }, payload: { name: "Ghost" } }).pipe(Effect.flip))._tag).toBe("NotFound")
+    expect((yield* h.client.recurrings.fire({ path: { id: ghost }, payload: {} }).pipe(Effect.flip))._tag).toBe("NotFound")
+    expect((yield* h.client.recurrings.delete({ path: { id: ghost } }).pipe(Effect.flip))._tag).toBe("NotFound")
   })
 )

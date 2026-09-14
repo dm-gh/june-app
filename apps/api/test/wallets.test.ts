@@ -92,3 +92,12 @@ it.scoped("deleting a Wallet removes its Init, unassigns its Changes and collaps
     expect(gone._tag).toBe("NotFound")
   })
 )
+
+it.scoped("a Wallet that does not exist is not found for update", () =>
+  Effect.gen(function* () {
+    const h = yield* makeHarness()
+    const ghost = "00000000-0000-4000-8000-00000000dead" as WalletId
+    const missing = yield* h.client.wallets.update({ path: { id: ghost }, payload: { name: "Ghost" } }).pipe(Effect.flip)
+    expect(missing._tag).toBe("NotFound")
+  })
+)

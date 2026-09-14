@@ -99,10 +99,18 @@ export const makeHarness = (options?: {
         )
       )
     )
-    const AuthStub = Layer.succeed(Authentication, Effect.succeed(user))
-
     // Build the services once for the test's scope so the handlers and the test share one pool.
     const context = yield* Layer.build(services)
+    const sql = Context.get(context, SqlClient.SqlClient)
+
+    // Like the session middleware, the stub reads the User row on every request, so a changed Default Currency shows.
+    const AuthStub = Layer.succeed(
+      Authentication,
+      sql<{ defaultCurrency: string }>`select default_currency from "user" where id = ${user.id}`.pipe(
+        Effect.map((rows) => ({ ...user, defaultCurrency: (rows[0]?.defaultCurrency.trim() ?? user.defaultCurrency) as CurrencyCode })),
+        Effect.orDie
+      )
+    )
     const api = ApiLive.pipe(Layer.provide(AuthStub), Layer.provide(Layer.succeedContext(context)))
     const { handler, dispose } = HttpApiBuilder.toWebHandler(Layer.mergeAll(api, HttpServer.layerContext), {
       // A 5xx in a test is a defect; print its cause instead of a bare status.
@@ -110,7 +118,6 @@ export const makeHarness = (options?: {
     })
     yield* Effect.addFinalizer(() => Effect.promise(dispose))
 
-    const sql = Context.get(context, SqlClient.SqlClient)
     yield* sql`insert into "user" (id, name, email, email_verified, default_currency)
                values (${user.id}, ${user.name}, ${user.email}, true, ${user.defaultCurrency})`
     const tokens = Context.get(context, CaptureTokens)

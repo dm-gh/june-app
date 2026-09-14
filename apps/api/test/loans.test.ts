@@ -1,5 +1,5 @@
 import { it } from "@effect/vitest"
-import type { CategoryType, CurrencyCode, Hue, LocalDate, MinorAmount } from "@june/shared"
+import type { CategoryType, CurrencyCode, Hue, LoanId, LocalDate, MinorAmount } from "@june/shared"
 import { Effect } from "effect"
 import { expect } from "vitest"
 import { makeHarness } from "./harness.js"
@@ -82,5 +82,20 @@ it.scoped("a settlement Change defaults to no description and no Tags, and a Cat
     expect(wrongType._tag).toBe("RuleViolation")
     expect((yield* h.client.loans.get({ path: { id: friend.id } })).amountMinor).toBe(-3000)
     expect((yield* h.client.transactions.list({ urlParams: period })).filter((t) => t.type === "change")).toHaveLength(1)
+  })
+)
+
+it.scoped("a Loan that does not exist is not found for get, update and settle", () =>
+  Effect.gen(function* () {
+    const h = yield* makeHarness()
+    const card = yield* h.client.wallets.create({ payload: { name: "Card", currency: usd, initMinor: minor(0) } })
+    const ghost = "00000000-0000-4000-8000-00000000dead" as LoanId
+    expect((yield* h.client.loans.get({ path: { id: ghost } }).pipe(Effect.flip))._tag).toBe("NotFound")
+    expect((yield* h.client.loans.update({ path: { id: ghost }, payload: { amountMinor: minor(1) } }).pipe(Effect.flip))._tag).toBe("NotFound")
+    const settle = yield* h.client.loans
+      .settle({ path: { id: ghost }, payload: { change: { walletId: card.id, amountMinor: minor(100), occurredOn: on } } })
+      .pipe(Effect.flip)
+    expect(settle._tag).toBe("NotFound")
+    expect((yield* h.client.transactions.list({ urlParams: period })).filter((t) => t.type === "change")).toHaveLength(0)
   })
 )
