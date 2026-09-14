@@ -1,47 +1,19 @@
 import { HttpApiBuilder, HttpApiError } from "@effect/platform"
 import { SqlClient } from "@effect/sql"
-import {
-  type CategoryId,
-  CurrentUser,
-  type CurrentUserShape,
-  type ExchangeId,
-  JuneApi,
-  type CreateExchange,
-  type Transaction,
-  type WalletId
-} from "@june/shared"
-import { DateTime, Effect, Option } from "effect"
+import { type CategoryId, type CreateExchange, CurrentUser, type CurrentUserShape, type ExchangeId, JuneApi, Transaction, type WalletId } from "@june/shared"
+import { Effect, Option } from "effect"
 import { randomUUID } from "node:crypto"
 import { CategoriesRepo } from "../categories/Categories.js"
+import { orNotFound } from "../http/errors.js"
 import { Rates, type RateTable } from "../rates/Rates.js"
 import { type WalletRow, WalletsRepo } from "../wallets/WalletsRepo.js"
 import { RecordChange } from "./RecordChange.js"
+import { categoryFits, categoryMismatch, checkChange as checkChangeRule, requireCategory as requireCategoryRule, requireWallet as requireWalletRule, violation } from "./rules.js"
 import { type TransactionRow, TransactionsRepo } from "./TransactionsRepo.js"
 
-import { categoryFits, categoryMismatch, checkChange as checkChangeRule, requireCategory as requireCategoryRule, requireWallet as requireWalletRule, violation } from "./rules.js"
-
-export const toTransaction = (
-  row: TransactionRow,
-  rates: Rates["Type"],
-  table: RateTable,
-  defaultCurrency: string
-): Transaction =>
-  ({
-    id: row.id,
-    type: row.type,
-    walletId: row.walletId,
-    amountMinor: row.amountMinor,
-    currency: row.currency,
-    occurredOn: row.occurredOn,
-    description: row.description,
-    tags: row.tags,
-    hiddenFromAnalysis: row.hiddenFromAnalysis,
-    categoryId: row.categoryId,
-    exchangeId: row.exchangeId,
-    defaultMinor: rates.convert(table, row.amountMinor, row.currency, defaultCurrency, row.occurredOn),
-    createdAt: DateTime.unsafeFromDate(row.createdAt),
-    updatedAt: DateTime.unsafeFromDate(row.updatedAt)
-  }) as Transaction
+/** The Transaction the api returns: the row converted into Default Currency for its own date. */
+export const toTransaction = (row: TransactionRow, rates: Rates["Type"], table: RateTable, defaultCurrency: string): Transaction =>
+  new Transaction({ ...row, defaultMinor: rates.convert(table, row.amountMinor, row.currency, defaultCurrency, row.occurredOn) })
 
 export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transactions", (handlers) =>
   Effect.gen(function* () {
@@ -84,15 +56,9 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
         return { source, target }
       })
 
+    /** Both legs, or 404 when the User has no such Exchange. */
     const findExchangeOrNotFound = (user: CurrentUserShape, exchangeId: ExchangeId) =>
-      repo.findByExchange(user.id, exchangeId).pipe(
-        Effect.flatMap((legs) => (legs.length === 0 ? new HttpApiError.NotFound() : Effect.succeed(legs)))
-      )
-
-    const findOrNotFound = (user: CurrentUserShape, id: TransactionRow["id"]) =>
-      repo.find(user.id, id).pipe(
-        Effect.flatMap(Option.match({ onNone: () => new HttpApiError.NotFound(), onSome: Effect.succeed }))
-      )
+      orNotFound(repo.findByExchange(user.id, exchangeId).pipe(Effect.map((legs) => (legs.length === 0 ? Option.none() : Option.some(legs)))))
 
     return handlers
       .handle("list", ({ urlParams }) =>
@@ -105,7 +71,7 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
       .handle("get", ({ path }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
-          return yield* presentOne(user, yield* findOrNotFound(user, path.id))
+          return yield* presentOne(user, yield* orNotFound(repo.find(user.id, path.id)))
         })
       )
       .handle("createChange", ({ payload }) =>
@@ -176,7 +142,7 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
       .handle("update", ({ path, payload }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
-          const current = yield* findOrNotFound(user, path.id)
+          const current = yield* orNotFound(repo.find(user.id, path.id))
           const next = {
             walletId: payload.walletId ?? current.walletId,
             amountMinor: payload.amountMinor ?? current.amountMinor,
@@ -198,21 +164,7 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
               return yield* violation("An Exchange is edited as a whole")
             }
           }
-          const updated = yield* Effect.gen(function* () {
-            const row = yield* repo.update(user.id, current.id, {
-              ...(payload.walletId !== undefined ? { walletId: payload.walletId } : {}),
-              ...(payload.amountMinor !== undefined ? { amountMinor: payload.amountMinor } : {}),
-              ...(payload.currency !== undefined ? { currency: payload.currency } : {}),
-              ...(payload.occurredOn !== undefined ? { occurredOn: payload.occurredOn } : {}),
-              ...(payload.description !== undefined ? { description: payload.description } : {}),
-              ...(payload.tags !== undefined ? { tags: payload.tags } : {}),
-              ...(payload.hiddenFromAnalysis !== undefined ? { hiddenFromAnalysis: payload.hiddenFromAnalysis } : {}),
-              ...(payload.categoryId !== undefined ? { categoryId: payload.categoryId } : {})
-            })
-            return row
-          }).pipe(sql.withTransaction, Effect.orDie)
-          if (Option.isNone(updated)) return yield* new HttpApiError.NotFound()
-          return yield* presentOne(user, updated.value)
+          return yield* presentOne(user, yield* orNotFound(repo.update(user.id, current.id, payload)))
         })
       )
       .handle("bulkUpdate", ({ payload }) =>
@@ -233,8 +185,8 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
             if (rows.some((r) => !categoryFits(category, r.amountMinor))) return yield* categoryMismatch(category)
           }
           yield* repo.bulkSet(user.id, payload.ids, {
-            ...(payload.walletId !== undefined ? { walletId: payload.walletId } : {}),
-            ...(payload.categoryId !== undefined ? { categoryId: payload.categoryId } : {}),
+            walletId: payload.walletId,
+            categoryId: payload.categoryId,
             addTags: payload.addTags ?? [],
             removeTags: payload.removeTags ?? []
           })
@@ -243,7 +195,7 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
       .handle("delete", ({ path }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
-          const row = yield* findOrNotFound(user, path.id)
+          const row = yield* orNotFound(repo.find(user.id, path.id))
           yield* deleteRows(user, [row])
         })
       )
@@ -270,5 +222,13 @@ export const TransactionsHandlersLive = HttpApiBuilder.group(JuneApi, "transacti
         )
       })
     }
+  })
+)
+
+/** Distinct Tags across the User's Transactions, for the tag input's suggestions. */
+export const TagsHandlersLive = HttpApiBuilder.group(JuneApi, "tags", (handlers) =>
+  Effect.gen(function* () {
+    const repo = yield* TransactionsRepo
+    return handlers.handle("list", () => CurrentUser.pipe(Effect.flatMap((user) => repo.distinctTags(user.id))))
   })
 )

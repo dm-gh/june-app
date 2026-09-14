@@ -7,8 +7,7 @@ import { ImportHandlersLive } from "../import/Import.js"
 import { LoansHandlersLive } from "../loans/Loans.js"
 import { RecurringsHandlersLive } from "../recurrings/Recurrings.js"
 import { SettingsHandlersLive } from "../settings/Settings.js"
-import { TagsHandlersLive } from "../tags/Tags.js"
-import { TransactionsHandlersLive } from "../transactions/Transactions.js"
+import { TagsHandlersLive, TransactionsHandlersLive } from "../transactions/Transactions.js"
 import { WalletsHandlersLive } from "../wallets/Wallets.js"
 
 const HealthHandlersLive = HttpApiBuilder.group(JuneApi, "health", (handlers) =>

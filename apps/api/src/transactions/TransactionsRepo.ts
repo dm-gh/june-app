@@ -1,24 +1,17 @@
 import { SqlClient } from "@effect/sql"
 import type { Fragment } from "@effect/sql/Statement"
-import type { CategoryId, ExchangeId, LocalDate, TransactionId, TransactionType, UserId, WalletId } from "@june/shared"
-import { Context, Effect, Layer, Option } from "effect"
+import { type CategoryId, type ExchangeId, type LocalDate, Tag, Transaction, TransactionId, type TransactionType, type UserId, type WalletId } from "@june/shared"
+import { Context, Effect, Layer, type Option, Schema } from "effect"
+import { ownedTable } from "../db/ownedTable.js"
 import { textArray, uuidArray } from "../db/sqlHelpers.js"
 
-export interface TransactionRow {
-  readonly id: TransactionId
-  readonly walletId: WalletId | null
-  readonly type: TransactionType
-  readonly amountMinor: number
-  readonly currency: string
-  readonly occurredOn: LocalDate
-  readonly description: string
-  readonly tags: ReadonlyArray<string>
-  readonly hiddenFromAnalysis: boolean
-  readonly categoryId: CategoryId | null
-  readonly exchangeId: ExchangeId | null
-  readonly createdAt: Date
-  readonly updatedAt: Date
-}
+/** A Transaction as stored: its fields without the derived defaultMinor, timestamps read from Date. */
+export const TransactionRow = Schema.Struct({
+  ...Schema.Struct(Transaction.fields).omit("defaultMinor").fields,
+  createdAt: Schema.DateTimeUtcFromDate,
+  updatedAt: Schema.DateTimeUtcFromDate
+})
+export type TransactionRow = typeof TransactionRow.Type
 
 export interface NewTransaction {
   readonly walletId: WalletId | null
@@ -45,15 +38,15 @@ export interface NewChange {
   readonly hiddenFromAnalysis: boolean
 }
 
-export interface TransactionPatch {
-  readonly walletId?: WalletId | null
-  readonly amountMinor?: number
-  readonly currency?: string
-  readonly occurredOn?: LocalDate
-  readonly description?: string
-  readonly tags?: ReadonlyArray<string>
-  readonly hiddenFromAnalysis?: boolean
-  readonly categoryId?: CategoryId | null
+export type TransactionPatch = {
+  readonly walletId?: WalletId | null | undefined
+  readonly amountMinor?: number | undefined
+  readonly currency?: string | undefined
+  readonly occurredOn?: LocalDate | undefined
+  readonly description?: string | undefined
+  readonly tags?: ReadonlyArray<string> | undefined
+  readonly hiddenFromAnalysis?: boolean | undefined
+  readonly categoryId?: CategoryId | null | undefined
 }
 
 export interface TransactionsRepoShape {
@@ -74,7 +67,12 @@ export interface TransactionsRepoShape {
   readonly bulkSet: (
     userId: UserId,
     ids: ReadonlyArray<TransactionId>,
-    set: { walletId?: WalletId; categoryId?: CategoryId | null; addTags: ReadonlyArray<string>; removeTags: ReadonlyArray<string> }
+    set: {
+      walletId?: WalletId | undefined
+      categoryId?: CategoryId | null | undefined
+      addTags: ReadonlyArray<string>
+      removeTags: ReadonlyArray<string>
+    }
   ) => Effect.Effect<void>
   readonly deleteMany: (userId: UserId, ids: ReadonlyArray<TransactionId>) => Effect.Effect<number>
   readonly deleteExchanges: (userId: UserId, exchangeIds: ReadonlyArray<ExchangeId>) => Effect.Effect<number>
@@ -90,55 +88,48 @@ export interface TransactionsRepoShape {
   readonly initOf: (userId: UserId, walletId: WalletId) => Effect.Effect<Option.Option<TransactionRow>>
   /** How many of the User's Transactions are Unassigned, for the attention banner. */
   readonly countUnassigned: (userId: UserId) => Effect.Effect<number>
+  /** Every distinct Tag on the User's Transactions, sorted; a Tag has no life beyond them. */
+  readonly distinctTags: (userId: UserId) => Effect.Effect<ReadonlyArray<Tag>>
 }
 
 export class TransactionsRepo extends Context.Tag("TransactionsRepo")<TransactionsRepo, TransactionsRepoShape>() {}
-
-const columns = `id, wallet_id, type, amount_minor, currency, to_char(occurred_on, 'YYYY-MM-DD') as occurred_on,
-  description, tags, hidden_from_analysis, category_id, exchange_id, created_at, updated_at`
 
 export const TransactionsRepoLive = Layer.effect(
   TransactionsRepo,
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient
-    const cols = sql.literal(columns)
-    const normalise = (row: TransactionRow): TransactionRow => ({ ...row, currency: row.currency.trim() })
-    const rows = <A extends TransactionRow>(effect: Effect.Effect<ReadonlyArray<A>, unknown>) =>
-      effect.pipe(Effect.map((rs) => rs.map(normalise)), Effect.orDie)
+    const transactions = ownedTable(sql, {
+      table: "transaction",
+      id: TransactionId,
+      row: TransactionRow,
+      columns: `id, wallet_id, type, amount_minor, trim(currency) as currency, to_char(occurred_on, 'YYYY-MM-DD') as occurred_on,
+        description, tags, hidden_from_analysis, category_id, exchange_id, created_at, updated_at`,
+      order: "occurred_on desc, created_at desc",
+      stampsUpdatedAt: true
+    })
+    const cols = transactions.columns
 
     const listInPeriod: TransactionsRepoShape["listInPeriod"] = (userId, from, to) =>
-      rows(sql<TransactionRow>`select ${cols} from transaction
-                               where user_id = ${userId} and occurred_on between ${from} and ${to}
-                               order by occurred_on desc, created_at desc`)
-
-    const find: TransactionsRepoShape["find"] = (userId, id) =>
-      rows(sql<TransactionRow>`select ${cols} from transaction where user_id = ${userId} and id = ${id}`).pipe(
-        Effect.map((rs) => Option.fromNullable(rs[0]))
-      )
+      transactions.rows(sql`select ${cols} from transaction
+                            where user_id = ${userId} and occurred_on between ${from} and ${to}
+                            order by occurred_on desc, created_at desc`)
 
     const findMany: TransactionsRepoShape["findMany"] = (userId, ids) =>
       ids.length === 0
         ? Effect.succeed([])
-        : rows(sql<TransactionRow>`select ${cols} from transaction where user_id = ${userId} and ${sql.in("id", ids)}`)
+        : transactions.rows(sql`select ${cols} from transaction where user_id = ${userId} and ${sql.in("id", ids)}`)
 
     const findByExchange: TransactionsRepoShape["findByExchange"] = (userId, exchangeId) =>
-      rows(sql<TransactionRow>`select ${cols} from transaction
-                               where user_id = ${userId} and exchange_id = ${exchangeId} order by amount_minor`)
+      transactions.rows(sql`select ${cols} from transaction
+                            where user_id = ${userId} and exchange_id = ${exchangeId} order by amount_minor`)
 
-    const insert: TransactionsRepoShape["insert"] = (userId, row) =>
-      rows(sql<TransactionRow>`
-        insert into transaction (user_id, wallet_id, type, amount_minor, currency, occurred_on, description, tags,
-                                 hidden_from_analysis, category_id, exchange_id)
-        values (${userId}, ${row.walletId}, ${row.type}, ${row.amountMinor}, ${row.currency}, ${row.occurredOn},
-                ${row.description}, ${textArray(sql, row.tags)}, ${row.hiddenFromAnalysis}, ${row.categoryId},
-                ${row.exchangeId})
-        returning ${cols}`).pipe(Effect.map((rs) => rs[0]!))
+    const insert: TransactionsRepoShape["insert"] = (userId, row) => transactions.insert(userId, { ...row, tags: textArray(sql, row.tags) })
 
     // One statement however many rows: they travel as one JSON parameter and unpack in SQL.
     const insertChanges: TransactionsRepoShape["insertChanges"] = (userId, changes) =>
       changes.length === 0
         ? Effect.succeed([])
-        : rows(sql<TransactionRow>`
+        : transactions.rows(sql`
             insert into transaction (user_id, wallet_id, type, amount_minor, currency, occurred_on, description, tags,
                                      hidden_from_analysis, category_id, exchange_id)
             select ${userId}, r.wallet_id, 'change', r.amount_minor, r.currency, r.occurred_on, r.description,
@@ -158,23 +149,8 @@ export const TransactionsRepoLive = Layer.effect(
                             hidden boolean, category_id uuid)
             returning ${cols}`)
 
-    const update: TransactionsRepoShape["update"] = (userId, id, patch) => {
-      const sets: Array<Fragment> = []
-      if (patch.walletId !== undefined) sets.push(sql`wallet_id = ${patch.walletId}`)
-      if (patch.amountMinor !== undefined) sets.push(sql`amount_minor = ${patch.amountMinor}`)
-      if (patch.currency !== undefined) sets.push(sql`currency = ${patch.currency}`)
-      if (patch.occurredOn !== undefined) sets.push(sql`occurred_on = ${patch.occurredOn}`)
-      if (patch.description !== undefined) sets.push(sql`description = ${patch.description}`)
-      if (patch.tags !== undefined) sets.push(sql`tags = ${textArray(sql, patch.tags)}`)
-      if (patch.hiddenFromAnalysis !== undefined) sets.push(sql`hidden_from_analysis = ${patch.hiddenFromAnalysis}`)
-      if (patch.categoryId !== undefined) sets.push(sql`category_id = ${patch.categoryId}`)
-      if (sets.length === 0) return find(userId, id)
-      sets.push(sql`updated_at = now()`)
-      return rows(sql<TransactionRow>`update transaction set ${sql.csv(sets)}
-                                      where user_id = ${userId} and id = ${id} returning ${cols}`).pipe(
-        Effect.map((rs) => Option.fromNullable(rs[0]))
-      )
-    }
+    const update: TransactionsRepoShape["update"] = (userId, id, patch) =>
+      transactions.patch(userId, id, { ...patch, tags: patch.tags && textArray(sql, patch.tags) })
 
     const updateExchange: TransactionsRepoShape["updateExchange"] = (userId, exchangeId, patch) => {
       const sets: Array<Fragment> = []
@@ -261,10 +237,8 @@ export const TransactionsRepoLive = Layer.effect(
       )
 
     const initOf: TransactionsRepoShape["initOf"] = (userId, walletId) =>
-      rows(sql<TransactionRow>`select ${cols} from transaction
-                               where user_id = ${userId} and wallet_id = ${walletId} and type = 'init'`).pipe(
-        Effect.map((rs) => Option.fromNullable(rs[0]))
-      )
+      transactions.first(sql`select ${cols} from transaction
+                             where user_id = ${userId} and wallet_id = ${walletId} and type = 'init'`)
 
     const countUnassigned: TransactionsRepoShape["countUnassigned"] = (userId) =>
       sql<{ n: number }>`select count(*)::int as n from transaction where user_id = ${userId} and wallet_id is null`.pipe(
@@ -272,9 +246,15 @@ export const TransactionsRepoLive = Layer.effect(
         Effect.orDie
       )
 
+    const distinctTags: TransactionsRepoShape["distinctTags"] = (userId) =>
+      sql<{ tag: string }>`select distinct tag from transaction, unnest(tags) as tag where user_id = ${userId} order by tag`.pipe(
+        Effect.flatMap((rs) => Schema.decodeUnknown(Schema.Array(Tag))(rs.map((r) => r.tag))),
+        Effect.orDie
+      )
+
     return {
       listInPeriod,
-      find,
+      find: transactions.find,
       findMany,
       findByExchange,
       insert,
@@ -288,7 +268,8 @@ export const TransactionsRepoLive = Layer.effect(
       collapseExchangesOf,
       balances,
       initOf,
-      countUnassigned
+      countUnassigned,
+      distinctTags
     }
   })
 )

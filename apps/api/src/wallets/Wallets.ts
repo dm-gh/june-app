@@ -45,7 +45,7 @@ export const WalletsHandlersLive = HttpApiBuilder.group(JuneApi, "wallets", (han
             new Wallet({
               ...row,
               balanceMinor,
-              initMinor: MinorAmount.make(Option.isSome(init) ? init.value.amountMinor : 0),
+              initMinor: Option.isSome(init) ? init.value.amountMinor : MinorAmount.make(0),
               balanceDefaultMinor: rates.convert(table, balanceMinor, row.currency, user.defaultCurrency, today)
             })
           )
